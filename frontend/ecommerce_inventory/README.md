@@ -68,3 +68,45 @@ This section has moved here: [https://facebook.github.io/create-react-app/docs/d
 ### `npm run build` fails to minify
 
 This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+
+  ---
+  Admin Login URL
+
+  http://localhost:3000/admin/auth
+
+  Use the Sign In tab (not Sign Up).
+
+  ---
+  Create an Admin User
+
+  Run this once from backend/EcommerceInventory/ with the venv active:
+
+  source venv/bin/activate
+
+  python manage.py create_admin \
+    --username admin \
+    --email admin@fabrything.com \
+    --password admin123
+
+  Change the username/email/password to whatever you want. A user with the same username or email will be rejected.
+
+  I've already created one for you:
+
+  ┌──────────┬──────────────────────────────────┐
+  │  Field   │              Value               │
+  ├──────────┼──────────────────────────────────┤
+  │ Username │ admin                            │
+  ├──────────┼──────────────────────────────────┤
+  │ Email    │ admin@fabrything.com             │
+  ├──────────┼──────────────────────────────────┤
+  │ Password │ admin123                         │
+  ├──────────┼──────────────────────────────────┤
+  │ URL      │ http://localhost:3000/admin/auth │
+  └──────────┴──────────────────────────────────┘
+
+  ---
+  Why a custom command was needed
+
+  The normal signup form (/api/auth/signup/) creates users but doesn't set domain_user_id to themselves — which is what the permission
+  middleware requires to grant full access. The create_admin command sets role = "Super Admin" and domain_user_id → self in one step, so you get
+   unrestricted access to all admin panel sections (Products, Categories, Orders, Users, etc.).

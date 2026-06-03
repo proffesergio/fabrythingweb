@@ -37,7 +37,11 @@ class CategoryListView(generics.ListAPIView):
 
 
     def get_queryset(self):
-        queryset=Categories.objects.filter(parent_id__isnull=True).filter(domain_user_id=self.request.user.domain_user_id.id)
+        # Super Admin sees all categories; others see only their domain's categories
+        if self.request.user.role == 'Super Admin' or self.request.user.domain_user_id.id == self.request.user.id:
+            queryset = Categories.objects.filter(parent_id__isnull=True)
+        else:
+            queryset = Categories.objects.filter(parent_id__isnull=True, domain_user_id=self.request.user.domain_user_id.id)
         return queryset
 
     @CommonListAPIMixin.common_list_decorator(CategorySerializer)

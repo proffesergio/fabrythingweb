@@ -82,16 +82,14 @@ const ManageProducts = ({onProductSelected}) => {
         console.log(params);
     }
     const onEditClick=(params)=>{
-        console.log(params);
-        navigate(`/form/product/${params.row.id}`)
+        navigate(`/admin/form/product/${params.row.id}`)
     }
     const onAddClick=(params)=>{
-        console.log(params);
         if(onProductSelected){
             onProductSelected(params.row);
             return;
         }
-        navigate('/form/product')
+        navigate('/admin/form/product')
     }
 
     const showHTMLData=(row)=>{

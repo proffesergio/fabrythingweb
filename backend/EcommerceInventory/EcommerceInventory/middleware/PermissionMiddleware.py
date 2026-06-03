@@ -11,6 +11,9 @@ class PermissionMiddleware:
 
     def __call__(self, request):
         current_url = request.path
+        # Storefront public APIs handle their own auth via DRF permission_classes
+        if current_url.startswith('/api/store/'):
+            return self.get_response(request)
         if current_url in urlToSkip():
             return self.get_response(request)
 

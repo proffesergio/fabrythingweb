@@ -112,8 +112,7 @@ const Layout = ({sidebarList,pageTitle,childPage}) => {
 
   const handleLogout = () => {
     localStorage.removeItem('token');
-    navigate('/auth');
-    // Handle logout action
+    navigate('/admin/auth');
   };
 
   const drawerWidth = 280;
@@ -123,9 +122,12 @@ const Layout = ({sidebarList,pageTitle,childPage}) => {
     }
     else{
       dispatch(activateItem({item:sidebarItem}))
-      navigate(sidebarItem.module_url);
+      const url = sidebarItem.module_url;
+      if(!url) return;
+      // Prefix with /admin if not already prefixed
+      const adminUrl = url.startsWith('/admin') ? url : `/admin${url}`;
+      navigate(adminUrl);
     }
-
   }
 
   const getIcon = (icon) => {
@@ -176,9 +178,18 @@ const Layout = ({sidebarList,pageTitle,childPage}) => {
       }}
       className='sidebar'
     >
-      <Box sx={{ display: 'flex', alignItems: 'center', marginBottom: '16px' }}>
-        <img src={theme?.logo?.rectangle} alt="Logo" className='logo' style={{ marginRight: '16px',width:'100%' }} />
-        
+      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '16px', py: 2 }}>
+        <Typography variant="h5" sx={{
+          fontWeight: 900,
+          letterSpacing: '0.12em',
+          background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
+          WebkitBackgroundClip: 'text',
+          WebkitTextFillColor: 'transparent',
+          backgroundClip: 'text',
+          userSelect: 'none',
+        }}>
+          FABRYTHING
+        </Typography>
       </Box>
       <List sx={{ '& .MuiListItem-root': { transition: 'background-color 0.3s' } }}>
         {sidebarItems.map((sidebarItem) => (
@@ -469,7 +480,7 @@ const Layout = ({sidebarList,pageTitle,childPage}) => {
               }}
             >
               <Typography variant="body2" color="text.secondary">
-                EzyMarket - Version 1.0.0 (2024)
+                Fabrything Admin — Version 1.0.0 (2026)
               </Typography>
             </Box>
           </Box>

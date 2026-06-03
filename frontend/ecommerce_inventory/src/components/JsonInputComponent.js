@@ -14,11 +14,17 @@ const JsonInputComponent =({fields})=>{
     }
 
     useEffect(()=>{
-        if(fields.default){
-            setKeyValuePairs([...keyValuePairs,...fields.default]);
-        }
-        else{
-            setKeyValuePairs([{key:'',value:''}])
+        const def = fields.default;
+        if (Array.isArray(def) && def.length > 0) {
+            // Array of {key,value} objects or primitives
+            setKeyValuePairs(def.map(item =>
+                (item && typeof item === 'object') ? item : { key: String(item), value: '' }
+            ));
+        } else if (def && typeof def === 'object' && !Array.isArray(def) && Object.keys(def).length > 0) {
+            // Plain object (e.g. specifications: {}) → convert to [{key,value}] pairs
+            setKeyValuePairs(Object.entries(def).map(([k, v]) => ({ key: k, value: String(v) })));
+        } else {
+            setKeyValuePairs([{ key: '', value: '' }]);
         }
     },[])
 

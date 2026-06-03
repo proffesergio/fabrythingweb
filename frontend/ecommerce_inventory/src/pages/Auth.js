@@ -72,7 +72,7 @@ const Auth = () => {
         localStorage.setItem("token",response.data.access);
         toast.success("Signup Successfully");
         dispatch(login());
-        navigate("/home");
+        navigate("/admin/home");
     }
     else{
         toast.error("Signup failed");
@@ -88,7 +88,7 @@ const doLogin = async(e) => {
       localStorage.setItem("token",response.data.access);
           toast.success("Login Successfully");
           dispatch(login());
-          navigate("/home");
+          navigate("/admin/home");
 
     }
     else{
@@ -114,10 +114,19 @@ const doLogin = async(e) => {
           <Card sx={{ maxWidth: 400, width: '100%' }}>
             <CardContent>
               <Box sx={{ display: 'flex', justifyContent: 'center', mb: 2 }}>
-                <img src={theme.logo.square} alt="Logo" style={{ borderRadius: '50%',width:'100px' }} />
+                <Typography variant="h4" sx={{
+                  fontWeight: 900,
+                  letterSpacing: '0.12em',
+                  background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                  backgroundClip: 'text',
+                }}>
+                  FABRYTHING
+                </Typography>
               </Box>
-              <Typography variant="h5" align="center" gutterBottom>
-                EzyMarket
+              <Typography variant="subtitle2" align="center" color="text.secondary" gutterBottom>
+                Admin Panel
               </Typography>
               <Tabs value={tab} onChange={handleChange} centered>
                 <Tab label="Sign Up" />
@@ -197,7 +206,7 @@ const doLogin = async(e) => {
             </CardContent>
             <Box sx={{ textAlign: 'center', py: 2, borderTop: '1px solid', borderColor: theme.palette.divider }}>
               <Typography variant="body2" color="text.secondary">
-                © 2024 EzyMarket. All rights reserved.
+                © 2026 Fabrything. All rights reserved.
               </Typography>
             </Box>
           </Card>

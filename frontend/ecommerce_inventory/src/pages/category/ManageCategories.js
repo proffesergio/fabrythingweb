@@ -63,12 +63,10 @@ const ManageCategories = () => {
         console.log(params);
     }
     const onEditClick=(params)=>{
-        console.log(params);
-        navigate(`/form/category/${params.row.id}`)
+        navigate(`/admin/form/category/${params.row.id}`)
     }
-    const onAddClick=(params)=>{
-        console.log(params);
-        navigate('/form/category')
+    const onAddClick=()=>{
+        navigate('/admin/form/category')
     }
 
     const generateColumns=(data)=>{
@@ -139,10 +137,15 @@ const ManageCategories = () => {
 
     return (
         <Box component={"div"} sx={{width:'100%'}}>
-            <Breadcrumbs>
-                <Typography variant="body2" onClick={()=>navigate('/')}>Home</Typography>
-                <Typography variant="body2" onClick={()=>navigate('/manage/category')}>Manage Category</Typography>
-            </Breadcrumbs>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                <Breadcrumbs>
+                    <Typography variant="body2" onClick={()=>navigate('/admin')}>Home</Typography>
+                    <Typography variant="body2">Manage Categories</Typography>
+                </Breadcrumbs>
+                <IconButton color="primary" onClick={onAddClick} title="Add Category" sx={{ bgcolor: 'primary.main', color: 'white', borderRadius: 2, px: 2, '&:hover': { bgcolor: 'primary.dark' } }}>
+                    <Add sx={{ mr: 0.5 }} /><Typography variant="button" sx={{ color: 'white', fontSize: '0.8rem' }}>Add Category</Typography>
+                </IconButton>
+            </Box>
             <Grid container spacing={2}>
                 <Grid item xs={12} sm={showImages?8:12} lg={showImages?9:12}>
             <TextField label="Search" variant="outlined" fullWidth onChange={(e)=>setSearchQuery(e.target.value)} margin="normal"/>

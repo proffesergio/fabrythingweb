@@ -37,7 +37,7 @@ class ModuleView(generics.CreateAPIView):
             cleaned_menus.append(menu['fields'])
 
         if request.user.role=='Super Admin':
-            cleaned_menus.append({'id':0,'module_name':'Manage Module Urls','module_icon':'','is_menu':True,'is_active':True,'parent_id':None,'display_order':0,'module_url':'/manage/moduleUrls','module_description':'Module Urls','submenus':[]})
+            cleaned_menus.append({'id':0,'module_name':'Manage Module Urls','module_icon':'Settings','is_menu':True,'is_active':True,'parent_id':None,'display_order':99,'module_url':'/manage/moduleurls','module_description':'Module Urls','submenus':[]})
 
         return renderResponse(data=cleaned_menus,message='All Modules',status=200)
     

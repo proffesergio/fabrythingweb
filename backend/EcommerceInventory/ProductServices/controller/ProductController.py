@@ -57,7 +57,11 @@ class ProductListView(generics.ListAPIView):
     pagination_class = CustomPageNumberPagination
 
     def get_queryset(self):
-        queryset=Products.objects.filter(domain_user_id=self.request.user.domain_user_id.id)
+        # Super Admin sees all products; others see only their domain's products
+        if self.request.user.role == 'Super Admin' or self.request.user.domain_user_id.id == self.request.user.id:
+            queryset = Products.objects.all()
+        else:
+            queryset = Products.objects.filter(domain_user_id=self.request.user.domain_user_id.id)
         return queryset
     
     @CommonListAPIMixin.common_list_decorator(ProductSerializer)

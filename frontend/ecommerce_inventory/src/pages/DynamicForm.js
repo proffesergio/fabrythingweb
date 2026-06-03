@@ -77,7 +77,7 @@ const DynamicForm=({formNameVar,idVar,onSaveEvent})=>{
                 onSaveEvent();
             }
             else{
-                navigate(`/manage/${formName}`)
+                navigate(`/admin/manage/${formName}`)
             }
         }
         catch(err){
