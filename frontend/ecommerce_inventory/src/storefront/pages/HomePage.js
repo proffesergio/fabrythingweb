@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { Box, Container, Typography, Grid, Card, Chip, Skeleton } from '@mui/material';
+import { Box, Container, Typography, Grid, Card, Skeleton } from '@mui/material';
 import { LocalShipping, Payment, Verified, Support } from '@mui/icons-material';
-import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import useApi from '../../hooks/APIHandler';
 import HeroCarousel from '../components/HeroCarousel';
@@ -9,6 +8,7 @@ import FlashSaleSection from '../components/FlashSaleSection';
 import TabbedProductSection from '../components/TabbedProductSection';
 import ProductCarousel from '../components/ProductCarousel';
 import PromoBanner from '../components/PromoBanner';
+import CategoryGrid from '../components/CategoryGrid';
 
 export default function HomePage() {
     const [data, setData] = useState(null);
@@ -55,38 +55,8 @@ export default function HomePage() {
                 </Grid>
             </Container>
 
-            {/* Category Bar */}
-            {data?.categories?.length > 0 && (
-                <Container maxWidth="lg" sx={{ mb: 5 }}>
-                    <motion.div
-                        initial={{ opacity: 0, y: 20 }}
-                        whileInView={{ opacity: 1, y: 0 }}
-                        viewport={{ once: true }}
-                        transition={{ duration: 0.5 }}
-                    >
-                        <Typography variant="h4" sx={{ fontWeight: 800, mb: 3 }}>Shop by Category</Typography>
-                        <Box sx={{ display: 'flex', gap: 1.5, overflowX: 'auto', pb: 1, '&::-webkit-scrollbar': { height: 4 }, '&::-webkit-scrollbar-thumb': { bgcolor: 'divider', borderRadius: 2 } }}>
-                            {data.categories.map(cat => (
-                                <Chip
-                                    key={cat.id}
-                                    label={cat.name}
-                                    component={Link}
-                                    to={`/shop?category=${cat.slug}`}
-                                    clickable
-                                    variant="outlined"
-                                    sx={{
-                                        px: 2, py: 2.5, fontSize: '0.95rem', fontWeight: 600,
-                                        borderRadius: 3, borderWidth: 2,
-                                        '&:hover': { bgcolor: 'primary.main', color: 'white', borderColor: 'primary.main' },
-                                        transition: 'all 0.2s',
-                                        flexShrink: 0,
-                                    }}
-                                />
-                            ))}
-                        </Box>
-                    </motion.div>
-                </Container>
-            )}
+            {/* Colourful category tiles */}
+            <CategoryGrid categories={data?.categories || []} />
 
             {/* Flash Sale */}
             {data?.flash_sale?.length > 0 && (

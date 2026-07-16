@@ -2,9 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { Outlet, Link, useNavigate } from 'react-router-dom';
 import {
     AppBar, Toolbar, Typography, IconButton, Badge, Box, Container,
-    Drawer, TextField, InputAdornment,
+    Drawer,
     BottomNavigation, BottomNavigationAction, Paper, Divider, Grid,
-    useMediaQuery, useTheme, GlobalStyles, Tooltip,
+    useMediaQuery, useTheme, GlobalStyles, Tooltip, useScrollTrigger,
 } from '@mui/material';
 import {
     ShoppingCart, Person, Menu as MenuIcon, Search, Close,
@@ -17,11 +17,11 @@ import { selectCartItemCount } from '../../redux/reducer/cartSlice';
 import { isAuthenticated } from '../../utils/Helper';
 import useApi from '../../hooks/APIHandler';
 import MegaMenu, { MobileCategoryMenu } from '../components/MegaMenu';
+import LiveSearch from '../components/LiveSearch';
 
 export default function StorefrontLayout({ toggleDarkMode, darkMode }) {
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
     const [searchOpen, setSearchOpen]         = useState(false);
-    const [searchQuery, setSearchQuery]       = useState('');
     const [categories, setCategories]         = useState([]);
     const cartItemCount = useSelector(selectCartItemCount);
     const navigate      = useNavigate();
@@ -30,20 +30,14 @@ export default function StorefrontLayout({ toggleDarkMode, darkMode }) {
     const isLoggedIn    = isAuthenticated();
     const { callApi }   = useApi();
 
+    // Header shrinks / gains a shadow once the page scrolls past ~40px.
+    const scrolled = useScrollTrigger({ disableHysteresis: true, threshold: 40 });
+
     useEffect(() => {
         callApi({ url: 'store/categories/' }).then(res => {
             if (res?.data?.data) setCategories(res.data.data);
         });
     }, []);
-
-    const handleSearch = (e) => {
-        e.preventDefault();
-        if (searchQuery.trim()) {
-            navigate(`/shop?search=${encodeURIComponent(searchQuery.trim())}`);
-            setSearchQuery('');
-            setSearchOpen(false);
-        }
-    };
 
     return (
         <>
@@ -142,7 +136,7 @@ export default function StorefrontLayout({ toggleDarkMode, darkMode }) {
                                     {[
                                         '⚡ Free delivery on orders over ৳1,500',
                                         '🎁 Cash on Delivery available everywhere in Bangladesh',
-                                        '🔥 New arrivals added daily — shop Men, Women & Kids',
+                                        '🔥 Authentic branded products — fashion, watches, home & beauty',
                                         '✨ Use code FABRYTHING for 10% off your first order',
                                         '📦 Easy returns within 7 days',
                                     ].map((msg, i) => (
@@ -170,11 +164,27 @@ export default function StorefrontLayout({ toggleDarkMode, darkMode }) {
                         </Box>
                     </Box>
 
-                    {/* ── Main Header ── */}
-                    <AppBar position="sticky" elevation={0}>
-                        <Toolbar sx={{ justifyContent: 'space-between', gap: 1 }}>
+                    {/* ── Main Header (animated: shrinks + gains shadow on scroll) ── */}
+                    <AppBar
+                        position="sticky"
+                        elevation={0}
+                        sx={{
+                            transition: 'box-shadow 0.25s ease, background-color 0.25s ease',
+                            boxShadow: scrolled
+                                ? (darkMode ? '0 6px 24px rgba(0,0,0,0.5)' : '0 6px 24px rgba(15,23,42,0.10)')
+                                : 'none',
+                        }}
+                    >
+                        <Toolbar
+                            sx={{
+                                justifyContent: 'space-between',
+                                gap: { xs: 1, md: 2 },
+                                minHeight: scrolled ? { xs: 54, md: 60 } : { xs: 60, md: 72 },
+                                transition: 'min-height 0.25s ease',
+                            }}
+                        >
                             {/* Left: hamburger + logo */}
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexShrink: 0 }}>
                                 {isMobile && (
                                     <IconButton onClick={() => setMobileMenuOpen(true)} color="inherit" size="small">
                                         <MenuIcon />
@@ -188,7 +198,8 @@ export default function StorefrontLayout({ toggleDarkMode, darkMode }) {
                                         textDecoration: 'none',
                                         fontWeight: 900,
                                         letterSpacing: '-0.04em',
-                                        fontSize: { xs: '1.1rem', md: '1.3rem' },
+                                        fontSize: scrolled ? { xs: '1.05rem', md: '1.2rem' } : { xs: '1.1rem', md: '1.4rem' },
+                                        transition: 'font-size 0.25s ease',
                                         background: darkMode
                                             ? 'linear-gradient(135deg,#A5B4FC,#E879F9)'
                                             : 'linear-gradient(135deg,#4F46E5,#E85D4A)',
@@ -201,31 +212,15 @@ export default function StorefrontLayout({ toggleDarkMode, darkMode }) {
                                 </Typography>
                             </Box>
 
-                            {/* Center: Mega Menu (desktop) */}
-                            {!isMobile && <MegaMenu categories={categories} />}
+                            {/* Center: live search (desktop) grows to fill */}
+                            {!isMobile && (
+                                <Box sx={{ flex: 1, display: 'flex', justifyContent: 'center', maxWidth: 560 }}>
+                                    <LiveSearch fullWidth />
+                                </Box>
+                            )}
 
-                            {/* Right: search, dark mode, account, cart */}
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                                {!isMobile && (
-                                    <form onSubmit={handleSearch}>
-                                        <TextField
-                                            size="small"
-                                            placeholder="Search products…"
-                                            value={searchQuery}
-                                            onChange={(e) => setSearchQuery(e.target.value)}
-                                            sx={{ width: 200 }}
-                                            InputProps={{
-                                                endAdornment: (
-                                                    <InputAdornment position="end">
-                                                        <IconButton size="small" type="submit">
-                                                            <Search fontSize="small" />
-                                                        </IconButton>
-                                                    </InputAdornment>
-                                                ),
-                                            }}
-                                        />
-                                    </form>
-                                )}
+                            {/* Right: dark mode, account, cart */}
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexShrink: 0 }}>
                                 {isMobile && (
                                     <IconButton color="inherit" size="small" onClick={() => setSearchOpen(v => !v)}>
                                         {searchOpen ? <Close /> : <Search />}
@@ -255,23 +250,17 @@ export default function StorefrontLayout({ toggleDarkMode, darkMode }) {
 
                         {/* Mobile search bar */}
                         {isMobile && searchOpen && (
-                            <Box sx={{ px: 2, pb: 1 }}>
-                                <form onSubmit={handleSearch}>
-                                    <TextField
-                                        fullWidth size="small"
-                                        placeholder="Search products…"
-                                        value={searchQuery}
-                                        onChange={(e) => setSearchQuery(e.target.value)}
-                                        autoFocus
-                                        InputProps={{
-                                            endAdornment: (
-                                                <InputAdornment position="end">
-                                                    <IconButton size="small" type="submit"><Search /></IconButton>
-                                                </InputAdornment>
-                                            ),
-                                        }}
-                                    />
-                                </form>
+                            <Box sx={{ px: 2, pb: 1.25 }}>
+                                <LiveSearch fullWidth autoFocus onNavigate={() => setSearchOpen(false)} />
+                            </Box>
+                        )}
+
+                        {/* Desktop category nav row (AliExpress-style) */}
+                        {!isMobile && (
+                            <Box sx={{ borderTop: '1px solid', borderColor: 'divider' }}>
+                                <Toolbar variant="dense" sx={{ minHeight: 44, gap: 1 }}>
+                                    <MegaMenu categories={categories} />
+                                </Toolbar>
                             </Box>
                         )}
                     </AppBar>
@@ -353,7 +342,7 @@ export default function StorefrontLayout({ toggleDarkMode, darkMode }) {
                                         FABRYTHING
                                     </Typography>
                                     <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.6)', mb: 2 }}>
-                                        Your one-stop destination for trendy and affordable clothing in Bangladesh.
+                                        Bangladesh's destination for authentic branded fashion, footwear, watches, home appliances & beauty — with Cash on Delivery nationwide.
                                     </Typography>
                                     <Box sx={{ display: 'flex', gap: 1 }}>
                                         <IconButton size="small" sx={{ color: 'rgba(255,255,255,0.7)', '&:hover': { color: '#A5B4FC' } }}><Facebook /></IconButton>
@@ -362,10 +351,15 @@ export default function StorefrontLayout({ toggleDarkMode, darkMode }) {
                                 </Grid>
                                 <Grid item xs={6} md={2}>
                                     <Typography variant="subtitle2" fontWeight={700} gutterBottom>Shop</Typography>
-                                    {['Men', 'Women', 'Kids'].map(cat => (
-                                        <Typography key={cat} component={Link} to={`/shop?gender=${cat.toUpperCase()}`}
+                                    {(categories.length ? categories.slice(0, 6) : [
+                                        { name: "Men's Fashion", slug: 'mens-fashion' },
+                                        { name: "Women's Fashion", slug: 'womens-fashion' },
+                                        { name: 'Shoes', slug: 'shoes' },
+                                        { name: 'Watches', slug: 'watches' },
+                                    ]).map(cat => (
+                                        <Typography key={cat.slug} component={Link} to={`/shop?category=${cat.slug}`}
                                             variant="body2" sx={{ display: 'block', mb: 0.5, color: 'rgba(255,255,255,0.6)', textDecoration: 'none', '&:hover': { color: '#A5B4FC' } }}>
-                                            {cat}
+                                            {cat.name}
                                         </Typography>
                                     ))}
                                 </Grid>
@@ -394,7 +388,6 @@ export default function StorefrontLayout({ toggleDarkMode, darkMode }) {
                                 </Typography>
                                 <Box sx={{ display: 'flex', gap: 2 }}>
                                     <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.6)' }}>Cash on Delivery</Typography>
-                                    <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.6)' }}>bKash</Typography>
                                 </Box>
                             </Box>
                         </Container>

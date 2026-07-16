@@ -39,3 +39,12 @@ Thumbs.db
 
 # Claude
 .claude/
+
+# Virtualenvs / tooling
+backend/benv/
+backend/*/benv/
+pyenv/
+graphify-out/
+backend/backenv/
+# Added by code-review-graph
+.code-review-graph/

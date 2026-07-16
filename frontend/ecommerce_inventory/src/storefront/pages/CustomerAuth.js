@@ -6,6 +6,7 @@ import {
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { useDispatch } from 'react-redux';
 import { login } from '../../redux/reducer/IsLoggedInReducer';
+import { syncCartOnLogin } from '../../redux/reducer/cartSlice';
 import useApi from '../../hooks/APIHandler';
 
 export default function CustomerAuth() {
@@ -29,6 +30,7 @@ export default function CustomerAuth() {
         if (res?.data?.access) {
             localStorage.setItem('token', res.data.access);
             dispatch(login());
+            await dispatch(syncCartOnLogin());  // merge guest cart into the account
             navigate(redirect);
         }
     };
@@ -44,6 +46,7 @@ export default function CustomerAuth() {
         if (res?.data?.access) {
             localStorage.setItem('token', res.data.access);
             dispatch(login());
+            await dispatch(syncCartOnLogin());  // merge guest cart into the new account
             navigate(redirect);
         }
     };

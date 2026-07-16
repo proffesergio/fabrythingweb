@@ -2,13 +2,10 @@ import React from 'react';
 import { Card, CardMedia, CardContent, Typography, Box, Rating, Button, IconButton } from '@mui/material';
 import { ShoppingCart, FavoriteBorder, Visibility } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
-import { useDispatch } from 'react-redux';
 import { motion } from 'framer-motion';
-import { addToCart } from '../../redux/reducer/cartSlice';
 
 export default function ProductCard({ product, showFlashBadge }) {
     const navigate = useNavigate();
-    const dispatch = useDispatch();
 
     const price = product.discount_price || product.initial_selling_price;
     const hasDiscount = product.discount_price && product.discount_price < product.initial_selling_price;
@@ -25,19 +22,9 @@ export default function ProductCard({ product, showFlashBadge }) {
         : '/placeholder.png';
 
     const handleQuickAdd = (e) => {
+        // Size/variant must be chosen on the product page, so route there.
         e.stopPropagation();
-        dispatch(addToCart({
-            product: {
-                id: product.id,
-                name: product.name,
-                slug: product.slug,
-                image: product.image,
-                initial_selling_price: product.initial_selling_price,
-                discount_price: product.discount_price,
-            },
-            size: product.available_sizes?.[0] || 'FREE',
-            quantity: 1,
-        }));
+        navigate(`/product/${product.slug}`);
     };
 
     return (

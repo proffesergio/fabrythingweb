@@ -35,7 +35,7 @@ const slides = [
     },
     {
         title: 'Free Delivery Nationwide',
-        subtitle: 'On all orders over ৳1,500. Cash on Delivery & bKash accepted.',
+        subtitle: 'Fast delivery nationwide. Cash on Delivery available.',
         cta: 'Start Shopping',
         link: '/shop',
         image: 'https://picsum.photos/seed/delivery_fashion/1600/700',

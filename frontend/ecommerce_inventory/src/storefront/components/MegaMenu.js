@@ -1,181 +1,153 @@
 import React, { useState } from 'react';
 import {
     Box, Typography, Paper, Grid,
-    List, ListItemButton, ListItemText, Collapse,
+    List, ListItemButton, ListItemText,
 } from '@mui/material';
-import { ExpandMore, ExpandLess } from '@mui/icons-material';
+import { Apps, Whatshot, FiberNew, Storefront as StorefrontIcon } from '@mui/icons-material';
 import { Link } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
 
-const navItems = [
-    { label: 'Home',  path: '/',     type: 'link' },
-    { label: 'Shop',  path: '/shop', type: 'link' },
-    { label: 'Men',   gender: 'MEN',   type: 'mega' },
-    { label: 'Women', gender: 'WOMEN', type: 'mega' },
-    { label: 'Kids',  gender: 'KIDS',  type: 'mega' },
+// Emoji glyph + accent colour per category slug (AliExpress-style colourful tiles).
+const CATEGORY_META = {
+    'mens-fashion':       { icon: '👔', color: '#4F46E5' },
+    'womens-fashion':     { icon: '👗', color: '#EC4899' },
+    'shoes':              { icon: '👟', color: '#F59E0B' },
+    'watches':            { icon: '⌚', color: '#0EA5E9' },
+    'eyewear':            { icon: '🕶️', color: '#8B5CF6' },
+    'wallets-bags':       { icon: '👜', color: '#B45309' },
+    'home-appliances':    { icon: '🏠', color: '#10B981' },
+    'skincare-cosmetics': { icon: '💄', color: '#E85D4A' },
+};
+const metaFor = (slug) => CATEGORY_META[slug] || { icon: '🛍️', color: '#4F46E5' };
+
+const quickLinks = [
+    { label: 'Home',         path: '/',                    icon: <StorefrontIcon fontSize="small" /> },
+    { label: 'Shop All',     path: '/shop',                icon: <Apps fontSize="small" /> },
+    { label: 'Flash Deals',  path: '/shop?ordering=price_low', icon: <Whatshot fontSize="small" />, hot: true },
+    { label: 'New Arrivals', path: '/shop?ordering=newest',    icon: <FiberNew fontSize="small" /> },
 ];
 
-// Desktop mega menu
-export default function MegaMenu({ categories }) {
-    const [activeMenu, setActiveMenu] = useState(null);
-
-    const getCategoryChildren = (label) => {
-        const parent = categories?.find(c => c.slug === label.toLowerCase());
-        return parent?.children || [];
-    };
+// ── Desktop nav: "All Categories" flyout + quick links ────────────────────────
+export default function MegaMenu({ categories = [] }) {
+    const [open, setOpen] = useState(false);
 
     return (
         <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center' }}>
-            {navItems.map(item => (
+            {/* All Categories flyout */}
+            <Box
+                onMouseEnter={() => setOpen(true)}
+                onMouseLeave={() => setOpen(false)}
+                sx={{ position: 'relative' }}
+            >
                 <Box
-                    key={item.label}
-                    // ── Hover zone: includes the label AND the absolutely-positioned
-                    //    dropdown, so mouse moving between them never fires onMouseLeave.
-                    onMouseEnter={() => item.type === 'mega' && setActiveMenu(item.label)}
-                    onMouseLeave={() => item.type === 'mega' && setActiveMenu(null)}
-                    sx={{ position: 'relative' }}
+                    sx={{
+                        display: 'flex', alignItems: 'center', gap: 0.75,
+                        px: 1.5, py: 1, borderRadius: 2, cursor: 'pointer',
+                        color: open ? 'primary.main' : 'text.primary',
+                        fontWeight: 700, fontSize: '0.92rem',
+                        bgcolor: open ? 'action.hover' : 'transparent',
+                        transition: 'all 0.15s',
+                    }}
                 >
-                    {/* Nav label */}
-                    <Typography
-                        component={Link}
-                        to={item.path || `/shop?gender=${item.gender}`}
-                        sx={{
-                            display: 'block',
-                            textDecoration: 'none',
-                            color: activeMenu === item.label ? 'primary.main' : 'text.primary',
-                            fontSize: '0.92rem',
-                            fontWeight: 600,
-                            px: 1.5, py: 1,
-                            borderRadius: 2,
-                            letterSpacing: '0.01em',
-                            transition: 'color 0.15s',
-                            '&:hover': { color: 'primary.main' },
-                        }}
-                    >
-                        {item.label}
-                    </Typography>
+                    <Apps fontSize="small" />
+                    <span>All Categories</span>
+                </Box>
 
-                    {/* Dropdown — only for mega items, only when active */}
-                    {item.type === 'mega' && activeMenu === item.label && (
-                        <>
-                            {/*
-                             * Transparent 8-px bridge between the label bottom and the Paper top.
-                             * It has no background but IS inside the hover container, so crossing
-                             * it does NOT trigger onMouseLeave on the parent Box.
-                             */}
-                            <Box sx={{
-                                position: 'absolute', top: '100%', left: 0,
-                                width: '100%', height: 8,
-                                zIndex: 1300,
-                            }} />
+                {/* transparent bridge so moving into the panel doesn't close it */}
+                <Box sx={{ position: 'absolute', top: '100%', left: 0, width: '100%', height: 10, zIndex: 1300 }} />
 
+                <AnimatePresence>
+                    {open && (
+                        <motion.div
+                            initial={{ opacity: 0, y: 8 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: 8 }}
+                            transition={{ duration: 0.16 }}
+                            style={{ position: 'absolute', top: 'calc(100% + 10px)', left: 0, zIndex: 1300 }}
+                        >
                             <Paper
-                                elevation={10}
+                                elevation={12}
                                 sx={{
-                                    position: 'absolute',
-                                    top: 'calc(100% + 8px)',
-                                    left: 0,
-                                    zIndex: 1300,
-                                    minWidth: 420,
-                                    maxWidth: 580,
-                                    borderRadius: 3,
-                                    p: 3,
-                                    border: '1px solid',
-                                    borderColor: 'divider',
-                                    backdropFilter: 'blur(14px)',
+                                    width: 560, borderRadius: 3, p: 2.5,
+                                    border: '1px solid', borderColor: 'divider',
                                 }}
                             >
-                                <MegaMenuContent
-                                    label={item.label}
-                                    gender={item.gender}
-                                    children={getCategoryChildren(item.label)}
-                                    onClose={() => setActiveMenu(null)}
-                                />
+                                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1.5 }}>
+                                    <Typography variant="subtitle1" fontWeight={800}>Shop by Category</Typography>
+                                    <Typography
+                                        component={Link} to="/shop" onClick={() => setOpen(false)}
+                                        variant="body2" sx={{ color: 'secondary.main', fontWeight: 700, textDecoration: 'none', '&:hover': { textDecoration: 'underline' } }}
+                                    >
+                                        View all →
+                                    </Typography>
+                                </Box>
+                                <Grid container spacing={1}>
+                                    {categories.map((cat) => {
+                                        const meta = metaFor(cat.slug);
+                                        return (
+                                            <Grid item xs={6} key={cat.id}>
+                                                <Box
+                                                    component={Link}
+                                                    to={`/shop?category=${cat.slug}`}
+                                                    onClick={() => setOpen(false)}
+                                                    sx={{
+                                                        display: 'flex', alignItems: 'center', gap: 1.25,
+                                                        p: 1, borderRadius: 2, textDecoration: 'none',
+                                                        color: 'text.primary', transition: 'all 0.15s',
+                                                        '&:hover': { bgcolor: 'action.hover', transform: 'translateX(3px)' },
+                                                    }}
+                                                >
+                                                    <Box sx={{
+                                                        width: 40, height: 40, borderRadius: 2, flexShrink: 0,
+                                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                        fontSize: '1.25rem',
+                                                        bgcolor: `${meta.color}1A`,
+                                                    }}>
+                                                        {meta.icon}
+                                                    </Box>
+                                                    <Box sx={{ minWidth: 0 }}>
+                                                        <Typography variant="body2" fontWeight={700} noWrap>{cat.name}</Typography>
+                                                        <Typography variant="caption" color="text.secondary" noWrap sx={{ display: 'block', maxWidth: 200 }}>
+                                                            {cat.description || 'Explore collection'}
+                                                        </Typography>
+                                                    </Box>
+                                                </Box>
+                                            </Grid>
+                                        );
+                                    })}
+                                </Grid>
                             </Paper>
-                        </>
+                        </motion.div>
                     )}
-                </Box>
+                </AnimatePresence>
+            </Box>
+
+            {/* Quick links */}
+            {quickLinks.map((link) => (
+                <Typography
+                    key={link.label}
+                    component={Link}
+                    to={link.path}
+                    sx={{
+                        display: 'flex', alignItems: 'center', gap: 0.5,
+                        textDecoration: 'none',
+                        color: link.hot ? 'secondary.main' : 'text.primary',
+                        fontSize: '0.92rem', fontWeight: 600,
+                        px: 1.25, py: 1, borderRadius: 2,
+                        transition: 'color 0.15s, background 0.15s',
+                        '&:hover': { color: 'primary.main', bgcolor: 'action.hover' },
+                    }}
+                >
+                    {link.icon}
+                    {link.label}
+                </Typography>
             ))}
         </Box>
     );
 }
 
-function MegaMenuContent({ label, children, gender, onClose }) {
-    return (
-        <Box>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                <Typography variant="subtitle1" sx={{ fontWeight: 700, letterSpacing: '-0.01em' }}>
-                    {label}'s Collection
-                </Typography>
-                <Typography
-                    component={Link}
-                    to={`/shop?gender=${gender}`}
-                    onClick={onClose}
-                    variant="body2"
-                    sx={{
-                        color: 'secondary.main', textDecoration: 'none',
-                        fontWeight: 600, fontSize: '0.82rem',
-                        '&:hover': { textDecoration: 'underline' },
-                    }}
-                >
-                    View All →
-                </Typography>
-            </Box>
-
-            <Grid container spacing={1}>
-                {children.map(cat => (
-                    <Grid item xs={6} sm={4} key={cat.id}>
-                        <Box
-                            component={Link}
-                            to={`/shop?category=${cat.slug}`}
-                            onClick={onClose}
-                            sx={{
-                                display: 'flex',
-                                justifyContent: 'space-between',
-                                alignItems: 'center',
-                                textDecoration: 'none',
-                                color: 'text.primary',
-                                py: 0.75, px: 1.25,
-                                borderRadius: 2,
-                                fontSize: '0.88rem',
-                                fontWeight: 500,
-                                transition: 'all 0.15s',
-                                '&:hover': {
-                                    bgcolor: 'action.hover',
-                                    color: 'primary.main',
-                                    pl: 1.75,
-                                },
-                            }}
-                        >
-                            <span>{cat.name}</span>
-                            {cat.product_count > 0 && (
-                                <Typography
-                                    component="span"
-                                    variant="caption"
-                                    sx={{
-                                        ml: 0.5, px: 0.75, py: 0.1,
-                                        bgcolor: 'action.selected',
-                                        borderRadius: 1,
-                                        fontSize: '0.7rem',
-                                        color: 'text.secondary',
-                                        fontWeight: 600,
-                                    }}
-                                >
-                                    {cat.product_count}
-                                </Typography>
-                            )}
-                        </Box>
-                    </Grid>
-                ))}
-            </Grid>
-        </Box>
-    );
-}
-
-// ── Mobile accordion menu (Drawer) ────────────────────────────
-export function MobileCategoryMenu({ categories, onClose }) {
-    const [expanded, setExpanded] = useState(null);
-    const genderSlugs = ['men', 'women', 'kids'];
-
+// ── Mobile drawer menu ────────────────────────────────────────────────────────
+export function MobileCategoryMenu({ categories = [], onClose }) {
     return (
         <List>
             <ListItemButton component={Link} to="/" onClick={onClose}>
@@ -184,50 +156,35 @@ export function MobileCategoryMenu({ categories, onClose }) {
             <ListItemButton component={Link} to="/shop" onClick={onClose}>
                 <ListItemText primary="Shop All" primaryTypographyProps={{ fontWeight: 600 }} />
             </ListItemButton>
-            {genderSlugs.map(slug => {
-                const parent = categories?.find(c => c.slug === slug);
-                if (!parent) return null;
-                const isOpen = expanded === slug;
+            <ListItemButton component={Link} to="/shop?ordering=newest" onClick={onClose}>
+                <ListItemText primary="New Arrivals" primaryTypographyProps={{ fontWeight: 600, color: 'primary.main' }} />
+            </ListItemButton>
+
+            <Typography variant="overline" sx={{ px: 2, pt: 1.5, display: 'block', color: 'text.secondary', fontWeight: 700 }}>
+                Categories
+            </Typography>
+            {categories.map((cat) => {
+                const meta = metaFor(cat.slug);
                 return (
-                    <React.Fragment key={slug}>
-                        <ListItemButton onClick={() => setExpanded(isOpen ? null : slug)}>
-                            <ListItemText primary={parent.name} primaryTypographyProps={{ fontWeight: 600 }} />
-                            {isOpen ? <ExpandLess /> : <ExpandMore />}
-                        </ListItemButton>
-                        <Collapse in={isOpen}>
-                            <List disablePadding>
-                                <ListItemButton
-                                    component={Link}
-                                    to={`/shop?gender=${slug.toUpperCase()}`}
-                                    onClick={onClose}
-                                    sx={{ pl: 4 }}
-                                >
-                                    <ListItemText
-                                        primary={`All ${parent.name}`}
-                                        primaryTypographyProps={{ fontSize: '0.9rem', color: 'primary.main', fontWeight: 600 }}
-                                    />
-                                </ListItemButton>
-                                {parent.children?.map(child => (
-                                    <ListItemButton
-                                        key={child.id}
-                                        component={Link}
-                                        to={`/shop?category=${child.slug}`}
-                                        onClick={onClose}
-                                        sx={{ pl: 4 }}
-                                    >
-                                        <ListItemText
-                                            primary={child.name}
-                                            secondary={child.product_count > 0 ? `${child.product_count} items` : null}
-                                            primaryTypographyProps={{ fontSize: '0.9rem' }}
-                                            secondaryTypographyProps={{ fontSize: '0.75rem' }}
-                                        />
-                                    </ListItemButton>
-                                ))}
-                            </List>
-                        </Collapse>
-                    </React.Fragment>
+                    <ListItemButton
+                        key={cat.id}
+                        component={Link}
+                        to={`/shop?category=${cat.slug}`}
+                        onClick={onClose}
+                    >
+                        <Box sx={{
+                            width: 32, height: 32, mr: 1.5, borderRadius: 1.5, flexShrink: 0,
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            fontSize: '1.05rem', bgcolor: `${meta.color}1A`,
+                        }}>
+                            {meta.icon}
+                        </Box>
+                        <ListItemText primary={cat.name} primaryTypographyProps={{ fontSize: '0.95rem', fontWeight: 500 }} />
+                    </ListItemButton>
                 );
             })}
         </List>
     );
 }
+
+export { CATEGORY_META, metaFor };

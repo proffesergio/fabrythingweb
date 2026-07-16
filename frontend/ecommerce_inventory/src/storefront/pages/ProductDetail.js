@@ -27,8 +27,14 @@ export default function ProductDetail() {
             const res = await callApi({ url: `store/products/${slug}/` });
             if (res?.data?.data) {
                 setProduct(res.data.data);
-                const sizes = res.data.data.available_sizes;
-                if (Array.isArray(sizes) && sizes.length > 0) setSelectedSize(sizes[0]);
+                const vs = res.data.data.variants;
+                if (Array.isArray(vs) && vs.length > 0) {
+                    const firstInStock = vs.find(v => v.in_stock) || vs[0];
+                    setSelectedSize(firstInStock.size);
+                } else {
+                    const sizes = res.data.data.available_sizes;
+                    if (Array.isArray(sizes) && sizes.length > 0) setSelectedSize(sizes[0]);
+                }
             }
         };
         fetchProduct();
@@ -53,24 +59,36 @@ export default function ProductDetail() {
     }
 
     const images = Array.isArray(product.image) ? product.image : [];
-    const price = product.discount_price || product.initial_selling_price;
+    const variants = Array.isArray(product.variants) ? product.variants : [];
+    const selectedVariant = variants.find(v => v.size === selectedSize) || variants[0] || null;
+    const price = selectedVariant
+        ? Number(selectedVariant.effective_price)
+        : (product.discount_price || product.initial_selling_price);
     const hasDiscount = product.discount_price && product.discount_price < product.initial_selling_price;
-    const sizes = Array.isArray(product.available_sizes) ? product.available_sizes : [];
+    // Prefer real variant sizes; fall back to the legacy available_sizes list.
+    const variantSizes = [...new Set(variants.map(v => v.size).filter(Boolean))];
+    const sizes = variantSizes.length
+        ? variantSizes
+        : (Array.isArray(product.available_sizes) ? product.available_sizes : []);
+    const inStock = selectedVariant ? selectedVariant.in_stock : false;
     const specs = product.specifications && typeof product.specifications === 'object' ? product.specifications : {};
     const highlights = Array.isArray(product.highlights) ? product.highlights : [];
     const sizeChart = product.size_chart && typeof product.size_chart === 'object' ? product.size_chart : {};
 
     const handleAddToCart = () => {
+        if (!selectedVariant || !inStock) return;
+        const firstImage = Array.isArray(product.image) && product.image.length ? product.image[0] : '';
         dispatch(addToCart({
-            product: {
-                id: product.id,
-                name: product.name,
-                slug: product.slug,
-                image: product.image,
-                initial_selling_price: product.initial_selling_price,
-                discount_price: product.discount_price,
-            },
-            size: selectedSize || 'FREE',
+            variantId: selectedVariant.id,
+            productId: product.id,
+            name: product.name,
+            slug: product.slug,
+            image: firstImage,
+            sku: selectedVariant.sku,
+            size: selectedVariant.size,
+            color: selectedVariant.color,
+            price: Number(selectedVariant.effective_price),
+            stock: selectedVariant.stock_quantity,
             quantity,
         }));
     };
@@ -204,17 +222,36 @@ export default function ProductDetail() {
                         </Box>
                     </Box>
 
+                    {/* Stock status */}
+                    <Box sx={{ mb: 1 }}>
+                        {selectedVariant ? (
+                            inStock ? (
+                                <Chip
+                                    size="small" color="success" variant="outlined"
+                                    label={selectedVariant.stock_quantity <= 5
+                                        ? `Only ${selectedVariant.stock_quantity} left`
+                                        : 'In stock'}
+                                />
+                            ) : (
+                                <Chip size="small" color="error" variant="outlined" label="Out of stock" />
+                            )
+                        ) : (
+                            <Chip size="small" color="warning" variant="outlined" label="Unavailable" />
+                        )}
+                    </Box>
+
                     {/* Add to Cart */}
                     <Button
                         variant="contained"
                         color="secondary"
                         size="large"
                         fullWidth
+                        disabled={!inStock}
                         startIcon={<ShoppingCart />}
                         onClick={handleAddToCart}
                         sx={{ py: 1.5, mb: 2, fontSize: '1.1rem' }}
                     >
-                        Add to Cart - ৳{(price * quantity)?.toLocaleString()}
+                        {inStock ? `Add to Cart - ৳${(price * quantity)?.toLocaleString()}` : 'Out of Stock'}
                     </Button>
 
                     {/* Description */}

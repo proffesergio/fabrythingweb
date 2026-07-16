@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "code-review-graph": {
+      "command": "/home/billsbro/Music/fabrythingweb/backend/EcommerceInventory/.venv/bin/python3",
+      "args": [
+        "-m",
+        "code_review_graph",
+        "serve"
+      ],
+      "cwd": "/home/billsbro/Music/fabrythingweb",
+      "type": "stdio"
+    }
+  }
+}

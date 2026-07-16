@@ -1,10 +1,10 @@
 #!/usr/bin/env python
 import os
 import django
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'EcommerceInventory.settings')
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings')
 django.setup()
 
-from UserServices.models import Modules
+from accounts.models import Modules
 from django.utils import timezone
 
 # Get parent IDs

@@ -1,8 +1,25 @@
 # Fabrything — Bangladesh Clothing Store
 
-A full-stack e-commerce platform for a B2C clothing store targeting the Bangladeshi market. Built with Django REST Framework and React, supporting Cash on Delivery and bKash payments.
+A full-stack **Cash-on-Delivery** e-commerce platform for a B2C clothing store targeting the Bangladeshi market. Built with Django REST Framework and React.
 
 **Live domain:** fabrything.com
+
+> ### ⚠️ Architecture updated (COD refactor)
+> This project was restructured into a production-ready COD storefront. Key changes:
+> - **Database is now PostgreSQL** (was MySQL).
+> - **Payment is Cash on Delivery only** (bKash removed).
+> - **Django apps were renamed** for clarity: `UserServices→accounts`, `ProductServices→catalog`,
+>   `InventoryServices→inventory`, `OrderService→purchasing`, `StorefrontService→storefront`,
+>   plus new `core` (store config/helpers) and `orders` (COD order layer) apps, and a `config` settings package.
+> - **New sellable stock** lives on `catalog.ProductVariant` (per size/colour); checkout locks and
+>   decrements it with `select_for_update()` inside `transaction.atomic` to prevent oversell.
+> - **COD order state machine**: `PENDING_VERIFICATION → CONFIRMED → OUT_FOR_DELIVERY → DELIVERED`,
+>   plus `CANCELED`/`RETURNED` (which auto-restock). Order numbers are now `ORD-XXXXXXXX`.
+> - **Shipping** is a flat rate from `core.StoreConfiguration`, applied at order creation.
+>
+> **👉 Follow [`SETUP.md`](./SETUP.md) for setup** — because apps were renamed and the DB engine changed,
+> you generate fresh migrations on first run. Some walkthrough diagrams below still show the pre-refactor
+> flow (e.g. `SO-` codes, bKash) and are being updated.
 
 ---
 
@@ -22,7 +39,7 @@ A full-stack e-commerce platform for a B2C clothing store targeting the Banglade
 | Layer | Technology |
 |---|---|
 | Backend | Django 5.0 + Django REST Framework 3.15 |
-| Database | MySQL |
+| Database | PostgreSQL (via psycopg 3) |
 | Auth | JWT (SimpleJWT) — separate tokens for admin vs. customer |
 | Frontend | React 18, MUI v5, Redux Toolkit, React Router v6 |
 | UI Components | Swiper (carousel), Framer Motion (animations), Recharts |
@@ -34,23 +51,23 @@ A full-stack e-commerce platform for a B2C clothing store targeting the Banglade
 ## Project Structure
 
 ```
-fabrything-new/
+fabrything/
 ├── backend/
 │   └── EcommerceInventory/
-│       ├── EcommerceInventory/     # Django project settings & URLs
-│       ├── UserServices/           # Admin & customer auth, roles, permissions
-│       ├── ProductServices/        # Products, categories, reviews, Q&A
-│       │   └── management/commands/seed_clothing_data.py
-│       ├── InventoryServices/      # Warehouses, racks, stock levels
-│       ├── OrderService/           # Purchase orders & sales orders
-│       └── StorefrontService/      # Public storefront API + customer checkout
+│       ├── config/                 # settings (base/dev/prod), urls, wsgi, asgi
+│       ├── core/                   # StoreConfiguration, shared helpers, middleware, permissions
+│       ├── accounts/               # Admin & customer auth, roles, permissions, addresses
+│       ├── catalog/                # Products, Categories, ProductVariant, reviews, Q&A
+│       │   └── management/commands/{seed_clothing_data,seed_demo}.py
+│       ├── inventory/              # Warehouses, racks, batch stock (back-office)
+│       ├── purchasing/             # Purchase orders & sales orders (back-office)
+│       ├── orders/                 # COD Order + OrderItem + state machine + checkout service
+│       └── storefront/             # Public storefront API + customer cart + COD checkout
 └── frontend/
     └── ecommerce_inventory/src/
         ├── pages/                  # Admin panel pages
-        ├── storefront/             # Customer-facing storefront
-        │   ├── pages/              # HomePage, ProductCatalog, Cart, Checkout…
-        │   └── components/         # HeroCarousel, ProductCard, FlashSale…
-        └── redux/                  # Cart state (Redux Toolkit)
+        ├── storefront/             # Customer-facing storefront (pages + components)
+        └── redux/                  # Cart state (variant-aware) + guest→user sync
 ```
 
 ---

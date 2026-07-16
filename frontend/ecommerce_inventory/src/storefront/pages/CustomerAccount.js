@@ -11,9 +11,10 @@ import { logout } from '../../redux/reducer/IsLoggedInReducer';
 import useApi from '../../hooks/APIHandler';
 
 const STATUS_COLORS = {
-    DRAFT: 'default', SENT: 'info', DELIVERED: 'success',
-    COMPLETED: 'success', CANCELLED: 'error', RETURNED: 'warning',
+    PENDING_VERIFICATION: 'default', CONFIRMED: 'info', OUT_FOR_DELIVERY: 'info',
+    DELIVERED: 'success', CANCELED: 'error', RETURNED: 'warning',
 };
+const CANCELABLE = ['PENDING_VERIFICATION', 'CONFIRMED', 'OUT_FOR_DELIVERY'];
 
 export default function CustomerAccount() {
     const [tab, setTab] = useState(0);
@@ -73,6 +74,14 @@ export default function CustomerAccount() {
     const handleDeleteAddress = async (id) => {
         await callApi({ url: `store/addresses/${id}/`, method: 'DELETE' });
         fetchAddresses();
+    };
+
+    const handleCancelOrder = async (id) => {
+        const res = await callApi({ url: `store/orders/${id}/cancel/`, method: 'POST', body: { reason: 'Canceled by customer' } });
+        if (res?.data) {
+            setSelectedOrder(null);
+            fetchOrders();
+        }
     };
 
     const handleLogout = () => {
@@ -141,13 +150,13 @@ export default function CustomerAccount() {
                             <Card key={order.id} sx={{ p: 2, mb: 2 }}>
                                 <Grid container spacing={2} alignItems="center">
                                     <Grid item xs={12} sm={3}>
-                                        <Typography variant="subtitle2" fontWeight={700}>{order.so_code}</Typography>
+                                        <Typography variant="subtitle2" fontWeight={700}>{order.order_number}</Typography>
                                         <Typography variant="caption" color="text.secondary">
                                             {new Date(order.created_at).toLocaleDateString()}
                                         </Typography>
                                     </Grid>
                                     <Grid item xs={4} sm={2}>
-                                        <Chip label={order.status} size="small" color={STATUS_COLORS[order.status] || 'default'} />
+                                        <Chip label={order.status_display || order.status} size="small" color={STATUS_COLORS[order.status] || 'default'} />
                                     </Grid>
                                     <Grid item xs={4} sm={2}>
                                         <Typography variant="body2">{order.item_count} items</Typography>
@@ -193,10 +202,10 @@ export default function CustomerAccount() {
             <Dialog open={!!selectedOrder} onClose={() => setSelectedOrder(null)} maxWidth="sm" fullWidth>
                 {selectedOrder && (
                     <>
-                        <DialogTitle>Order #{selectedOrder.so_code}</DialogTitle>
+                        <DialogTitle>Order #{selectedOrder.order_number}</DialogTitle>
                         <DialogContent>
                             <Box sx={{ mb: 2 }}>
-                                <Chip label={selectedOrder.status} color={STATUS_COLORS[selectedOrder.status] || 'default'} sx={{ mb: 1 }} />
+                                <Chip label={selectedOrder.status_display || selectedOrder.status} color={STATUS_COLORS[selectedOrder.status] || 'default'} sx={{ mb: 1 }} />
                                 <Typography variant="body2" color="text.secondary">
                                     Placed on {new Date(selectedOrder.created_at).toLocaleDateString()}
                                 </Typography>
@@ -207,10 +216,10 @@ export default function CustomerAccount() {
                                     <Box>
                                         <Typography variant="body2" fontWeight={600}>{item.product_name}</Typography>
                                         <Typography variant="caption" color="text.secondary">
-                                            Qty: {item.quantity_ordered} {item.additional_details?.size ? `| Size: ${item.additional_details.size}` : ''}
+                                            Qty: {item.quantity} {item.size ? `| Size: ${item.size}` : ''}
                                         </Typography>
                                     </Box>
-                                    <Typography variant="body2" fontWeight={600}>৳{Number(item.amount_ordered).toLocaleString()}</Typography>
+                                    <Typography variant="body2" fontWeight={600}>৳{Number(item.line_total).toLocaleString()}</Typography>
                                 </Box>
                             ))}
                             <Divider sx={{ my: 2 }} />
@@ -228,6 +237,11 @@ export default function CustomerAccount() {
                             )}
                         </DialogContent>
                         <DialogActions>
+                            {CANCELABLE.includes(selectedOrder.status) && (
+                                <Button color="error" onClick={() => handleCancelOrder(selectedOrder.id)} disabled={loading}>
+                                    Cancel Order
+                                </Button>
+                            )}
                             <Button onClick={() => setSelectedOrder(null)}>Close</Button>
                         </DialogActions>
                     </>
