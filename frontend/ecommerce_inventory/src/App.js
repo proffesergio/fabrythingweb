@@ -21,6 +21,8 @@ import ManageModuleUrls from './pages/module/ManageModuleUrls';
 import CreatePurchaseOrder from './pages/purchaseorder/CreatePurchaseOrder';
 import ManagePurchaseOrder from './pages/purchaseorder/ManagePurchaseOrder';
 import ManageSalesOrder from './pages/salesorder/ManageSalesOrder';
+import ManageRestaurants from './pages/food/ManageRestaurants';
+import ManageZones from './pages/food/ManageZones';
 
 // Storefront imports
 import { ThemeProvider } from '@mui/material/styles';
@@ -123,6 +125,8 @@ function App() {
           {path:"create/po/:id",element:<ProtectedRoute element={<CreatePurchaseOrder/>}/>},
           {path:"manage/purchaseorder",element:<ProtectedRoute element={<ManagePurchaseOrder/>}/>},
           {path:"manage/salesorder",element:<ProtectedRoute element={<ManageSalesOrder/>}/>},
+          {path:"manage/food/restaurants",element:<ProtectedRoute element={<ManageRestaurants/>}/>},
+          {path:"manage/food/zones",element:<ProtectedRoute element={<ManageZones/>}/>},
           {path:"*",element:<Error404Page/>},
         ]},
     ]
