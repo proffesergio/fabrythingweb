@@ -1,6 +1,5 @@
 from decimal import Decimal
 from django.test import TestCase
-from django.urls import reverse
 from rest_framework.test import APIClient
 from food.models import Restaurant, FoodCategory, FoodItem
 
@@ -42,3 +41,11 @@ class PublicApiTests(TestCase):
 
         with self.assertNumQueries(4):
             self.client.get("/api/food/restaurants/big/")
+
+    def test_detail_404_for_non_active_slug(self):
+        res = self.client.get("/api/food/restaurants/pending/")
+        self.assertEqual(res.status_code, 404)
+
+    def test_detail_404_for_unknown_slug(self):
+        res = self.client.get("/api/food/restaurants/does-not-exist/")
+        self.assertEqual(res.status_code, 404)
