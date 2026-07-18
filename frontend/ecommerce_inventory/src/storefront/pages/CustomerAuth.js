@@ -8,6 +8,7 @@ import { useDispatch } from 'react-redux';
 import { login } from '../../redux/reducer/IsLoggedInReducer';
 import { syncCartOnLogin } from '../../redux/reducer/cartSlice';
 import useApi from '../../hooks/APIHandler';
+import { getUser } from '../../utils/Helper';
 
 export default function CustomerAuth() {
     const [tab, setTab] = useState(0);
@@ -31,7 +32,12 @@ export default function CustomerAuth() {
             localStorage.setItem('token', res.data.access);
             dispatch(login());
             await dispatch(syncCartOnLogin());  // merge guest cart into the account
-            navigate(redirect);
+            // Restaurant-role accounts (vendors) land on their dashboard rather than
+            // wherever the customer flow was headed — the role claim is embedded in
+            // the JWT at login time (storefront/views.py issue_tokens), so this is
+            // just a decode, no extra request.
+            const user = getUser();
+            navigate(user?.role === 'Restaurant' ? '/vendor' : redirect);
         }
     };
 

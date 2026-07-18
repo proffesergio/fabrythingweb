@@ -3,6 +3,7 @@ import Home from './pages/Home';
 import Layout from './layout/layout';
 import {RouterProvider, createBrowserRouter} from 'react-router-dom'
 import ProtectedRoute from './utils/ProtectedRoute';
+import VendorRoute from './utils/VendorRoute';
 import {ToastContainer} from 'react-toastify';
 import Auth from './pages/Auth';
 import { useSelector } from 'react-redux';
@@ -36,6 +37,11 @@ import CheckoutPage from './storefront/pages/CheckoutPage';
 import CustomerAuth from './storefront/pages/CustomerAuth';
 import CustomerAccount from './storefront/pages/CustomerAccount';
 import { useMemo, useState } from 'react';
+
+// Vendor (Restaurant-role) dashboard imports
+import VendorLayout from './vendor/VendorLayout';
+import VendorRestaurant from './vendor/VendorRestaurant';
+import VendorMenu from './vendor/VendorMenu';
 
 // Wraps the storefront with a dark-mode-aware theme.
 // Lives inside the router so it re-renders cleanly on toggle.
@@ -104,6 +110,20 @@ function App() {
       // Storefront Auth (standalone page, no layout)
       {path:"/auth/login",element:<StorefrontAuthTheme><CustomerAuth/></StorefrontAuthTheme>},
       {path:"/auth/signup",element:<StorefrontAuthTheme><CustomerAuth/></StorefrontAuthTheme>},
+
+      // ── Vendor Routes (restaurant-owner dashboard) ──
+      // Gated by role, not just auth: VendorRoute decodes the JWT (see utils/VendorRoute.js)
+      // and requires role === 'Restaurant'. The backend independently enforces owner-scoping
+      // on every vendor/* endpoint (request.user.restaurant), so this gate is UX only, not
+      // the security boundary.
+      {
+        path:"/vendor",
+        element:<VendorRoute element={<VendorLayout/>}/>,
+        children:[
+          {index:true,element:<VendorRestaurant/>},
+          {path:"menu",element:<VendorMenu/>},
+        ]
+      },
 
       // ── Admin Routes ──
       {path:"/admin/auth",element:<Auth/>},
