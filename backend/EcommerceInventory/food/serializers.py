@@ -61,7 +61,6 @@ class FoodCategorySerializer(_LangMixin, serializers.ModelSerializer):
 
 class RestaurantListSerializer(_LangMixin, serializers.ModelSerializer):
     display_name = serializers.SerializerMethodField()
-    name = serializers.SerializerMethodField()
 
     class Meta:
         model = Restaurant
@@ -70,9 +69,6 @@ class RestaurantListSerializer(_LangMixin, serializers.ModelSerializer):
                   "is_open", "status"]
 
     def get_display_name(self, obj):
-        return localized(obj, "name", self.lang)
-
-    def get_name(self, obj):
         return localized(obj, "name", self.lang)
 
 

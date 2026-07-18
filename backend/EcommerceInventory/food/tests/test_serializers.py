@@ -33,4 +33,5 @@ class RestaurantDetailSerializerTests(TestCase):
 
     def test_bn_name_rendered(self):
         data = RestaurantDetailSerializer(self.r, context={"lang": "bn"}).data
-        self.assertEqual(data["name"], "রহিম")
+        self.assertEqual(data["display_name"], "রহিম")
+        self.assertEqual(data["name"], "Rahim")
