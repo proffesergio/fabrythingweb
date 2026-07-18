@@ -10,14 +10,49 @@ import {
     ShoppingCart, Person, Menu as MenuIcon, Search, Close,
     Home as HomeIcon, Category, AccountCircle,
     Phone, Email, Facebook, Instagram,
-    DarkMode, LightMode,
+    DarkMode, LightMode, Restaurant as RestaurantIcon,
 } from '@mui/icons-material';
+import { motion } from 'framer-motion';
 import { useSelector } from 'react-redux';
 import { selectCartItemCount } from '../../redux/reducer/cartSlice';
 import { isAuthenticated } from '../../utils/Helper';
 import useApi from '../../hooks/APIHandler';
 import MegaMenu, { MobileCategoryMenu } from '../components/MegaMenu';
 import LiveSearch from '../components/LiveSearch';
+
+// Animated, highlighted "Food" nav entry — points at the Phase-1 `/food`
+// placeholder. Transform-only animation (scale pulse) so it stays cheap on
+// low-end/rural devices; no layout-affecting properties are animated.
+function FoodNavBadge() {
+    return (
+        <Box
+            component={motion.div}
+            animate={{ scale: [1, 1.06, 1] }}
+            transition={{ repeat: Infinity, duration: 2, ease: 'easeInOut' }}
+            sx={{ display: 'inline-flex' }}
+        >
+            <Box
+                component={Link}
+                to="/food"
+                sx={{
+                    display: 'flex', alignItems: 'center', gap: 0.5,
+                    textDecoration: 'none',
+                    px: 1.5, py: 0.5,
+                    borderRadius: 5,
+                    fontWeight: 700,
+                    fontSize: '0.85rem',
+                    color: 'white',
+                    background: 'linear-gradient(135deg,#F97316,#E85D4A)',
+                    boxShadow: '0 2px 10px rgba(232,93,74,0.45)',
+                    '&:hover': { boxShadow: '0 4px 14px rgba(232,93,74,0.6)' },
+                }}
+            >
+                <RestaurantIcon fontSize="small" />
+                Food
+            </Box>
+        </Box>
+    );
+}
 
 export default function StorefrontLayout({ toggleDarkMode, darkMode }) {
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -258,8 +293,9 @@ export default function StorefrontLayout({ toggleDarkMode, darkMode }) {
                         {/* Desktop category nav row (AliExpress-style) */}
                         {!isMobile && (
                             <Box sx={{ borderTop: '1px solid', borderColor: 'divider' }}>
-                                <Toolbar variant="dense" sx={{ minHeight: 44, gap: 1 }}>
+                                <Toolbar variant="dense" sx={{ minHeight: 44, gap: 1, justifyContent: 'space-between' }}>
                                     <MegaMenu categories={categories} />
+                                    <FoodNavBadge />
                                 </Toolbar>
                             </Box>
                         )}
@@ -286,6 +322,9 @@ export default function StorefrontLayout({ toggleDarkMode, darkMode }) {
                                 <IconButton size="small" onClick={toggleDarkMode}>
                                     {darkMode ? <LightMode fontSize="small" /> : <DarkMode fontSize="small" />}
                                 </IconButton>
+                            </Box>
+                            <Box sx={{ px: 2, pb: 2 }} onClick={() => setMobileMenuOpen(false)}>
+                                <FoodNavBadge />
                             </Box>
                             <Divider />
                             <MobileCategoryMenu

@@ -36,6 +36,7 @@ import CartPage from './storefront/pages/CartPage';
 import CheckoutPage from './storefront/pages/CheckoutPage';
 import CustomerAuth from './storefront/pages/CustomerAuth';
 import CustomerAccount from './storefront/pages/CustomerAccount';
+import FoodComingSoon from './storefront/pages/FoodComingSoon';
 import { useMemo, useState } from 'react';
 
 // Vendor (Restaurant-role) dashboard imports
@@ -100,6 +101,7 @@ function App() {
         children:[
           {index:true,element:<HomePage/>},
           {path:"shop",element:<ProductCatalog/>},
+          {path:"food",element:<FoodComingSoon/>},
           {path:"product/:slug",element:<ProductDetail/>},
           {path:"cart",element:<CartPage/>},
           {path:"checkout",element:<CheckoutPage/>},
