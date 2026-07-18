@@ -1,4 +1,5 @@
 from rest_framework.viewsets import ModelViewSet
+from rest_framework.generics import RetrieveUpdateAPIView
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.exceptions import PermissionDenied
 from rest_framework_simplejwt.authentication import JWTAuthentication
@@ -6,7 +7,7 @@ from rest_framework_simplejwt.authentication import JWTAuthentication
 from core.helpers import renderResponse
 from food.models import FoodCategory, FoodItem
 from food.permissions import IsRestaurantOwner
-from food.serializers_write import FoodCategoryWriteSerializer, FoodItemWriteSerializer
+from food.serializers_write import FoodCategoryWriteSerializer, FoodItemWriteSerializer, VendorRestaurantSerializer
 
 
 class EnvelopeModelViewSetMixin:
@@ -86,3 +87,32 @@ class VendorItemViewSet(EnvelopeModelViewSetMixin, ModelViewSet):
         if category and category.restaurant_id != self.request.user.restaurant.id:
             raise PermissionDenied("Category does not belong to your restaurant.")
         serializer.save()
+
+
+class VendorRestaurantView(RetrieveUpdateAPIView):
+    """GET/PATCH the caller's own restaurant profile. Deliberately not a router-registered
+    viewset — there is exactly one object per owner and no pk in the URL. get_object()
+    always resolves to request.user.restaurant so this can never leak or edit another
+    vendor's restaurant, regardless of request body content (commission/status/slug are
+    read-only on the serializer as an additional belt-and-suspenders guard).
+    """
+
+    permission_classes = [IsAuthenticated, IsRestaurantOwner]
+    authentication_classes = [JWTAuthentication]
+    serializer_class = VendorRestaurantSerializer
+
+    def get_object(self):
+        return self.request.user.restaurant
+
+    def retrieve(self, request, *args, **kwargs):
+        serializer = self.get_serializer(self.get_object())
+        return renderResponse(data=serializer.data, message="Restaurant profile retrieved")
+
+    def update(self, request, *args, **kwargs):
+        partial = kwargs.pop("partial", False)
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+        if not serializer.is_valid():
+            return renderResponse(data=serializer.errors, message="Validation error", status=400)
+        serializer.save()
+        return renderResponse(data=serializer.data, message="Restaurant profile updated")
