@@ -2,6 +2,8 @@ import React from "react";
 import { AppBar, Toolbar, Typography, Tabs, Tab, Box, IconButton, Container } from "@mui/material";
 import { Logout } from "@mui/icons-material";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
+import { useDispatch } from "react-redux";
+import { logout } from "../redux/reducer/IsLoggedInReducer";
 
 // Slim, mobile-first layout for the vendor (restaurant-owner) dashboard.
 // Deliberately lighter than the admin `Layout` (no theme switcher, no
@@ -15,6 +17,7 @@ const NAV_ITEMS = [
 const VendorLayout = () => {
     const location = useLocation();
     const navigate = useNavigate();
+    const dispatch = useDispatch();
 
     const activeTab = NAV_ITEMS.some((item) => item.path === location.pathname)
         ? location.pathname
@@ -22,6 +25,7 @@ const VendorLayout = () => {
 
     const handleLogout = () => {
         localStorage.removeItem("token");
+        dispatch(logout());
         navigate("/auth/login");
     };
 

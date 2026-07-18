@@ -1,5 +1,6 @@
 from decimal import Decimal
 from django.test import TestCase
+from django.utils.text import slugify
 from rest_framework.test import APIClient
 from django.contrib.auth import get_user_model
 from rest_framework_simplejwt.tokens import RefreshToken
@@ -70,6 +71,35 @@ class VendorScopingTests(TestCase):
         self.assertIn(res.status_code, (400, 403))
         item_a.refresh_from_db()
         self.assertEqual(item_a.category_id_id, cat_a.id)
+
+    def test_vendor_create_item_without_slug_auto_generates_one(self):
+        # Regression test: vendors never send a slug (no client did), so the
+        # backend must auto-generate one — previously `slug` was required and
+        # every vendor "Add Item" request failed validation.
+        cat_a = FoodCategory.objects.create(restaurant=self.ra, name="A-cat-3")
+        auth(self.client, self.owner_a)
+        payload = {"category_id": cat_a.id, "name": "Chicken Biriyani", "price": "150.00"}
+        res = self.client.post("/api/food/vendor/items/", payload, format="json")
+        self.assertEqual(res.status_code, 201, res.content)
+        data = res.json()["data"]
+        self.assertTrue(data["slug"])
+        self.assertEqual(data["slug"], slugify("Chicken Biriyani"))
+        item = FoodItem.objects.get(id=data["id"])
+        self.assertEqual(item.slug, "chicken-biriyani")
+
+    def test_vendor_create_item_same_name_gets_unique_slug(self):
+        cat_a = FoodCategory.objects.create(restaurant=self.ra, name="A-cat-4")
+        auth(self.client, self.owner_a)
+        payload = {"category_id": cat_a.id, "name": "Beef Curry", "price": "200.00"}
+        res1 = self.client.post("/api/food/vendor/items/", payload, format="json")
+        res2 = self.client.post("/api/food/vendor/items/", payload, format="json")
+        self.assertEqual(res1.status_code, 201, res1.content)
+        self.assertEqual(res2.status_code, 201, res2.content)
+        slug1 = res1.json()["data"]["slug"]
+        slug2 = res2.json()["data"]["slug"]
+        self.assertNotEqual(slug1, slug2)
+        self.assertEqual(slug1, "beef-curry")
+        self.assertEqual(slug2, "beef-curry-2")
 
 
 class VendorRestaurantProfileTests(TestCase):

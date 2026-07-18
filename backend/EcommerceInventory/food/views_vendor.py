@@ -1,3 +1,4 @@
+from django.utils.text import slugify
 from rest_framework.viewsets import ModelViewSet
 from rest_framework.generics import RetrieveUpdateAPIView
 from rest_framework.permissions import IsAuthenticated
@@ -8,6 +9,19 @@ from core.helpers import renderResponse
 from food.models import FoodCategory, FoodItem
 from food.permissions import IsRestaurantOwner
 from food.serializers_write import FoodCategoryWriteSerializer, FoodItemWriteSerializer, VendorRestaurantSerializer
+
+
+def _unique_item_slug(restaurant, name):
+    """Generate a slug for a new item that is unique within the restaurant,
+    satisfying FoodItem's (restaurant, slug) UniqueConstraint. Vendors never
+    supply a slug themselves (see FoodItemWriteSerializer.slug, read_only)."""
+    base = slugify(name) or "item"
+    slug = base
+    i = 2
+    while FoodItem.objects.filter(restaurant=restaurant, slug=slug).exists():
+        slug = f"{base}-{i}"
+        i += 1
+    return slug
 
 
 class EnvelopeModelViewSetMixin:
@@ -80,7 +94,9 @@ class VendorItemViewSet(EnvelopeModelViewSetMixin, ModelViewSet):
         category = serializer.validated_data.get("category_id")
         if category and category.restaurant_id != self.request.user.restaurant.id:
             raise PermissionDenied("Category does not belong to your restaurant.")
-        serializer.save(restaurant=self.request.user.restaurant)
+        restaurant = self.request.user.restaurant
+        slug = _unique_item_slug(restaurant, serializer.validated_data.get("name"))
+        serializer.save(restaurant=restaurant, slug=slug)
 
     def perform_update(self, serializer):
         category = serializer.validated_data.get("category_id")

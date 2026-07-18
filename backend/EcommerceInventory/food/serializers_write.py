@@ -9,6 +9,11 @@ class FoodCategoryWriteSerializer(serializers.ModelSerializer):
 
 
 class FoodItemWriteSerializer(serializers.ModelSerializer):
+    # Vendors never type a slug themselves — it's auto-generated server-side from
+    # `name` (see food/views_vendor.py::VendorItemViewSet.perform_create). Kept
+    # read_only (not write_only) so it's still returned in create/update responses.
+    slug = serializers.SlugField(read_only=True)
+
     class Meta:
         model = FoodItem
         fields = ["id", "category_id", "name", "name_bn", "slug", "description", "description_bn",
