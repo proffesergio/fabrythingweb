@@ -276,8 +276,8 @@ class Restaurant(TimeStamped):
     slug = models.SlugField(max_length=170, unique=True)
     description = models.TextField(blank=True, default="")
     description_bn = models.TextField(blank=True, default="")
-    logo = models.ImageField(upload_to="food/restaurants/", null=True, blank=True)
-    cover_image = models.ImageField(upload_to="food/restaurants/", null=True, blank=True)
+    logo = models.URLField(max_length=500, blank=True, default="")          # image URL (matches catalog's URL-based images)
+    cover_image = models.URLField(max_length=500, blank=True, default="")
     cuisine_type = models.CharField(max_length=120, blank=True, default="")
     phone = models.CharField(max_length=20, blank=True, default="")
     address = models.CharField(max_length=255, blank=True, default="")
@@ -326,7 +326,7 @@ class RestaurantZone(TimeStamped):
         unique_together = ("restaurant", "zone")
 ```
 
-> Note: `ImageField` requires Pillow — already a dependency of the existing catalog images. Verify `Pillow` is in `requirements.txt`; if absent, add it in this task and reinstall.
+> Images: the existing catalog stores images as URLs in `JSONField` (no Pillow, no local media — `MEDIA_ROOT` is ephemeral on Render). Follow that pattern: single images here are `URLField` holding an image URL. Do NOT use Django `ImageField` and do NOT add Pillow.
 
 - [ ] **Step 4: Migrate and run tests**
 
@@ -412,7 +412,7 @@ class FoodItem(TimeStamped):
     slug = models.SlugField(max_length=170)
     description = models.TextField(blank=True, default="")
     description_bn = models.TextField(blank=True, default="")
-    image = models.ImageField(upload_to="food/items/", null=True, blank=True)
+    image = models.URLField(max_length=500, blank=True, default="")  # image URL (matches catalog pattern; no Pillow)
     price = models.DecimalField(max_digits=10, decimal_places=2)
     discount_price = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     prep_minutes = models.PositiveIntegerField(null=True, blank=True)
