@@ -104,6 +104,8 @@ class Users(AbstractUser):
             ("Supplier", "Supplier"),
             ("Customer", "Customer"),
             ("Staff", "Staff"),
+            ("Restaurant", "Restaurant"),
+            ("Rider", "Rider"),
         ),
     )
     dob = models.DateField(blank=True, null=True)
