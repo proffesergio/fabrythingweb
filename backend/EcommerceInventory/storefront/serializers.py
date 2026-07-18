@@ -194,10 +194,23 @@ class PlaceOrderItemSerializer(serializers.Serializer):
     quantity = serializers.IntegerField(min_value=1)
 
 
+class InlineShippingAddressSerializer(serializers.Serializer):
+    """A one-off delivery address typed in at checkout (guest orders)."""
+    address_type = serializers.CharField(max_length=50, required=False, default='Home')
+    address = serializers.CharField()
+    city = serializers.CharField(max_length=50)
+    state = serializers.CharField(max_length=50, required=False, allow_blank=True, default='')
+    pincode = serializers.CharField(max_length=10, required=False, allow_blank=True, default='')
+    country = serializers.CharField(max_length=50, required=False, default='Bangladesh')
+
+
 class PlaceOrderSerializer(serializers.Serializer):
-    """COD-only checkout payload."""
+    """COD-only checkout payload. Supports both logged-in (saved address) and
+    guest (inline address) checkout."""
     items = PlaceOrderItemSerializer(many=True)
-    shipping_address_id = serializers.IntegerField()
+    # Logged-in users pass a saved address id; guests pass an inline address.
+    shipping_address_id = serializers.IntegerField(required=False, allow_null=True)
+    shipping_address = InlineShippingAddressSerializer(required=False)
     contact_name = serializers.CharField(max_length=120)
     contact_phone = serializers.CharField(max_length=20)
     notes = serializers.CharField(required=False, allow_blank=True, default='')
@@ -214,6 +227,13 @@ class PlaceOrderSerializer(serializers.Serializer):
         if not value:
             raise serializers.ValidationError("Your cart is empty.")
         return value
+
+    def validate(self, attrs):
+        if not attrs.get('shipping_address_id') and not attrs.get('shipping_address'):
+            raise serializers.ValidationError(
+                "A delivery address is required to place the order."
+            )
+        return attrs
 
 
 class OrderItemSerializer(serializers.ModelSerializer):

@@ -6,7 +6,6 @@ import { Add, Remove, Delete, ShoppingCart, ArrowForward } from '@mui/icons-mate
 import { Link, useNavigate } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
 import { selectCartItems, selectCartTotal, removeFromCart, updateQuantity, clearCart } from '../../redux/reducer/cartSlice';
-import { isAuthenticated } from '../../utils/Helper';
 import useApi from '../../hooks/APIHandler';
 
 export default function CartPage() {
@@ -33,10 +32,9 @@ export default function CartPage() {
     const deliveryCharge = (freeThreshold != null && subtotal >= freeThreshold) ? 0 : shippingRate;
     const total = subtotal + deliveryCharge;
 
-    const handleCheckout = () => {
-        if (isAuthenticated()) navigate('/checkout');
-        else navigate('/auth/login?redirect=/checkout');
-    };
+    // Guest checkout is allowed — everyone goes straight to checkout. Signing in
+    // is offered there as an option, never forced.
+    const handleCheckout = () => navigate('/checkout');
 
     if (items.length === 0) {
         return (

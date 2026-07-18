@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
     Box, Container, Card, Typography, TextField, Button, Tab, Tabs, Alert,
-    CircularProgress, Divider,
+    CircularProgress,
 } from '@mui/material';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { useDispatch } from 'react-redux';
@@ -123,11 +123,6 @@ export default function CustomerAuth() {
                         </Button>
                     </form>
                 )}
-
-                <Divider sx={{ my: 3 }} />
-                <Typography variant="body2" color="text.secondary" textAlign="center">
-                    Are you an admin? <Link to="/admin/auth" style={{ color: '#E85D4A' }}>Login to Admin Panel</Link>
-                </Typography>
             </Card>
         </Container>
     );

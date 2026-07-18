@@ -20,6 +20,7 @@ export default function HomePage() {
             if (res?.data?.data) setData(res.data.data);
         };
         fetchHomepage();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     const trustSignals = [

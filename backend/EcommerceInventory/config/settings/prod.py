@@ -21,3 +21,14 @@ X_FRAME_OPTIONS = "DENY"
 
 if not SECRET_KEY:  # noqa: F405
     raise RuntimeError("SECRET_KEY must be set in production.")
+
+# Static files: WhiteNoise compresses and serves them from the app itself, so
+# no separate CDN/nginx is needed on Render's free web service.
+STORAGES = {
+    "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
+    "staticfiles": {"BACKEND": "whitenoise.storage.CompressedStaticFilesStorage"},
+}
+
+# Neon (managed Postgres) requires SSL. Default the prod connection to require it
+# even if DATABASE_SSLMODE isn't explicitly set in the environment.
+DATABASES["default"]["OPTIONS"]["sslmode"] = os.getenv("DATABASE_SSLMODE", "require")  # noqa: F405

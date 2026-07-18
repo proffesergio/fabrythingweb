@@ -5,6 +5,17 @@ import re
 from django.db.models import Q
 
 
+# Public API paths that must NEVER be gated behind a JWT by this middleware.
+# These are the endpoints a visitor reaches *before* they have a token:
+#   - the whole storefront (it enforces its own auth via DRF permission_classes)
+#   - login / signup (you cannot present a token before you have logged in)
+PUBLIC_API_PREFIXES = (
+    '/api/store/',
+    '/api/auth/login',
+    '/api/auth/signup',
+)
+
+
 class PermissionMiddleware:
     def __init__(self, get_response):
         self.get_response = get_response
@@ -16,8 +27,8 @@ class PermissionMiddleware:
         # its own (or is public) and must not be turned into a 401 by this middleware.
         if not current_url.startswith('/api/'):
             return self.get_response(request)
-        # Storefront public APIs handle their own auth via DRF permission_classes
-        if current_url.startswith('/api/store/'):
+        # Public, token-less endpoints (storefront + login/signup) bypass the gate.
+        if any(current_url.startswith(prefix) for prefix in PUBLIC_API_PREFIXES):
             return self.get_response(request)
         if current_url in urlToSkip():
             return self.get_response(request)

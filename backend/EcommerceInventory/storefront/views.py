@@ -387,9 +387,14 @@ class CartMergeView(APIView):
 
 
 class PlaceOrderView(APIView):
-    """Create a Cash-on-Delivery order. Throttled + honeypot-protected."""
+    """Create a Cash-on-Delivery order — logged-in OR guest.
+
+    Guests are allowed: they type an inline delivery address and the order is
+    saved with customer=None (an anonymous COD order). Logged-in users may pass
+    a saved address id instead. Throttled by user/IP + honeypot-protected.
+    """
     authentication_classes = [JWTAuthentication]
-    permission_classes = [IsAuthenticated]
+    permission_classes = [AllowAny]
     throttle_scope = 'orders.create'
 
     def post(self, request):
@@ -402,15 +407,28 @@ class PlaceOrderView(APIView):
         if data.get('website'):
             return renderResponse(data={'order_number': 'ORD-PENDING'}, message='Order received', status=201)
 
-        address = UserShippingAddress.objects.filter(user=request.user, pk=data['shipping_address_id']).first()
-        if not address:
-            return renderResponse(data='Shipping address not found', message='Invalid address', status=400)
+        user = request.user if request.user.is_authenticated else None
 
-        address_snapshot = {
-            'address_type': address.address_type, 'address': address.address,
-            'city': address.city, 'state': address.state,
-            'pincode': address.pincode, 'country': address.country,
-        }
+        # Resolve the delivery address: a saved one (logged-in) or an inline one (guest).
+        if user and data.get('shipping_address_id'):
+            address = UserShippingAddress.objects.filter(user=user, pk=data['shipping_address_id']).first()
+            if not address:
+                return renderResponse(data='Shipping address not found', message='Invalid address', status=400)
+            address_snapshot = {
+                'address_type': address.address_type, 'address': address.address,
+                'city': address.city, 'state': address.state,
+                'pincode': address.pincode, 'country': address.country,
+            }
+        elif data.get('shipping_address'):
+            inline = data['shipping_address']
+            address_snapshot = {
+                'address_type': inline.get('address_type', 'Home'),
+                'address': inline['address'], 'city': inline['city'],
+                'state': inline.get('state', ''), 'pincode': inline.get('pincode', ''),
+                'country': inline.get('country', 'Bangladesh'),
+            }
+        else:
+            return renderResponse(data='A delivery address is required.', message='Invalid address', status=400)
 
         try:
             order = place_cod_order(
@@ -431,8 +449,9 @@ class PlaceOrderView(APIView):
                 status=getattr(exc, 'status_code', 400),
             )
 
-        # Clear the server cart now that the order is placed.
-        CartItem.objects.filter(cart__user=request.user).delete()
+        # Clear the server cart now that the order is placed (logged-in users only).
+        if user:
+            CartItem.objects.filter(cart__user=user).delete()
 
         return renderResponse(
             data={

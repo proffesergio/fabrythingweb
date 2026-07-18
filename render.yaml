@@ -1,0 +1,39 @@
+# Render Blueprint for the Fabrything Django API.
+# Create the service from the Render dashboard: New + > Blueprint, point it at
+# this repo. Secret values (marked `sync: false`) are entered in the dashboard,
+# never committed here.
+services:
+  - type: web
+    name: fabrything-api
+    runtime: python
+    plan: free
+    rootDir: backend/EcommerceInventory
+    buildCommand: "./build.sh"
+    startCommand: "gunicorn config.wsgi:application --bind 0.0.0.0:$PORT"
+    healthCheckPath: /api/store/config/
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.12.4"
+      - key: DJANGO_SETTINGS_MODULE
+        value: config.settings.prod
+      - key: SECRET_KEY
+        generateValue: true          # Render generates a strong random key
+      - key: DEBUG
+        value: "False"
+      - key: DATABASE_PORT
+        value: "5432"
+      - key: DATABASE_SSLMODE
+        value: require                # Neon requires SSL
+      # --- Secrets / per-env values: set these in the Render dashboard ---
+      - key: ALLOWED_HOSTS            # e.g. fabrything-api.onrender.com
+        sync: false
+      - key: CORS_ALLOWED_ORIGINS     # e.g. https://fabrything.vercel.app
+        sync: false
+      - key: DATABASE_NAME
+        sync: false
+      - key: DATABASE_USER
+        sync: false
+      - key: DATABASE_PASSWORD
+        sync: false
+      - key: DATABASE_HOST
+        sync: false

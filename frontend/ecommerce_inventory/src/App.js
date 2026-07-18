@@ -94,7 +94,7 @@ function App() {
           {path:"shop",element:<ProductCatalog/>},
           {path:"product/:slug",element:<ProductDetail/>},
           {path:"cart",element:<CartPage/>},
-          {path:"checkout",element:<ProtectedRoute element={<CheckoutPage/>}/>},
+          {path:"checkout",element:<CheckoutPage/>},
           {path:"account",element:<ProtectedRoute element={<CustomerAccount/>}/>},
           {path:"account/orders",element:<ProtectedRoute element={<CustomerAccount/>}/>},
         ]

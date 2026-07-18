@@ -66,6 +66,7 @@ export default function ProductCatalog() {
                 totalItems: res.data.data.totalItems || 0,
             });
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [searchParams]);
 
     const fetchCategories = async () => {
@@ -74,6 +75,7 @@ export default function ProductCatalog() {
     };
 
     useEffect(() => { fetchProducts(); }, [fetchProducts]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     useEffect(() => { fetchCategories(); }, []);
 
     const activeFilterCount = [filters.category, filters.gender, filters.price_min, filters.price_max, filters.search]

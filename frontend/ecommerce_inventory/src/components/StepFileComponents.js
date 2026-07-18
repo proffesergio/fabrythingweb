@@ -1,5 +1,4 @@
-import {useFormContext} from 'react-hook-form';
-import { Box,FormControl,InputLabel,Select,MenuItem, FormControlLabel, Switch, TextField,Alert } from "@mui/material";
+import { Box } from "@mui/material";
 import FileInputComponent from './FileInputComponents';
 
 const StepFileComponents = ({formConfig }) => {
