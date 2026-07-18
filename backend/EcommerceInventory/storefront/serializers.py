@@ -43,7 +43,7 @@ class StorefrontProductListSerializer(serializers.ModelSerializer):
     average_rating = serializers.SerializerMethodField()
     review_count = serializers.SerializerMethodField()
     discount_percentage = serializers.SerializerMethodField()
-    total_stock = serializers.IntegerField(read_only=True)
+    total_stock = serializers.SerializerMethodField()
 
     class Meta:
         model = Products
@@ -60,11 +60,31 @@ class StorefrontProductListSerializer(serializers.ModelSerializer):
         return obj.category_id.name if obj.category_id else None
 
     def get_average_rating(self, obj):
-        result = ProductReviews.objects.filter(product_id=obj.id, status='ACTIVE').aggregate(avg=Avg('rating'))
-        return round(result['avg'], 1) if result['avg'] else 0
+        # Prefer the queryset annotation (set by list views) to avoid an N+1
+        # query per product; fall back to a direct query for un-annotated
+        # single objects (e.g. the product detail view).
+        avg = getattr(obj, 'avg_rating', None)
+        if avg is None and not hasattr(obj, 'avg_rating'):
+            avg = ProductReviews.objects.filter(
+                product_id=obj.id, status='ACTIVE',
+            ).aggregate(avg=Avg('rating'))['avg']
+        return round(avg, 1) if avg else 0
 
     def get_review_count(self, obj):
-        return ProductReviews.objects.filter(product_id=obj.id, status='ACTIVE').count()
+        count = getattr(obj, 'n_reviews', None)
+        if count is None and not hasattr(obj, 'n_reviews'):
+            count = ProductReviews.objects.filter(
+                product_id=obj.id, status='ACTIVE',
+            ).count()
+        return count or 0
+
+    def get_total_stock(self, obj):
+        # Prefer the annotation; fall back to the model property (which queries
+        # variants) only when the object was not annotated.
+        stock = getattr(obj, 'stock_total', None)
+        if stock is None and not hasattr(obj, 'stock_total'):
+            stock = obj.total_stock
+        return stock or 0
 
     def get_discount_percentage(self, obj):
         if obj.discount_price and obj.initial_selling_price and obj.initial_selling_price > 0:

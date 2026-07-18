@@ -1,7 +1,8 @@
 from datetime import timedelta
 
 from django.db import transaction
-from django.db.models import Avg, Count, Q, Sum
+from django.db.models import Avg, Count, FloatField, IntegerField, OuterRef, Q, Subquery, Sum
+from django.db.models.functions import Coalesce
 from django.utils import timezone
 from rest_framework import generics
 from rest_framework import status as http_status
@@ -169,27 +170,61 @@ class PublicProductDetailView(APIView):
         return renderResponse(data=data, message='Product retrieved successfully')
 
 
+def annotate_product_cards(qs):
+    """Annotate a Products queryset with the rating/review/stock aggregates the
+    card serializer needs, using correlated subqueries.
+
+    Serializing a list of products previously fired ~4 queries *per product*
+    (rating avg, review count, category name, variant-stock sum) — an N+1 that
+    timed out the worker against a cold/remote DB. This collapses those into a
+    constant number of queries per list. Subqueries (not multi-table joins) are
+    used so the aggregates don't multiply each other's rows.
+    """
+    active_reviews = (
+        ProductReviews.objects
+        .filter(product_id=OuterRef('pk'), status='ACTIVE')
+        .order_by().values('product_id')
+    )
+    avg_sq = active_reviews.annotate(v=Avg('rating')).values('v')
+    cnt_sq = active_reviews.annotate(v=Count('id')).values('v')
+    stock_sq = (
+        ProductVariant.objects
+        .filter(product_id=OuterRef('pk'), is_active=True)
+        .order_by().values('product_id').annotate(v=Sum('stock_quantity')).values('v')
+    )
+    return qs.select_related('category_id').annotate(
+        avg_rating=Subquery(avg_sq, output_field=FloatField()),
+        n_reviews=Coalesce(Subquery(cnt_sq, output_field=IntegerField()), 0),
+        stock_total=Coalesce(Subquery(stock_sq, output_field=IntegerField()), 0),
+    )
+
+
 class PublicHomepageView(APIView):
     permission_classes = [AllowAny]
 
     def get(self, request):
         categories = Categories.objects.filter(parent_id__isnull=True).order_by('display_order')[:8]
-        new_arrivals = Products.objects.filter(status='ACTIVE').order_by('-created_at')[:8]
-        on_sale = Products.objects.filter(status='ACTIVE', discount_price__isnull=False).order_by('-created_at')[:8]
+        new_arrivals = annotate_product_cards(
+            Products.objects.filter(status='ACTIVE')
+        ).order_by('-created_at')[:8]
+        on_sale = annotate_product_cards(
+            Products.objects.filter(status='ACTIVE', discount_price__isnull=False)
+        ).order_by('-created_at')[:8]
 
         best_rated_ids = list(
             ProductReviews.objects.filter(status='ACTIVE')
             .values('product_id').annotate(avg_rating=Avg('rating'))
             .order_by('-avg_rating')[:8].values_list('product_id', flat=True)
         )
+        best_rated_qs = annotate_product_cards(Products.objects.filter(status='ACTIVE'))
         best_rated = (
-            Products.objects.filter(id__in=best_rated_ids, status='ACTIVE')
-            if best_rated_ids else Products.objects.filter(status='ACTIVE')[:8]
+            best_rated_qs.filter(id__in=best_rated_ids)
+            if best_rated_ids else best_rated_qs[:8]
         )
 
-        all_discounted = list(Products.objects.filter(
+        all_discounted = list(annotate_product_cards(Products.objects.filter(
             status='ACTIVE', discount_price__isnull=False, initial_selling_price__gt=0,
-        ).select_related('category_id'))
+        )))
         flash_sale = sorted(
             all_discounted,
             key=lambda p: (p.initial_selling_price - p.discount_price) / p.initial_selling_price,
@@ -208,9 +243,10 @@ class PublicHomepageView(APIView):
             .values('variant__product_id').annotate(c=Count('id')).order_by('-c')[:8]
             .values_list('variant__product_id', flat=True)
         )
+        trending_qs = annotate_product_cards(Products.objects.filter(status='ACTIVE'))
         trending = (
-            Products.objects.filter(id__in=trending_ids, status='ACTIVE')
-            if trending_ids else Products.objects.filter(status='ACTIVE')[:8]
+            trending_qs.filter(id__in=trending_ids)
+            if trending_ids else trending_qs[:8]
         )
 
         best_seller_ids = list(
@@ -218,9 +254,10 @@ class PublicHomepageView(APIView):
             .values('variant__product_id').annotate(total=Sum('quantity')).order_by('-total')[:8]
             .values_list('variant__product_id', flat=True)
         )
+        best_sellers_qs = annotate_product_cards(Products.objects.filter(status='ACTIVE'))
         best_sellers = (
-            Products.objects.filter(id__in=best_seller_ids, status='ACTIVE')
-            if best_seller_ids else Products.objects.filter(status='ACTIVE')[:8]
+            best_sellers_qs.filter(id__in=best_seller_ids)
+            if best_seller_ids else best_sellers_qs[:8]
         )
 
         data = {
