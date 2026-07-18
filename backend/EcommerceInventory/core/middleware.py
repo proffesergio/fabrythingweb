@@ -8,9 +8,11 @@ from django.db.models import Q
 # Public API paths that must NEVER be gated behind a JWT by this middleware.
 # These are the endpoints a visitor reaches *before* they have a token:
 #   - the whole storefront (it enforces its own auth via DRF permission_classes)
+#   - the public food-delivery read API (restaurants/zones; AllowAny via DRF)
 #   - login / signup (you cannot present a token before you have logged in)
 PUBLIC_API_PREFIXES = (
     '/api/store/',
+    '/api/food/',
     '/api/auth/login',
     '/api/auth/signup',
 )

@@ -38,6 +38,7 @@ urlpatterns = [
     path('api/orders/',include('purchasing.urls')),
     path('api/uploads/',FileUploadViewInS3.as_view(),name='fileupload'),
     path('api/store/',include('storefront.urls')),
+    path('api/food/',include('food.urls')),
 ]
 
 if settings.DEBUG:
