@@ -10,7 +10,7 @@
 
 ## Global Constraints
 
-- Backend settings module for all `manage.py` commands: `DJANGO_SETTINGS_MODULE=config.settings.dev` (tests) — copied from `manage.py` default.
+- Backend tests, `makemigrations`, and `check` run with `DJANGO_SETTINGS_MODULE=config.settings.test`, which uses a local in-memory SQLite database and is fully isolated from the Neon production DB. NEVER run `manage.py test` under `dev`/`prod` (they point at Neon). Commands may need `SECRET_KEY` only if unset; `test.py` provides a fallback.
 - Money fields: `DecimalField(max_digits=10, decimal_places=2)`, currency BDT (৳).
 - Lat/lng fields: `DecimalField(max_digits=9, decimal_places=6)`. No PostGIS.
 - Every model has `AutoField` PK, `created_at = DateTimeField(auto_now_add=True)`, `updated_at = DateTimeField(auto_now=True)` — match existing apps.
@@ -60,9 +60,9 @@ In `accounts/models.py`, extend the `role` `choices` tuple with:
 
 - [ ] **Step 4: Make migrations and verify apps load**
 
-Run: `DJANGO_SETTINGS_MODULE=config.settings.dev python manage.py makemigrations food accounts`
+Run: `DJANGO_SETTINGS_MODULE=config.settings.test python manage.py makemigrations food accounts`
 Expected: creates `accounts/migrations/000X_*` (role choices) and no-op/empty for food (no models yet).
-Run: `DJANGO_SETTINGS_MODULE=config.settings.dev python manage.py check`
+Run: `DJANGO_SETTINGS_MODULE=config.settings.test python manage.py check`
 Expected: `System check identified no issues`.
 
 - [ ] **Step 5: Stage changes** (do not commit unless owner opted in)
@@ -123,7 +123,7 @@ class DeliveryZoneServesTests(TestCase):
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `DJANGO_SETTINGS_MODULE=config.settings.dev python manage.py test food.tests.test_geo -v 2`
+Run: `DJANGO_SETTINGS_MODULE=config.settings.test python manage.py test food.tests.test_geo -v 2`
 Expected: FAIL — `ImportError`/`cannot import name` (geo/model missing).
 
 - [ ] **Step 3: Implement geo helper**
@@ -176,7 +176,7 @@ class DeliveryZone(TimeStamped):
 
 - [ ] **Step 5: Migrate and run tests**
 
-Run: `DJANGO_SETTINGS_MODULE=config.settings.dev python manage.py makemigrations food && DJANGO_SETTINGS_MODULE=config.settings.dev python manage.py test food.tests.test_geo -v 2`
+Run: `DJANGO_SETTINGS_MODULE=config.settings.test python manage.py makemigrations food && DJANGO_SETTINGS_MODULE=config.settings.test python manage.py test food.tests.test_geo -v 2`
 Expected: PASS (4 tests).
 
 - [ ] **Step 6: Stage changes**
@@ -249,7 +249,7 @@ class RestaurantLogicTests(TestCase):
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `DJANGO_SETTINGS_MODULE=config.settings.dev python manage.py test food.tests.test_restaurant -v 2`
+Run: `DJANGO_SETTINGS_MODULE=config.settings.test python manage.py test food.tests.test_restaurant -v 2`
 Expected: FAIL — `Restaurant`/`RestaurantHours` not defined.
 
 - [ ] **Step 3: Implement models**
@@ -330,7 +330,7 @@ class RestaurantZone(TimeStamped):
 
 - [ ] **Step 4: Migrate and run tests**
 
-Run: `DJANGO_SETTINGS_MODULE=config.settings.dev python manage.py makemigrations food && DJANGO_SETTINGS_MODULE=config.settings.dev python manage.py test food.tests.test_restaurant -v 2`
+Run: `DJANGO_SETTINGS_MODULE=config.settings.test python manage.py makemigrations food && DJANGO_SETTINGS_MODULE=config.settings.test python manage.py test food.tests.test_restaurant -v 2`
 Expected: PASS (4 tests).
 
 - [ ] **Step 5: Stage changes**
@@ -386,7 +386,7 @@ class MenuTests(TestCase):
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `DJANGO_SETTINGS_MODULE=config.settings.dev python manage.py test food.tests.test_menu -v 2`
+Run: `DJANGO_SETTINGS_MODULE=config.settings.test python manage.py test food.tests.test_menu -v 2`
 Expected: FAIL — models not defined.
 
 - [ ] **Step 3: Implement models**
@@ -450,7 +450,7 @@ class FoodItemOption(TimeStamped):
 
 - [ ] **Step 4: Migrate and run tests**
 
-Run: `DJANGO_SETTINGS_MODULE=config.settings.dev python manage.py makemigrations food && DJANGO_SETTINGS_MODULE=config.settings.dev python manage.py test food.tests.test_menu -v 2`
+Run: `DJANGO_SETTINGS_MODULE=config.settings.test python manage.py makemigrations food && DJANGO_SETTINGS_MODULE=config.settings.test python manage.py test food.tests.test_menu -v 2`
 Expected: PASS (2 tests).
 
 - [ ] **Step 5: Stage changes**
@@ -518,7 +518,7 @@ class RestaurantDetailSerializerTests(TestCase):
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `DJANGO_SETTINGS_MODULE=config.settings.dev python manage.py test food.tests.test_serializers -v 2`
+Run: `DJANGO_SETTINGS_MODULE=config.settings.test python manage.py test food.tests.test_serializers -v 2`
 Expected: FAIL — module missing.
 
 - [ ] **Step 3: Implement i18n helper**
@@ -625,7 +625,7 @@ class RestaurantDetailSerializer(RestaurantListSerializer):
 
 - [ ] **Step 5: Run tests**
 
-Run: `DJANGO_SETTINGS_MODULE=config.settings.dev python manage.py test food.tests.test_serializers -v 2`
+Run: `DJANGO_SETTINGS_MODULE=config.settings.test python manage.py test food.tests.test_serializers -v 2`
 Expected: PASS (4 tests).
 
 - [ ] **Step 6: Stage changes**
@@ -687,7 +687,7 @@ class PublicApiTests(TestCase):
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `DJANGO_SETTINGS_MODULE=config.settings.dev python manage.py test food.tests.test_public_api -v 2`
+Run: `DJANGO_SETTINGS_MODULE=config.settings.test python manage.py test food.tests.test_public_api -v 2`
 Expected: FAIL — 404/route missing.
 
 - [ ] **Step 3: Implement views**
@@ -783,7 +783,7 @@ In `config/urls.py`, add under the existing `api/` includes: `path("api/food/", 
 
 - [ ] **Step 4: Run tests, then tune the query-count assertion**
 
-Run: `DJANGO_SETTINGS_MODULE=config.settings.dev python manage.py test food.tests.test_public_api -v 2`
+Run: `DJANGO_SETTINGS_MODULE=config.settings.test python manage.py test food.tests.test_public_api -v 2`
 If `assertNumQueries(4)` mismatches, read the reported actual count, set it, and add the "20 items → same count" invariant test. Re-run: Expected PASS.
 
 - [ ] **Step 5: Stage changes**
@@ -863,7 +863,7 @@ class VendorScopingTests(TestCase):
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `DJANGO_SETTINGS_MODULE=config.settings.dev python manage.py test food.tests.test_vendor_api -v 2`
+Run: `DJANGO_SETTINGS_MODULE=config.settings.test python manage.py test food.tests.test_vendor_api -v 2`
 Expected: FAIL — routes/permission missing.
 
 - [ ] **Step 3: Implement permission + write serializers + views**
@@ -956,7 +956,7 @@ urlpatterns += router.urls
 
 - [ ] **Step 4: Run tests**
 
-Run: `DJANGO_SETTINGS_MODULE=config.settings.dev python manage.py test food.tests.test_vendor_api -v 2`
+Run: `DJANGO_SETTINGS_MODULE=config.settings.test python manage.py test food.tests.test_vendor_api -v 2`
 Expected: PASS (3 tests).
 
 - [ ] **Step 5: Stage changes**
@@ -1020,7 +1020,7 @@ class AdminApiTests(TestCase):
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `DJANGO_SETTINGS_MODULE=config.settings.dev python manage.py test food.tests.test_admin_api -v 2`
+Run: `DJANGO_SETTINGS_MODULE=config.settings.test python manage.py test food.tests.test_admin_api -v 2`
 Expected: FAIL — route missing.
 
 - [ ] **Step 3: Implement serializer + views**
@@ -1088,7 +1088,7 @@ router.register("admin/zones", AdminZoneViewSet, basename="admin-zones")
 
 - [ ] **Step 4: Run tests**
 
-Run: `DJANGO_SETTINGS_MODULE=config.settings.dev python manage.py test food.tests.test_admin_api -v 2`
+Run: `DJANGO_SETTINGS_MODULE=config.settings.test python manage.py test food.tests.test_admin_api -v 2`
 Expected: PASS (2 tests).
 
 - [ ] **Step 5: Stage changes**
@@ -1128,7 +1128,7 @@ class SeedFoodModulesTests(TestCase):
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `DJANGO_SETTINGS_MODULE=config.settings.dev python manage.py test food.tests.test_seed_modules -v 2`
+Run: `DJANGO_SETTINGS_MODULE=config.settings.test python manage.py test food.tests.test_seed_modules -v 2`
 Expected: FAIL — unknown command `seed_food_modules`.
 
 - [ ] **Step 3: Implement command (mirror `seed_admin_modules` shape)**
@@ -1168,7 +1168,7 @@ class Command(BaseCommand):
 
 - [ ] **Step 4: Run tests**
 
-Run: `DJANGO_SETTINGS_MODULE=config.settings.dev python manage.py test food.tests.test_seed_modules -v 2`
+Run: `DJANGO_SETTINGS_MODULE=config.settings.test python manage.py test food.tests.test_seed_modules -v 2`
 Expected: PASS.
 
 - [ ] **Step 5: Add to build.sh so prod registers modules on deploy**
@@ -1180,7 +1180,7 @@ python manage.py seed_food_modules
 
 - [ ] **Step 6: Full backend test run + stage**
 
-Run: `DJANGO_SETTINGS_MODULE=config.settings.dev python manage.py test food -v 2`
+Run: `DJANGO_SETTINGS_MODULE=config.settings.test python manage.py test food -v 2`
 Expected: ALL pass.
 ```bash
 git add backend/EcommerceInventory/food backend/EcommerceInventory/build.sh
@@ -1317,7 +1317,7 @@ git add frontend/ecommerce_inventory/src/vendor frontend/ecommerce_inventory/src
 
 - [ ] **Step 8: Final Phase 0+1 verification**
 
-Run backend: `DJANGO_SETTINGS_MODULE=config.settings.dev python manage.py test food -v 2` → all pass.
+Run backend: `DJANGO_SETTINGS_MODULE=config.settings.test python manage.py test food -v 2` → all pass.
 Run frontend: `CI=false npm run build` → succeeds.
 Manually (optional): start backend + frontend, seed a zone + restaurant, approve it, build a menu as a vendor, confirm it appears at `/food` and `/api/food/restaurants/`.
 
