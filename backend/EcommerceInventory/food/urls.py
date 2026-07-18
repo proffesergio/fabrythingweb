@@ -4,6 +4,7 @@ from food.views_public import (
     PublicRestaurantListView, PublicRestaurantDetailView, PublicZoneListView,
 )
 from food.views_vendor import VendorCategoryViewSet, VendorItemViewSet, VendorRestaurantView
+from food.views_admin import AdminRestaurantViewSet, AdminZoneViewSet
 
 urlpatterns = [
     path("restaurants/", PublicRestaurantListView.as_view(), name="food_restaurants"),
@@ -17,4 +18,6 @@ urlpatterns = [
 router = DefaultRouter()
 router.register("vendor/categories", VendorCategoryViewSet, basename="vendor-categories")
 router.register("vendor/items", VendorItemViewSet, basename="vendor-items")
+router.register("admin/restaurants", AdminRestaurantViewSet, basename="admin-restaurants")
+router.register("admin/zones", AdminZoneViewSet, basename="admin-zones")
 urlpatterns += router.urls
