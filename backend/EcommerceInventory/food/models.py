@@ -91,3 +91,58 @@ class RestaurantZone(TimeStamped):
 
     class Meta:
         unique_together = ("restaurant", "zone")
+
+
+class FoodCategory(TimeStamped):
+    restaurant = models.ForeignKey(Restaurant, on_delete=models.CASCADE, related_name="categories")
+    name = models.CharField(max_length=120)
+    name_bn = models.CharField(max_length=120, blank=True, default="")
+    display_order = models.PositiveIntegerField(default=0)
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        indexes = [models.Index(fields=["restaurant", "display_order"])]
+
+
+class FoodItem(TimeStamped):
+    restaurant = models.ForeignKey(Restaurant, on_delete=models.CASCADE, related_name="items")
+    category_id = models.ForeignKey(FoodCategory, on_delete=models.CASCADE, related_name="items")
+    name = models.CharField(max_length=150)
+    name_bn = models.CharField(max_length=150, blank=True, default="")
+    slug = models.SlugField(max_length=170)
+    description = models.TextField(blank=True, default="")
+    description_bn = models.TextField(blank=True, default="")
+    image = models.URLField(max_length=500, blank=True, default="")
+    price = models.DecimalField(max_digits=10, decimal_places=2)
+    discount_price = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    prep_minutes = models.PositiveIntegerField(null=True, blank=True)
+    is_available = models.BooleanField(default=True)
+    is_veg = models.BooleanField(default=False)
+    spice_level = models.CharField(max_length=20, blank=True, default="")
+    display_order = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        indexes = [models.Index(fields=["restaurant", "is_available"])]
+        constraints = [models.UniqueConstraint(fields=["restaurant", "slug"], name="uniq_item_slug_per_restaurant")]
+
+    @property
+    def effective_price(self):
+        return self.discount_price if self.discount_price is not None else self.price
+
+
+class FoodItemOptionGroup(TimeStamped):
+    item = models.ForeignKey(FoodItem, on_delete=models.CASCADE, related_name="option_groups")
+    name = models.CharField(max_length=120)
+    name_bn = models.CharField(max_length=120, blank=True, default="")
+    min_select = models.PositiveSmallIntegerField(default=0)
+    max_select = models.PositiveSmallIntegerField(default=1)
+    is_required = models.BooleanField(default=False)
+
+
+class FoodItemOption(TimeStamped):
+    group = models.ForeignKey(FoodItemOptionGroup, on_delete=models.CASCADE, related_name="options")
+    name = models.CharField(max_length=120)
+    name_bn = models.CharField(max_length=120, blank=True, default="")
+    price_delta = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    is_default = models.BooleanField(default=False)
+    display_order = models.PositiveIntegerField(default=0)
