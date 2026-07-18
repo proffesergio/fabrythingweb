@@ -1,4 +1,6 @@
 from django.db import models
+from django.conf import settings
+from decimal import Decimal
 from food.geo import haversine_km
 
 
@@ -23,3 +25,69 @@ class DeliveryZone(TimeStamped):
 
     def __str__(self):
         return self.name
+
+
+class Restaurant(TimeStamped):
+    class Status(models.TextChoices):
+        PENDING = "PENDING", "Pending"
+        ACTIVE = "ACTIVE", "Active"
+        SUSPENDED = "SUSPENDED", "Suspended"
+        REJECTED = "REJECTED", "Rejected"
+
+    owner = models.OneToOneField(
+        settings.AUTH_USER_MODEL, null=True, blank=True,
+        on_delete=models.SET_NULL, related_name="restaurant",
+    )
+    name = models.CharField(max_length=150)
+    name_bn = models.CharField(max_length=150, blank=True, default="")
+    slug = models.SlugField(max_length=170, unique=True)
+    description = models.TextField(blank=True, default="")
+    description_bn = models.TextField(blank=True, default="")
+    logo = models.URLField(max_length=500, blank=True, default="")
+    cover_image = models.URLField(max_length=500, blank=True, default="")
+    cuisine_type = models.CharField(max_length=120, blank=True, default="")
+    phone = models.CharField(max_length=20, blank=True, default="")
+    address = models.CharField(max_length=255, blank=True, default="")
+    pickup_lat = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
+    pickup_lng = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
+    commission_percentage = models.DecimalField(max_digits=5, decimal_places=2, default=Decimal("15.00"))
+    base_delivery_fee = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal("0.00"))
+    avg_prep_minutes = models.PositiveIntegerField(default=30)
+    min_order_amount = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal("0.00"))
+    status = models.CharField(max_length=10, choices=Status.choices, default=Status.PENDING)
+    is_open = models.BooleanField(default=True)
+    zones = models.ManyToManyField(DeliveryZone, through="RestaurantZone", related_name="restaurants")
+
+    class Meta:
+        indexes = [models.Index(fields=["slug"]), models.Index(fields=["status"])]
+
+    def payout_for(self, subtotal):
+        subtotal = Decimal(subtotal)
+        return (subtotal * (Decimal("100") - self.commission_percentage) / Decimal("100")).quantize(Decimal("0.01"))
+
+    def is_currently_open(self, now):
+        if not self.is_open:
+            return False
+        hours = self.hours.filter(weekday=now.weekday(), is_closed=False)
+        t = now.time()
+        return any(h.open_time <= t <= h.close_time for h in hours)
+
+    def __str__(self):
+        return self.name
+
+
+class RestaurantHours(TimeStamped):
+    restaurant = models.ForeignKey(Restaurant, on_delete=models.CASCADE, related_name="hours")
+    weekday = models.PositiveSmallIntegerField()  # 0=Mon .. 6=Sun (datetime.weekday())
+    open_time = models.TimeField()
+    close_time = models.TimeField()
+    is_closed = models.BooleanField(default=False)
+
+
+class RestaurantZone(TimeStamped):
+    restaurant = models.ForeignKey(Restaurant, on_delete=models.CASCADE, related_name="restaurant_zones")
+    zone = models.ForeignKey(DeliveryZone, on_delete=models.CASCADE, related_name="zone_restaurants")
+    delivery_fee = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+
+    class Meta:
+        unique_together = ("restaurant", "zone")
