@@ -12,6 +12,7 @@ import { logout } from "../redux/reducer/IsLoggedInReducer";
 const NAV_ITEMS = [
     { label: "Restaurant", path: "/vendor" },
     { label: "Menu", path: "/vendor/menu" },
+    { label: "Orders", path: "/vendor/orders" },
 ];
 
 const VendorLayout = () => {

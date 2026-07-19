@@ -36,13 +36,24 @@ import CartPage from './storefront/pages/CartPage';
 import CheckoutPage from './storefront/pages/CheckoutPage';
 import CustomerAuth from './storefront/pages/CustomerAuth';
 import CustomerAccount from './storefront/pages/CustomerAccount';
-import FoodComingSoon from './storefront/pages/FoodComingSoon';
 import { useMemo, useState } from 'react';
 
 // Vendor (Restaurant-role) dashboard imports
 import VendorLayout from './vendor/VendorLayout';
 import VendorRestaurant from './vendor/VendorRestaurant';
 import VendorMenu from './vendor/VendorMenu';
+import VendorOrders from './vendor/VendorOrders';
+
+// Food delivery app (separate themed experience mounted at /food)
+import { getFoodTheme } from './food/theme';
+import { FoodLocationProvider } from './food/context/FoodLocationContext';
+import FoodLayout from './food/layout/FoodLayout';
+import FoodHome from './food/pages/FoodHome';
+import RestaurantDetail from './food/pages/RestaurantDetail';
+import FoodCartPage from './food/pages/FoodCartPage';
+import FoodCheckout from './food/pages/FoodCheckout';
+import FoodOrderTrack from './food/pages/FoodOrderTrack';
+import FoodMyOrders from './food/pages/FoodMyOrders';
 
 // Wraps the storefront with a dark-mode-aware theme.
 // Lives inside the router so it re-renders cleanly on toggle.
@@ -63,6 +74,17 @@ function StorefrontWrapper() {
   return (
     <ThemeProvider theme={theme}>
       <StorefrontLayout toggleDarkMode={toggleDarkMode} darkMode={darkMode} />
+    </ThemeProvider>
+  );
+}
+
+// Food delivery app shell: its own dark theme + location provider + layout,
+// mounted OUTSIDE the storefront wrapper so selecting "Food" switches the whole UI.
+function FoodApp() {
+  const theme = useMemo(() => getFoodTheme(), []);
+  return (
+    <ThemeProvider theme={theme}>
+      <FoodLocationProvider><FoodLayout /></FoodLocationProvider>
     </ThemeProvider>
   );
 }
@@ -101,7 +123,6 @@ function App() {
         children:[
           {index:true,element:<HomePage/>},
           {path:"shop",element:<ProductCatalog/>},
-          {path:"food",element:<FoodComingSoon/>},
           {path:"product/:slug",element:<ProductDetail/>},
           {path:"cart",element:<CartPage/>},
           {path:"checkout",element:<CheckoutPage/>},
@@ -112,6 +133,20 @@ function App() {
       // Storefront Auth (standalone page, no layout)
       {path:"/auth/login",element:<StorefrontAuthTheme><CustomerAuth/></StorefrontAuthTheme>},
       {path:"/auth/signup",element:<StorefrontAuthTheme><CustomerAuth/></StorefrontAuthTheme>},
+
+      // ── Food Delivery Routes (separate themed app) ──
+      {
+        path:"/food",
+        element:<FoodApp/>,
+        children:[
+          {index:true,element:<FoodHome/>},
+          {path:"restaurant/:slug",element:<RestaurantDetail/>},
+          {path:"cart",element:<FoodCartPage/>},
+          {path:"checkout",element:<FoodCheckout/>},
+          {path:"order/:code",element:<FoodOrderTrack/>},
+          {path:"orders",element:<ProtectedRoute element={<FoodMyOrders/>}/>},
+        ]
+      },
 
       // ── Vendor Routes (restaurant-owner dashboard) ──
       // Gated by role, not just auth: VendorRoute decodes the JWT (see utils/VendorRoute.js)
@@ -124,6 +159,7 @@ function App() {
         children:[
           {index:true,element:<VendorRestaurant/>},
           {path:"menu",element:<VendorMenu/>},
+          {path:"orders",element:<VendorOrders/>},
         ]
       },
 

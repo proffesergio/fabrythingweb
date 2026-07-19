@@ -23,5 +23,10 @@ DATABASES = {
 if not SECRET_KEY:  # noqa: F405
     SECRET_KEY = "test-insecure-key"
 
+# base.py captured SIMPLE_JWT["SIGNING_KEY"] = SECRET_KEY at import time, when
+# SECRET_KEY was still None (no .env in CI/fresh checkouts). Re-point it at the
+# resolved key so JWT-authenticated API tests can sign tokens.
+SIMPLE_JWT["SIGNING_KEY"] = SECRET_KEY  # noqa: F405
+
 # Faster hashing keeps the suite quick.
 PASSWORD_HASHERS = ["django.contrib.auth.hashers.MD5PasswordHasher"]

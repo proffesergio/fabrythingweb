@@ -5,6 +5,10 @@ from food.views_public import (
 )
 from food.views_vendor import VendorCategoryViewSet, VendorItemViewSet, VendorRestaurantView
 from food.views_admin import AdminRestaurantViewSet, AdminZoneViewSet
+from food.views_orders import (
+    FoodOrderView, FoodOrderTrackView, VendorOrderListView, VendorOrderStatusView,
+    AdminFoodOrderListView, AdminFoodOrderStatusView,
+)
 
 urlpatterns = [
     path("restaurants/", PublicRestaurantListView.as_view(), name="food_restaurants"),
@@ -13,6 +17,13 @@ urlpatterns = [
     # Single-object endpoint (no pk in the URL — always the caller's own restaurant),
     # so it's registered explicitly rather than via the router below.
     path("vendor/restaurant/", VendorRestaurantView.as_view(), name="food_vendor_restaurant"),
+    # Orders — customer (guest/auth), vendor fulfillment, admin oversight.
+    path("orders/", FoodOrderView.as_view(), name="food_orders"),
+    path("orders/<str:order_code>/", FoodOrderTrackView.as_view(), name="food_order_track"),
+    path("vendor/orders/", VendorOrderListView.as_view(), name="food_vendor_orders"),
+    path("vendor/orders/<int:pk>/status/", VendorOrderStatusView.as_view(), name="food_vendor_order_status"),
+    path("admin/orders/", AdminFoodOrderListView.as_view(), name="food_admin_orders"),
+    path("admin/orders/<int:pk>/status/", AdminFoodOrderStatusView.as_view(), name="food_admin_order_status"),
 ]
 
 router = DefaultRouter()

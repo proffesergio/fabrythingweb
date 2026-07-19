@@ -16,6 +16,7 @@ from django.core.management.base import BaseCommand
 from django.db import transaction
 from django.utils.text import slugify
 
+from accounts.models import Users
 from catalog.models import Categories, Products
 
 
@@ -258,6 +259,17 @@ class Command(BaseCommand):
 
     @transaction.atomic
     def handle(self, *args, **options):
+        # Products/categories are tenant-scoped by domain_user_id. Without an owner
+        # they are invisible in the admin list (which filters by the caller's domain)
+        # and crash the admin serializer, so attach them to an admin/tenant user.
+        owner = (Users.objects.filter(role="Super Admin").order_by("id").first()
+                 or Users.objects.filter(role="Admin").order_by("id").first()
+                 or Users.objects.order_by("id").first())
+        if owner is None:
+            self.stdout.write(self.style.ERROR(
+                "No admin user found. Run `python manage.py create_admin` first."))
+            return
+
         if not options["keep"]:
             self.stdout.write("Clearing existing products and categories...")
             Products.objects.all().delete()
@@ -274,6 +286,7 @@ class Command(BaseCommand):
                 defaults={
                     "name": c["name"], "description": c["desc"],
                     "display_order": c["order"], "image": [img(c["kw"], lock)],
+                    "domain_user_id": owner, "added_by_user_id": owner,
                 },
             )
             cat_map[c["slug"]] = cat
@@ -298,6 +311,8 @@ class Command(BaseCommand):
                     "name": p["name"],
                     "slug": slugify(p["name"]),
                     "description": p["desc"],
+                    "domain_user_id": owner,
+                    "added_by_user_id": owner,
                     "image": gallery,
                     "initial_buying_price": buy,
                     "initial_selling_price": sell,

@@ -1,3 +1,4 @@
+import uuid
 from django.db import models
 from django.conf import settings
 from decimal import Decimal
@@ -146,3 +147,85 @@ class FoodItemOption(TimeStamped):
     price_delta = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     is_default = models.BooleanField(default=False)
     display_order = models.PositiveIntegerField(default=0)
+
+
+def generate_food_order_code():
+    return f"FD-{uuid.uuid4().hex[:6].upper()}"
+
+
+class FoodOrder(TimeStamped):
+    """A customer-facing Cash-on-Delivery food order.
+
+    Money is snapshotted at creation (the server-authoritative single source of
+    truth) and the status follows a strict forward-only state machine.
+    """
+
+    class Status(models.TextChoices):
+        PLACED = "PLACED", "Placed"
+        CONFIRMED = "CONFIRMED", "Confirmed"
+        PREPARING = "PREPARING", "Preparing"
+        OUT_FOR_DELIVERY = "OUT_FOR_DELIVERY", "Out for Delivery"
+        DELIVERED = "DELIVERED", "Delivered"
+        CANCELLED = "CANCELLED", "Cancelled"
+
+    ALLOWED_TRANSITIONS = {
+        Status.PLACED: {Status.CONFIRMED, Status.CANCELLED},
+        Status.CONFIRMED: {Status.PREPARING, Status.CANCELLED},
+        Status.PREPARING: {Status.OUT_FOR_DELIVERY, Status.CANCELLED},
+        Status.OUT_FOR_DELIVERY: {Status.DELIVERED, Status.CANCELLED},
+        Status.DELIVERED: set(),
+        Status.CANCELLED: set(),
+    }
+
+    customer = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True,
+                                 on_delete=models.SET_NULL, related_name="food_orders")
+    guest_name = models.CharField(max_length=120)
+    guest_phone = models.CharField(max_length=20)
+    delivery_address = models.TextField()
+    restaurant = models.ForeignKey(Restaurant, on_delete=models.PROTECT, related_name="orders")
+    zone = models.ForeignKey(DeliveryZone, null=True, blank=True, on_delete=models.SET_NULL,
+                             related_name="orders")
+    order_code = models.CharField(max_length=12, unique=True, default=generate_food_order_code)
+    status = models.CharField(max_length=20, choices=Status.choices, default=Status.PLACED)
+    subtotal = models.DecimalField(max_digits=10, decimal_places=2)
+    delivery_fee = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal("0.00"))
+    tip = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal("0.00"))
+    total = models.DecimalField(max_digits=10, decimal_places=2)
+    eta_minutes = models.PositiveIntegerField(default=45)
+    payment_method = models.CharField(max_length=8, default="COD")
+    payment_status = models.CharField(max_length=12, default="PENDING")  # PENDING | COLLECTED
+    notes = models.TextField(blank=True, default="")
+
+    class Meta:
+        ordering = ["-created_at"]
+        indexes = [
+            models.Index(fields=["restaurant", "status"]),
+            models.Index(fields=["order_code"]),
+        ]
+
+    def can_transition_to(self, new_status):
+        return new_status in self.ALLOWED_TRANSITIONS.get(self.status, set())
+
+    def transition_to(self, new_status, changed_by=None, reason=""):
+        from rest_framework.exceptions import ValidationError
+        new_status = FoodOrder.Status(new_status)
+        if new_status == self.status:
+            return self
+        if not self.can_transition_to(new_status):
+            raise ValidationError(f"Cannot move order from {self.status} to {new_status}.")
+        self.status = new_status
+        self.save(update_fields=["status", "updated_at"])
+        return self
+
+    def __str__(self):
+        return f"{self.order_code} ({self.status})"
+
+
+class FoodOrderItem(TimeStamped):
+    order = models.ForeignKey(FoodOrder, on_delete=models.CASCADE, related_name="items")
+    item = models.ForeignKey(FoodItem, null=True, on_delete=models.SET_NULL, related_name="order_items")
+    item_name = models.CharField(max_length=150)
+    unit_price = models.DecimalField(max_digits=10, decimal_places=2)
+    quantity = models.PositiveIntegerField()
+    selected_options = models.JSONField(default=list, blank=True)  # [{"name":..., "price_delta":...}]
+    line_total = models.DecimalField(max_digits=10, decimal_places=2)
