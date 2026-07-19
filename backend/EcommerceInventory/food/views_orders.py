@@ -110,6 +110,19 @@ class AdminFoodOrderListView(ListAPIView):
         return super().list(request, *args, **kwargs)
 
 
+class AdminFoodOrderDetailView(APIView):
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated, IsPlatformAdmin]
+
+    def get(self, request, pk):
+        order = FoodOrder.objects.filter(pk=pk).prefetch_related("items").first()
+        if not order:
+            return renderResponse(data={}, message="Order not found", status=404)
+        data = FoodOrderSerializer(order).data
+        data["allowed_transitions"] = [s.value for s in FoodOrder.ALLOWED_TRANSITIONS.get(order.status, [])]
+        return renderResponse(data=data, message="Order detail")
+
+
 class AdminFoodOrderStatusView(APIView):
     authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated, IsPlatformAdmin]

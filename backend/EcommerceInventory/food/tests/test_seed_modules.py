@@ -31,3 +31,13 @@ class SeedFoodModulesTests(TestCase):
 
         delivery_zones = Modules.objects.get(module_name="Delivery Zones")
         self.assertEqual(delivery_zones.parent_id, food_module)
+
+        # New production admin modules register under Food
+        for name, url in [
+            ("Food Dashboard", "/manage/food/dashboard"),
+            ("Food Orders", "/manage/food/orders"),
+            ("Menu Management", "/manage/food/menu"),
+        ]:
+            mod = Modules.objects.get(module_name=name)
+            self.assertEqual(mod.module_url, url)
+            self.assertEqual(mod.parent_id, food_module)

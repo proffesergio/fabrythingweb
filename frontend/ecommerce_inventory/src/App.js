@@ -24,6 +24,10 @@ import ManagePurchaseOrder from './pages/purchaseorder/ManagePurchaseOrder';
 import ManageSalesOrder from './pages/salesorder/ManageSalesOrder';
 import ManageRestaurants from './pages/food/ManageRestaurants';
 import ManageZones from './pages/food/ManageZones';
+import FoodDashboard from './pages/food/FoodDashboard';
+import ManageFoodOrders from './pages/food/ManageFoodOrders';
+import FoodMenuManager from './pages/food/FoodMenuManager';
+import RestaurantDetailAdmin from './pages/food/RestaurantDetailAdmin';
 
 // Storefront imports
 import { ThemeProvider } from '@mui/material/styles';
@@ -183,8 +187,12 @@ function App() {
           {path:"create/po/:id",element:<ProtectedRoute element={<CreatePurchaseOrder/>}/>},
           {path:"manage/purchaseorder",element:<ProtectedRoute element={<ManagePurchaseOrder/>}/>},
           {path:"manage/salesorder",element:<ProtectedRoute element={<ManageSalesOrder/>}/>},
+          {path:"manage/food/dashboard",element:<ProtectedRoute element={<FoodDashboard/>}/>},
           {path:"manage/food/restaurants",element:<ProtectedRoute element={<ManageRestaurants/>}/>},
+          {path:"manage/food/restaurants/:id",element:<ProtectedRoute element={<RestaurantDetailAdmin/>}/>},
           {path:"manage/food/zones",element:<ProtectedRoute element={<ManageZones/>}/>},
+          {path:"manage/food/orders",element:<ProtectedRoute element={<ManageFoodOrders/>}/>},
+          {path:"manage/food/menu",element:<ProtectedRoute element={<FoodMenuManager/>}/>},
           {path:"*",element:<Error404Page/>},
         ]},
     ]

@@ -5,10 +5,14 @@ from food.views_public import (
 )
 from food.views_vendor import VendorCategoryViewSet, VendorItemViewSet, VendorRestaurantView
 from food.views_admin import AdminRestaurantViewSet, AdminZoneViewSet
+from food.views_admin_menu import (
+    AdminCategoryViewSet, AdminItemViewSet, AdminOptionGroupViewSet, AdminOptionViewSet,
+)
 from food.views_orders import (
     FoodOrderView, FoodOrderTrackView, VendorOrderListView, VendorOrderStatusView,
-    AdminFoodOrderListView, AdminFoodOrderStatusView,
+    AdminFoodOrderListView, AdminFoodOrderStatusView, AdminFoodOrderDetailView,
 )
+from food.views_admin_dashboard import AdminFoodDashboardView
 
 urlpatterns = [
     path("restaurants/", PublicRestaurantListView.as_view(), name="food_restaurants"),
@@ -22,7 +26,9 @@ urlpatterns = [
     path("orders/<str:order_code>/", FoodOrderTrackView.as_view(), name="food_order_track"),
     path("vendor/orders/", VendorOrderListView.as_view(), name="food_vendor_orders"),
     path("vendor/orders/<int:pk>/status/", VendorOrderStatusView.as_view(), name="food_vendor_order_status"),
+    path("admin/dashboard/", AdminFoodDashboardView.as_view(), name="food_admin_dashboard"),
     path("admin/orders/", AdminFoodOrderListView.as_view(), name="food_admin_orders"),
+    path("admin/orders/<int:pk>/", AdminFoodOrderDetailView.as_view(), name="food_admin_order_detail"),
     path("admin/orders/<int:pk>/status/", AdminFoodOrderStatusView.as_view(), name="food_admin_order_status"),
 ]
 
@@ -31,4 +37,8 @@ router.register("vendor/categories", VendorCategoryViewSet, basename="vendor-cat
 router.register("vendor/items", VendorItemViewSet, basename="vendor-items")
 router.register("admin/restaurants", AdminRestaurantViewSet, basename="admin-restaurants")
 router.register("admin/zones", AdminZoneViewSet, basename="admin-zones")
+router.register("admin/categories", AdminCategoryViewSet, basename="admin-categories")
+router.register("admin/items", AdminItemViewSet, basename="admin-items")
+router.register("admin/option-groups", AdminOptionGroupViewSet, basename="admin-option-groups")
+router.register("admin/options", AdminOptionViewSet, basename="admin-options")
 urlpatterns += router.urls
