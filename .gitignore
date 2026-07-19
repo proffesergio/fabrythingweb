@@ -11,7 +11,7 @@ env/
 
 # Django
 *.log
-db.sqlite3
+*.sqlite3
 staticfiles/
 mediafiles/
 
@@ -22,6 +22,10 @@ mediafiles/
 # Node
 node_modules/
 npm-debug.log*
+# The real frontend project lives in frontend/ecommerce_inventory/.
+# Ignore stray root-level npm files (e.g. an accidental `npm i` at the repo root).
+/package.json
+/package-lock.json
 
 # React build
 frontend/ecommerce_inventory/build/
