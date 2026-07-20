@@ -1,35 +1,76 @@
-import { Card, CardMedia, CardContent, Box, Typography, Chip, Stack } from '@mui/material';
-import AccessTimeIcon from '@mui/icons-material/AccessTime';
-import TwoWheelerIcon from '@mui/icons-material/TwoWheeler';
+import { Card, Box, Typography, Chip, Stack } from '@mui/material';
+import AccessTimeRoundedIcon from '@mui/icons-material/AccessTimeRounded';
+import TwoWheelerRoundedIcon from '@mui/icons-material/TwoWheelerRounded';
 import { Link } from 'react-router-dom';
+import { motion } from 'framer-motion';
+import { FOOD } from '../theme';
+
+const EMOJI = {
+  bengali: '🍛', biryani: '🍚', biriyani: '🍚', 'fast food': '🍔', chinese: '🥡',
+  pizza: '🍕', dessert: '🧁', cafe: '☕', kebab: '🍢', default: '🍽️',
+};
+const emojiFor = (cuisine = '') => {
+  const k = cuisine.toLowerCase();
+  return Object.keys(EMOJI).find((key) => k.includes(key)) ? EMOJI[Object.keys(EMOJI).find((key) => k.includes(key))] : EMOJI.default;
+};
 
 export default function RestaurantCard({ restaurant: r }) {
+  const closed = !r.is_open;
   return (
     <Card
-      component={Link}
-      to={`/food/restaurant/${r.slug}`}
-      sx={{ textDecoration: 'none', display: 'block', overflow: 'hidden', opacity: r.is_open ? 1 : 0.6 }}
+      component={motion.a}
+      whileHover={{ y: -4 }}
+      transition={{ type: 'spring', stiffness: 300, damping: 22 }}
+      href={undefined}
+      sx={{ textDecoration: 'none', display: 'block', overflow: 'hidden', height: '100%',
+            filter: closed ? 'grayscale(0.5)' : 'none', opacity: closed ? 0.85 : 1 }}
     >
-      <Box sx={{ position: 'relative' }}>
-        <CardMedia
-          component="img"
-          height="150"
-          image={r.cover_image || 'https://placehold.co/600x300/17191F/FF6B35?text=Food'}
-          alt={r.display_name}
-          loading="lazy"
-        />
-        {!r.is_open && (
-          <Chip label="Closed" size="small" sx={{ position: 'absolute', top: 10, left: 10 }} />
-        )}
-      </Box>
-      <CardContent>
-        <Typography variant="h6" noWrap sx={{ color: 'text.primary' }}>{r.display_name}</Typography>
-        <Typography variant="body2" color="text.secondary" noWrap>{r.cuisine_type || 'Restaurant'}</Typography>
-        <Stack direction="row" spacing={1} sx={{ mt: 1 }}>
-          <Chip size="small" icon={<AccessTimeIcon />} label={`${r.avg_prep_minutes}+ min`} />
-          <Chip size="small" icon={<TwoWheelerIcon />} label={`৳${r.base_delivery_fee}`} />
-        </Stack>
-      </CardContent>
+      <Link to={`/food/restaurant/${r.slug}`} style={{ textDecoration: 'none', color: 'inherit' }}>
+        {/* Cover: real photo if present, else a warm gradient + cuisine emoji */}
+        <Box sx={{ position: 'relative', height: 158, overflow: 'hidden' }}>
+          {r.cover_image ? (
+            <Box component="img" src={r.cover_image} alt={r.display_name} loading="lazy"
+              sx={{ width: '100%', height: '100%', objectFit: 'cover',
+                    transition: 'transform .5s ease', '.MuiCard-root:hover &': { transform: 'scale(1.06)' } }} />
+          ) : (
+            <Box sx={{ width: '100%', height: '100%', display: 'grid', placeItems: 'center',
+                       background: `radial-gradient(120% 120% at 20% 0%, #FFE7C2 0%, #FFD0A6 45%, #F7B27A 100%)` }}>
+              <Box component="span" sx={{ fontSize: 54, filter: 'drop-shadow(0 6px 10px rgba(120,60,20,.25))' }}>
+                {emojiFor(r.cuisine_type)}
+              </Box>
+            </Box>
+          )}
+          {/* Floating ETA pill (turmeric) — the signature detail */}
+          <Chip
+            size="small" icon={<AccessTimeRoundedIcon sx={{ fontSize: 15 }} />}
+            label={`${r.avg_prep_minutes}+ min`}
+            sx={{ position: 'absolute', bottom: 10, left: 10, bgcolor: FOOD.turmeric, color: '#3A2A05',
+                  fontWeight: 800, '& .MuiChip-icon': { color: '#3A2A05' } }}
+          />
+          <Chip
+            size="small" label={closed ? 'Closed' : 'Open now'}
+            color={closed ? 'default' : 'success'}
+            sx={{ position: 'absolute', top: 10, right: 10, fontWeight: 800,
+                  bgcolor: closed ? 'rgba(36,24,18,0.72)' : undefined, color: closed ? '#fff' : undefined }}
+          />
+        </Box>
+
+        <Box sx={{ p: 2 }}>
+          <Typography variant="h6" noWrap sx={{ color: 'text.primary', lineHeight: 1.2 }}>{r.display_name}</Typography>
+          <Typography variant="body2" color="text.secondary" noWrap sx={{ mb: 1.2 }}>
+            {r.cuisine_type || 'Restaurant'}
+          </Typography>
+          <Stack direction="row" spacing={2} alignItems="center">
+            <Stack direction="row" spacing={0.5} alignItems="center">
+              <TwoWheelerRoundedIcon sx={{ fontSize: 18, color: 'text.secondary' }} />
+              <Typography variant="body2" fontWeight={700}>৳{r.base_delivery_fee}</Typography>
+            </Stack>
+            {Number(r.min_order_amount) > 0 && (
+              <Typography variant="caption" color="text.secondary">Min ৳{r.min_order_amount}</Typography>
+            )}
+          </Stack>
+        </Box>
+      </Link>
     </Card>
   );
 }

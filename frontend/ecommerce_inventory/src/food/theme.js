@@ -1,44 +1,101 @@
 import { createTheme } from '@mui/material/styles';
 
-// Dark, immersive food-app theme — deliberately distinct from the storefront
-// (clothing) theme so selecting "Food" visibly switches the whole experience.
+// "Spice market" identity — warm, appetizing, light-forward. Deliberately not the
+// dark-tech food-app default: food photography reads as appetizing on warm surfaces.
+export const FOOD = {
+  canvas: '#FDF8F3',   // soft warm white
+  surface: '#FFFFFF',
+  ink: '#241812',      // roasted espresso (warm near-black)
+  muted: '#8C7B6E',    // warm taupe
+  line: '#EFE6DC',     // warm hairline
+  primary: '#E8452B',  // chili tomato — appetite, CTAs
+  primaryDeep: '#C4361F',
+  turmeric: '#F4A62A', // ratings, highlights
+  cardamom: '#2F7D4F', // open / veg / success
+};
+
+const display = "'Bricolage Grotesque', 'Plus Jakarta Sans', sans-serif";
+const body = "'Plus Jakarta Sans', 'Inter', system-ui, sans-serif";
+
 export function getFoodTheme() {
   return createTheme({
     palette: {
-      mode: 'dark',
-      primary: { main: '#FF6B35', light: '#FF8C5F', dark: '#E14E1D', contrastText: '#FFFFFF' },
-      secondary: { main: '#FFC93C', contrastText: '#1A1200' },
-      background: { default: '#0E0F12', paper: '#17191F' },
-      text: { primary: '#F5F6F7', secondary: '#9BA1AC' },
-      divider: '#262A32',
-      success: { main: '#22C55E' }, warning: { main: '#F59E0B' }, error: { main: '#EF4444' },
+      mode: 'light',
+      primary: { main: FOOD.primary, dark: FOOD.primaryDeep, contrastText: '#FFFFFF' },
+      secondary: { main: FOOD.turmeric, contrastText: '#3A2A05' },
+      success: { main: FOOD.cardamom, contrastText: '#FFFFFF' },
+      warning: { main: FOOD.turmeric },
+      error: { main: '#D64541' },
+      background: { default: FOOD.canvas, paper: FOOD.surface },
+      text: { primary: FOOD.ink, secondary: FOOD.muted },
+      divider: FOOD.line,
     },
     typography: {
-      fontFamily: "'Inter','Roboto','Helvetica Neue',sans-serif",
-      h1: { fontWeight: 800, letterSpacing: '-0.03em' },
-      h4: { fontWeight: 800 }, h5: { fontWeight: 700 }, h6: { fontWeight: 700 },
-      button: { textTransform: 'none', fontWeight: 700 },
+      fontFamily: body,
+      h1: { fontFamily: display, fontWeight: 800, letterSpacing: '-0.02em' },
+      h2: { fontFamily: display, fontWeight: 800, letterSpacing: '-0.02em' },
+      h3: { fontFamily: display, fontWeight: 800, letterSpacing: '-0.02em' },
+      h4: { fontFamily: display, fontWeight: 800, letterSpacing: '-0.02em' },
+      h5: { fontFamily: display, fontWeight: 700, letterSpacing: '-0.01em' },
+      h6: { fontFamily: display, fontWeight: 700 },
+      subtitle1: { fontWeight: 600 },
+      subtitle2: { fontWeight: 600 },
+      button: { textTransform: 'none', fontWeight: 700, letterSpacing: 0 },
+      overline: { fontWeight: 700, letterSpacing: '0.14em' },
     },
     shape: { borderRadius: 16 },
     components: {
-      MuiButton: {
+      MuiCssBaseline: {
         styleOverrides: {
-          root: { borderRadius: 999, padding: '10px 22px', boxShadow: 'none' },
-          containedPrimary: { background: 'linear-gradient(135deg,#FF8C5F,#E14E1D)' },
+          body: { backgroundColor: FOOD.canvas },
         },
       },
-      MuiCard: { styleOverrides: { root: { backgroundImage: 'none', border: '1px solid #262A32', borderRadius: 20 } } },
+      MuiButton: {
+        styleOverrides: {
+          root: { borderRadius: 12, padding: '10px 20px', boxShadow: 'none' },
+          containedPrimary: {
+            background: `linear-gradient(180deg, ${FOOD.primary}, ${FOOD.primaryDeep})`,
+            '&:hover': { background: FOOD.primaryDeep, boxShadow: '0 8px 20px rgba(232,69,43,0.30)' },
+          },
+        },
+      },
+      MuiCard: {
+        styleOverrides: {
+          root: {
+            backgroundImage: 'none',
+            borderRadius: 22,
+            border: `1px solid ${FOOD.line}`,
+            boxShadow: '0 6px 22px rgba(120,60,20,0.06)',
+          },
+        },
+      },
       MuiPaper: { styleOverrides: { root: { backgroundImage: 'none' } } },
       MuiAppBar: {
         styleOverrides: {
           root: {
-            backgroundColor: 'rgba(14,15,18,0.85)', backdropFilter: 'blur(14px)',
-            WebkitBackdropFilter: 'blur(14px)', color: '#F5F6F7', boxShadow: '0 1px 0 0 #262A32',
+            backgroundColor: 'rgba(253,248,243,0.86)',
+            backdropFilter: 'blur(14px)',
+            WebkitBackdropFilter: 'blur(14px)',
+            color: FOOD.ink,
+            boxShadow: `inset 0 -1px 0 0 ${FOOD.line}`,
           },
         },
       },
-      MuiChip: { styleOverrides: { root: { borderRadius: 999, fontWeight: 600 } } },
-      MuiOutlinedInput: { styleOverrides: { root: { borderRadius: 12 } } },
+      MuiChip: {
+        styleOverrides: {
+          root: { borderRadius: 999, fontWeight: 700, fontFamily: body },
+        },
+      },
+      MuiOutlinedInput: {
+        styleOverrides: {
+          root: {
+            borderRadius: 14,
+            backgroundColor: FOOD.surface,
+            '& fieldset': { borderColor: FOOD.line },
+          },
+        },
+      },
+      MuiDialog: { styleOverrides: { paper: { borderRadius: 24 } } },
     },
   });
 }
