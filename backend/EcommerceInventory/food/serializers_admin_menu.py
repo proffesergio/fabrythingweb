@@ -16,7 +16,7 @@ class AdminItemSerializer(serializers.ModelSerializer):
         model = FoodItem
         fields = ["id", "restaurant", "category_id", "name", "name_bn", "slug", "description",
                   "description_bn", "image", "price", "discount_price", "prep_minutes",
-                  "is_available", "is_veg", "spice_level", "display_order"]
+                  "is_available", "is_veg", "is_featured", "spice_level", "display_order"]
 
 
 class AdminOptionGroupSerializer(serializers.ModelSerializer):

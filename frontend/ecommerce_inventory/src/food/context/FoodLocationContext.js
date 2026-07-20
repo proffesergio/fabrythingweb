@@ -37,7 +37,9 @@ export function FoodLocationProvider({ children }) {
   useEffect(() => {
     (async () => {
       const res = await callApi({ url: 'food/zones/', method: 'GET' });
-      const z = res?.data?.data || [];
+      // Tolerate both the {data:[...]} envelope and a bare [...] list.
+      const raw = res?.data;
+      const z = Array.isArray(raw) ? raw : (raw?.data || []);
       if (z.length) {
         setZones(z);
         writeCache(ZONES_KEY, z);

@@ -8,13 +8,16 @@ import AddIcon from "@mui/icons-material/Add";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/DeleteOutline";
 import TuneIcon from "@mui/icons-material/Tune";
+import StarRoundedIcon from "@mui/icons-material/StarRounded";
+import StarBorderRoundedIcon from "@mui/icons-material/StarBorderRounded";
 import { toast } from "react-toastify";
 import useApi from "../../hooks/APIHandler";
 
 const EMPTY_ITEM = {
     name: "", name_bn: "", description: "", description_bn: "", price: "", discount_price: "",
-    prep_minutes: "", image: "", is_available: true, is_veg: false, spice_level: "",
+    prep_minutes: "", image: "", is_available: true, is_veg: false, is_featured: false, spice_level: "",
 };
+const SPICE_LEVELS = ["", "Mild", "Medium", "Hot", "Extra Hot"];
 
 export default function FoodMenuManager() {
     const { callApi } = useApi();
@@ -81,6 +84,12 @@ export default function FoodMenuManager() {
         loadMenu(restaurant);
     };
 
+    // Quick inline toggle (availability / featured) without opening the dialog.
+    const toggleField = async (item, field) => {
+        const res = await callApi({ url: `food/admin/items/${item.id}/`, method: "PATCH", body: { [field]: !item[field] } });
+        if (res?.status === 200) loadMenu(restaurant);
+    };
+
     const openOptions = async (item) => {
         setOptionItem(item);
         const res = await callApi({ url: "food/admin/option-groups/", method: "GET", params: { item: item.id } });
@@ -137,17 +146,37 @@ export default function FoodMenuManager() {
                     </Stack>
                     <Divider sx={{ mb: 1 }} />
                     <Table size="small">
-                        <TableHead><TableRow><TableCell>Item</TableCell><TableCell>Price</TableCell><TableCell>Available</TableCell><TableCell align="right">Actions</TableCell></TableRow></TableHead>
+                        <TableHead><TableRow>
+                            <TableCell>Item</TableCell><TableCell>Price</TableCell>
+                            <TableCell align="center">Featured</TableCell><TableCell align="center">Available</TableCell>
+                            <TableCell align="right">Actions</TableCell>
+                        </TableRow></TableHead>
                         <TableBody>
                             {itemsByCategory(cat.id).map((it) => (
-                                <TableRow key={it.id}>
-                                    <TableCell>{it.name}</TableCell>
-                                    <TableCell>৳{it.price}</TableCell>
-                                    <TableCell><Chip size="small" label={it.is_available ? "Yes" : "No"} color={it.is_available ? "success" : "default"} /></TableCell>
+                                <TableRow key={it.id} sx={{ opacity: it.is_available ? 1 : 0.55 }}>
+                                    <TableCell>
+                                        <Typography variant="body2" fontWeight={600}>{it.name}</Typography>
+                                        {it.name_bn && <Typography variant="caption" color="text.secondary">{it.name_bn}</Typography>}
+                                    </TableCell>
+                                    <TableCell>
+                                        {it.discount_price
+                                            ? <><Typography variant="body2" component="span" fontWeight={700}>৳{it.discount_price}</Typography>
+                                                <Typography variant="caption" component="span" sx={{ ml: 0.5, textDecoration: "line-through" }} color="text.secondary">৳{it.price}</Typography></>
+                                            : <>৳{it.price}</>}
+                                    </TableCell>
+                                    <TableCell align="center">
+                                        <IconButton size="small" onClick={() => toggleField(it, "is_featured")}
+                                            color={it.is_featured ? "warning" : "default"}>
+                                            {it.is_featured ? <StarRoundedIcon /> : <StarBorderRoundedIcon />}
+                                        </IconButton>
+                                    </TableCell>
+                                    <TableCell align="center">
+                                        <Switch size="small" checked={!!it.is_available} onChange={() => toggleField(it, "is_available")} />
+                                    </TableCell>
                                     <TableCell align="right">
-                                        <IconButton size="small" onClick={() => openOptions(it)}><TuneIcon /></IconButton>
-                                        <IconButton size="small" onClick={() => setItemDialog({ ...it, category_id: cat.id })}><EditIcon /></IconButton>
-                                        <IconButton size="small" color="error" onClick={() => deleteItem(it.id)}><DeleteIcon /></IconButton>
+                                        <IconButton size="small" title="Options" onClick={() => openOptions(it)}><TuneIcon /></IconButton>
+                                        <IconButton size="small" title="Edit" onClick={() => setItemDialog({ ...it, category_id: cat.id })}><EditIcon /></IconButton>
+                                        <IconButton size="small" color="error" title="Delete" onClick={() => deleteItem(it.id)}><DeleteIcon /></IconButton>
                                     </TableCell>
                                 </TableRow>
                             ))}
@@ -170,9 +199,19 @@ export default function FoodMenuManager() {
                             <Grid item xs={12}><TextField label="Description (English)" fullWidth multiline rows={2} value={itemDialog.description || ""} onChange={(e) => setItemDialog({ ...itemDialog, description: e.target.value })} /></Grid>
                             <Grid item xs={12}><TextField label="বিবরণ (বাংলা)" fullWidth multiline rows={2} value={itemDialog.description_bn || ""} onChange={(e) => setItemDialog({ ...itemDialog, description_bn: e.target.value })} inputProps={{ lang: "bn" }} /></Grid>
                             <Grid item xs={12}><TextField label="Image URL" fullWidth value={itemDialog.image} onChange={(e) => setItemDialog({ ...itemDialog, image: e.target.value })} helperText="Paste a photo URL — dishes with photos look best" /></Grid>
-                            <Grid item xs={12} sm={4}><TextField label="Spice level" fullWidth value={itemDialog.spice_level} onChange={(e) => setItemDialog({ ...itemDialog, spice_level: e.target.value })} /></Grid>
-                            <Grid item xs={12} sm={4}><FormControlLabel control={<Switch checked={itemDialog.is_available} onChange={(e) => setItemDialog({ ...itemDialog, is_available: e.target.checked })} />} label="Available" /></Grid>
-                            <Grid item xs={12} sm={4}><FormControlLabel control={<Switch checked={itemDialog.is_veg} onChange={(e) => setItemDialog({ ...itemDialog, is_veg: e.target.checked })} />} label="Veg" /></Grid>
+                            <Grid item xs={12} sm={6}>
+                                <TextField select fullWidth label="Spice level" value={itemDialog.spice_level || ""}
+                                    onChange={(e) => setItemDialog({ ...itemDialog, spice_level: e.target.value })}>
+                                    {SPICE_LEVELS.map((s) => <MenuItem key={s || "none"} value={s}>{s || "None"}</MenuItem>)}
+                                </TextField>
+                            </Grid>
+                            <Grid item xs={12} sm={6}>
+                                <Stack direction="row" spacing={1} sx={{ flexWrap: "wrap" }}>
+                                    <FormControlLabel control={<Switch checked={!!itemDialog.is_available} onChange={(e) => setItemDialog({ ...itemDialog, is_available: e.target.checked })} />} label="Available" />
+                                    <FormControlLabel control={<Switch checked={!!itemDialog.is_veg} onChange={(e) => setItemDialog({ ...itemDialog, is_veg: e.target.checked })} />} label="Veg" />
+                                    <FormControlLabel control={<Switch color="warning" checked={!!itemDialog.is_featured} onChange={(e) => setItemDialog({ ...itemDialog, is_featured: e.target.checked })} />} label="Bestseller" />
+                                </Stack>
+                            </Grid>
                         </Grid>
                     )}
                 </DialogContent>

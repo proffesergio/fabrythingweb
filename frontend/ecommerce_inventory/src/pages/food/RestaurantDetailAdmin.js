@@ -44,7 +44,7 @@ export default function RestaurantDetailAdmin() {
             (detail.data.data.zones || []).forEach((z) => { a[z.id] = z.delivery_fee ?? ""; });
             setAssigned(a);
         }
-        setZones(zoneRes?.data?.data || []);
+        setZones(Array.isArray(zoneRes?.data) ? zoneRes.data : (zoneRes?.data?.data || []));
     }, [id]); // eslint-disable-line react-hooks/exhaustive-deps
 
     useEffect(() => { load(); }, [load]);

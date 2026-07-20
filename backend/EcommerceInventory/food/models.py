@@ -119,6 +119,7 @@ class FoodItem(TimeStamped):
     prep_minutes = models.PositiveIntegerField(null=True, blank=True)
     is_available = models.BooleanField(default=True)
     is_veg = models.BooleanField(default=False)
+    is_featured = models.BooleanField(default=False)  # "Bestseller" / chef's pick
     spice_level = models.CharField(max_length=20, blank=True, default="")
     display_order = models.PositiveIntegerField(default=0)
 

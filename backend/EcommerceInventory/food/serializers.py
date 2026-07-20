@@ -40,7 +40,7 @@ class FoodItemSerializer(_LangMixin, serializers.ModelSerializer):
         model = FoodItem
         fields = ["id", "name", "name_bn", "display_name", "slug", "description", "description_bn",
                   "image", "price", "discount_price", "effective_price", "prep_minutes",
-                  "is_available", "is_veg", "spice_level", "display_order", "option_groups"]
+                  "is_available", "is_veg", "is_featured", "spice_level", "display_order", "option_groups"]
 
     def get_display_name(self, obj):
         return localized(obj, "name", self.lang)

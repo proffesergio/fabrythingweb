@@ -73,3 +73,9 @@ class PublicZoneListView(ListAPIView):
 
     def get_queryset(self):
         return DeliveryZone.objects.filter(is_active=True).order_by("name")
+
+    def list(self, request, *args, **kwargs):
+        # Wrap in the project's standard {"data": [...]} envelope so the frontend's
+        # res.data.data access works (every other food endpoint uses renderResponse).
+        serializer = self.get_serializer(self.get_queryset(), many=True)
+        return renderResponse(data=serializer.data, message="Zones")

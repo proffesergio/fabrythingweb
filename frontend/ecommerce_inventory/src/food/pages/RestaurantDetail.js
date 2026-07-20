@@ -5,6 +5,7 @@ import { Box, Typography, Grid, Chip, Stack, CircularProgress, Button, Card } fr
 import AddRoundedIcon from '@mui/icons-material/AddRounded';
 import AccessTimeRoundedIcon from '@mui/icons-material/AccessTimeRounded';
 import TwoWheelerRoundedIcon from '@mui/icons-material/TwoWheelerRounded';
+import StarRoundedIcon from '@mui/icons-material/StarRounded';
 import { motion } from 'framer-motion';
 import useApi from '../../hooks/APIHandler';
 import { useFoodLocation } from '../context/FoodLocationContext';
@@ -36,6 +37,14 @@ function DishCard({ item, onClick }) {
         </Box>
         <Chip size="small" label={`৳${item.effective_price}`}
           sx={{ position: 'absolute', bottom: 8, left: 8, bgcolor: 'rgba(36,24,18,0.82)', color: '#fff', fontWeight: 800 }} />
+        {item.is_featured && (
+          <Chip size="small" icon={<StarRoundedIcon sx={{ fontSize: 15 }} />} label="Bestseller"
+            sx={{ position: 'absolute', top: 8, left: 8, bgcolor: FOOD.turmeric, color: '#3A2A05', fontWeight: 800,
+                  '& .MuiChip-icon': { color: '#3A2A05' } }} />
+        )}
+        {item.discount_price && (
+          <Chip size="small" label="Deal" sx={{ position: 'absolute', top: 8, right: 8, bgcolor: 'primary.main', color: '#fff', fontWeight: 800 }} />
+        )}
       </Box>
       <Box sx={{ p: 1.75, display: 'flex', flexDirection: 'column', flexGrow: 1 }}>
         <Stack direction="row" spacing={0.75} alignItems="center" sx={{ mb: 0.5 }}>
