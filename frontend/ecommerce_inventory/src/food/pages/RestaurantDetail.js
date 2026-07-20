@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
-import { Box, Typography, Grid, Chip, Stack, Divider, CircularProgress, IconButton } from '@mui/material';
+import { Box, Typography, Grid, Chip, Stack, CircularProgress, Button, Card } from '@mui/material';
 import AddRoundedIcon from '@mui/icons-material/AddRounded';
 import AccessTimeRoundedIcon from '@mui/icons-material/AccessTimeRounded';
 import TwoWheelerRoundedIcon from '@mui/icons-material/TwoWheelerRounded';
@@ -12,50 +12,49 @@ import { addFoodItem, selectFoodRestaurant } from '../redux/foodCartSlice';
 import ItemOptionModal from '../components/ItemOptionModal';
 import { FOOD } from '../theme';
 
-function DishRow({ item, onClick }) {
+function VegDot() {
   return (
-    <Box
-      onClick={onClick}
-      sx={{ display: 'flex', gap: 2, py: 2, cursor: 'pointer', alignItems: 'center',
-            borderBottom: `1px solid ${FOOD.line}`, '&:hover .dish-name': { color: 'primary.main' } }}
-    >
-      <Box sx={{ flex: 1, minWidth: 0 }}>
-        {item.is_veg && (
-          <Box aria-label="veg" sx={{ width: 14, height: 14, mb: 0.5, borderRadius: '3px',
-            border: `2px solid ${FOOD.cardamom}`, display: 'grid', placeItems: 'center' }}>
-            <Box sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: FOOD.cardamom }} />
-          </Box>
-        )}
-        <Typography className="dish-name" variant="subtitle1" sx={{ fontWeight: 700, transition: 'color .15s' }}>
-          {item.display_name}
-        </Typography>
+    <Box aria-label="veg" sx={{ width: 15, height: 15, borderRadius: '3px', border: `2px solid ${FOOD.cardamom}`,
+      display: 'grid', placeItems: 'center', flexShrink: 0 }}>
+      <Box sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: FOOD.cardamom }} />
+    </Box>
+  );
+}
+
+function DishCard({ item, onClick }) {
+  const hasOptions = item.option_groups && item.option_groups.length > 0;
+  return (
+    <Card component={motion.div} whileHover={{ y: -4 }} transition={{ type: 'spring', stiffness: 300, damping: 22 }}
+      onClick={onClick} sx={{ cursor: 'pointer', overflow: 'hidden', height: '100%', display: 'flex', flexDirection: 'column' }}>
+      <Box sx={{ position: 'relative', pt: '62%' }}>
+        <Box sx={{ position: 'absolute', inset: 0, background: item.image ? undefined
+          : 'radial-gradient(120% 120% at 30% 0%, #FFE7C2, #F7B27A)' }}>
+          {item.image
+            ? <Box component="img" src={item.image} alt={item.display_name} loading="lazy"
+                sx={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            : <Box sx={{ width: '100%', height: '100%', display: 'grid', placeItems: 'center', fontSize: 46 }}>🍽️</Box>}
+        </Box>
+        <Chip size="small" label={`৳${item.effective_price}`}
+          sx={{ position: 'absolute', bottom: 8, left: 8, bgcolor: 'rgba(36,24,18,0.82)', color: '#fff', fontWeight: 800 }} />
+      </Box>
+      <Box sx={{ p: 1.75, display: 'flex', flexDirection: 'column', flexGrow: 1 }}>
+        <Stack direction="row" spacing={0.75} alignItems="center" sx={{ mb: 0.5 }}>
+          {item.is_veg && <VegDot />}
+          <Typography variant="subtitle1" sx={{ fontWeight: 800, lineHeight: 1.2 }}>{item.display_name}</Typography>
+        </Stack>
         {item.description && (
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 0.75, display: '-webkit-box',
-            WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5,
+            display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
             {item.description}
           </Typography>
         )}
-        <Typography variant="subtitle2" sx={{ fontWeight: 800 }}>৳{item.effective_price}</Typography>
+        <Button variant="contained" size="small" startIcon={<AddRoundedIcon />}
+          sx={{ mt: 'auto', alignSelf: 'flex-start', borderRadius: 999 }}
+          onClick={(e) => { e.stopPropagation(); onClick(); }}>
+          {hasOptions ? 'Choose' : 'Add'}
+        </Button>
       </Box>
-
-      <Box sx={{ position: 'relative', flexShrink: 0 }}>
-        <Box sx={{ width: 96, height: 96, borderRadius: 3, overflow: 'hidden',
-          background: item.image ? undefined : `radial-gradient(120% 120% at 30% 0%, #FFE7C2, #F7B27A)` }}>
-          {item.image
-            ? <Box component="img" src={item.image} alt={item.display_name} loading="lazy" sx={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-            : <Box sx={{ width: '100%', height: '100%', display: 'grid', placeItems: 'center', fontSize: 34 }}>🍽️</Box>}
-        </Box>
-        <IconButton
-          component={motion.button} whileTap={{ scale: 0.8 }}
-          sx={{ position: 'absolute', bottom: -12, right: '50%', transform: 'translateX(50%)',
-                bgcolor: '#fff', border: `1px solid ${FOOD.line}`, color: 'primary.main',
-                boxShadow: '0 6px 14px rgba(120,60,20,0.16)', width: 36, height: 36,
-                '&:hover': { bgcolor: 'primary.main', color: '#fff' } }}
-        >
-          <AddRoundedIcon />
-        </IconButton>
-      </Box>
-    </Box>
+    </Card>
   );
 }
 
@@ -95,18 +94,14 @@ export default function RestaurantDetail() {
 
   return (
     <Box>
-      {/* Hero cover with scrim + name overlay */}
-      <Box sx={{ position: 'relative', height: { xs: 180, md: 240 }, borderRadius: 4, overflow: 'hidden', mb: 2 }}>
-        <Box sx={{ position: 'absolute', inset: 0,
-          background: data.cover_image
-            ? `linear-gradient(180deg, rgba(0,0,0,0.05), rgba(0,0,0,0.62)), url(${data.cover_image}) center/cover`
-            : `linear-gradient(135deg, #E8452B, #C4361F)` }} />
-        {!data.cover_image && (
-          <Box aria-hidden sx={{ position: 'absolute', right: 8, bottom: -14, fontSize: 130, opacity: 0.22 }}>🍛</Box>
-        )}
+      <Box sx={{ position: 'relative', height: { xs: 190, md: 260 }, borderRadius: 4, overflow: 'hidden', mb: 2 }}>
+        <Box sx={{ position: 'absolute', inset: 0, background: data.cover_image
+          ? `linear-gradient(180deg, rgba(0,0,0,0.05), rgba(0,0,0,0.66)), url(${data.cover_image}) center/cover`
+          : 'linear-gradient(135deg,#E8452B,#9E2A16)' }} />
+        {!data.cover_image && <Box aria-hidden sx={{ position: 'absolute', right: 8, bottom: -18, fontSize: 140, opacity: 0.22 }}>🍛</Box>}
         <Box sx={{ position: 'absolute', left: 0, right: 0, bottom: 0, p: { xs: 2, md: 3 }, color: '#fff' }}>
-          <Typography variant="h4" sx={{ textShadow: '0 2px 12px rgba(0,0,0,0.4)' }}>{data.display_name}</Typography>
-          <Typography variant="body2" sx={{ opacity: 0.9 }}>{data.cuisine_type}</Typography>
+          <Typography variant="h4" sx={{ textShadow: '0 2px 12px rgba(0,0,0,0.45)' }}>{data.display_name}</Typography>
+          <Typography variant="body2" sx={{ opacity: 0.92 }}>{data.cuisine_type}</Typography>
         </Box>
       </Box>
 
@@ -118,13 +113,13 @@ export default function RestaurantDetail() {
       </Stack>
 
       {(data.categories || []).map((cat) => (
-        <Box key={cat.id} sx={{ mb: 4 }}>
+        <Box key={cat.id} sx={{ mb: 4.5 }}>
           <Typography variant="h5" sx={{ mb: 0.5 }}>{cat.name}</Typography>
-          <Divider sx={{ borderColor: 'primary.main', borderBottomWidth: 2, width: 44, mb: 1 }} />
-          <Grid container columnSpacing={4}>
+          <Box sx={{ width: 44, height: 3, borderRadius: 2, bgcolor: 'primary.main', mb: 2 }} />
+          <Grid container spacing={2.5}>
             {cat.items.map((item) => (
-              <Grid item xs={12} md={6} key={item.id}>
-                <DishRow item={item} onClick={() => onItemClick(item)} />
+              <Grid item xs={6} sm={4} md={3} key={item.id}>
+                <DishCard item={item} onClick={() => onItemClick(item)} />
               </Grid>
             ))}
           </Grid>

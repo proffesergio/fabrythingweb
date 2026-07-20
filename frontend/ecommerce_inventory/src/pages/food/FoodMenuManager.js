@@ -11,7 +11,10 @@ import TuneIcon from "@mui/icons-material/Tune";
 import { toast } from "react-toastify";
 import useApi from "../../hooks/APIHandler";
 
-const EMPTY_ITEM = { name: "", price: "", image: "", is_available: true, is_veg: false, spice_level: "" };
+const EMPTY_ITEM = {
+    name: "", name_bn: "", description: "", description_bn: "", price: "", discount_price: "",
+    prep_minutes: "", image: "", is_available: true, is_veg: false, spice_level: "",
+};
 
 export default function FoodMenuManager() {
     const { callApi } = useApi();
@@ -20,6 +23,7 @@ export default function FoodMenuManager() {
     const [categories, setCategories] = useState([]);
     const [items, setItems] = useState([]);
     const [newCat, setNewCat] = useState("");
+    const [newCatBn, setNewCatBn] = useState("");
     const [itemDialog, setItemDialog] = useState(null); // {...item, category_id}
     const [optionItem, setOptionItem] = useState(null); // item whose options we manage
     const [groups, setGroups] = useState([]);
@@ -47,8 +51,9 @@ export default function FoodMenuManager() {
 
     const addCategory = async () => {
         if (!newCat.trim()) return;
-        const res = await callApi({ url: "food/admin/categories/", method: "POST", body: { restaurant: Number(restaurant), name: newCat } });
-        if (res?.status === 201) { toast.success("Category added"); setNewCat(""); loadMenu(restaurant); }
+        const res = await callApi({ url: "food/admin/categories/", method: "POST",
+            body: { restaurant: Number(restaurant), name: newCat, name_bn: newCatBn } });
+        if (res?.status === 201) { toast.success("Category added"); setNewCat(""); setNewCatBn(""); loadMenu(restaurant); }
     };
 
     const deleteCategory = async (id) => {
@@ -58,6 +63,9 @@ export default function FoodMenuManager() {
 
     const saveItem = async () => {
         const body = { ...itemDialog, restaurant: Number(restaurant) };
+        // Optional numeric fields must be null (not "") or the backend rejects them.
+        if (body.discount_price === "" || body.discount_price == null) delete body.discount_price;
+        if (body.prep_minutes === "" || body.prep_minutes == null) delete body.prep_minutes;
         const isEdit = !!itemDialog.id;
         const res = await callApi({
             url: isEdit ? `food/admin/items/${itemDialog.id}/` : "food/admin/items/",
@@ -108,8 +116,10 @@ export default function FoodMenuManager() {
             </Stack>
 
             <Card sx={{ mb: 2 }}><CardContent>
-                <Stack direction="row" spacing={1} alignItems="center">
-                    <TextField size="small" label="New category" value={newCat} onChange={(e) => setNewCat(e.target.value)} />
+                <Stack direction={{ xs: "column", sm: "row" }} spacing={1} alignItems={{ sm: "center" }}>
+                    <TextField size="small" label="New category (English)" value={newCat} onChange={(e) => setNewCat(e.target.value)} />
+                    <TextField size="small" label="বিভাগ (বাংলা)" value={newCatBn} onChange={(e) => setNewCatBn(e.target.value)}
+                        inputProps={{ lang: "bn" }} />
                     <Button variant="contained" startIcon={<AddIcon />} onClick={addCategory}>Add category</Button>
                 </Stack>
             </CardContent></Card>
@@ -152,9 +162,14 @@ export default function FoodMenuManager() {
                 <DialogContent>
                     {itemDialog && (
                         <Grid container spacing={2} sx={{ mt: 0 }}>
-                            <Grid item xs={12} sm={8}><TextField label="Name" fullWidth value={itemDialog.name} onChange={(e) => setItemDialog({ ...itemDialog, name: e.target.value })} /></Grid>
-                            <Grid item xs={12} sm={4}><TextField label="Price" type="number" fullWidth value={itemDialog.price} onChange={(e) => setItemDialog({ ...itemDialog, price: e.target.value })} /></Grid>
-                            <Grid item xs={12}><TextField label="Image URL" fullWidth value={itemDialog.image} onChange={(e) => setItemDialog({ ...itemDialog, image: e.target.value })} /></Grid>
+                            <Grid item xs={12} sm={6}><TextField label="Name (English)" fullWidth value={itemDialog.name} onChange={(e) => setItemDialog({ ...itemDialog, name: e.target.value })} /></Grid>
+                            <Grid item xs={12} sm={6}><TextField label="নাম (বাংলা)" fullWidth value={itemDialog.name_bn || ""} onChange={(e) => setItemDialog({ ...itemDialog, name_bn: e.target.value })} inputProps={{ lang: "bn" }} /></Grid>
+                            <Grid item xs={12} sm={4}><TextField label="Price ৳" type="number" fullWidth value={itemDialog.price} onChange={(e) => setItemDialog({ ...itemDialog, price: e.target.value })} /></Grid>
+                            <Grid item xs={12} sm={4}><TextField label="Discount price ৳" type="number" fullWidth value={itemDialog.discount_price || ""} onChange={(e) => setItemDialog({ ...itemDialog, discount_price: e.target.value })} helperText="Optional" /></Grid>
+                            <Grid item xs={12} sm={4}><TextField label="Prep minutes" type="number" fullWidth value={itemDialog.prep_minutes || ""} onChange={(e) => setItemDialog({ ...itemDialog, prep_minutes: e.target.value })} /></Grid>
+                            <Grid item xs={12}><TextField label="Description (English)" fullWidth multiline rows={2} value={itemDialog.description || ""} onChange={(e) => setItemDialog({ ...itemDialog, description: e.target.value })} /></Grid>
+                            <Grid item xs={12}><TextField label="বিবরণ (বাংলা)" fullWidth multiline rows={2} value={itemDialog.description_bn || ""} onChange={(e) => setItemDialog({ ...itemDialog, description_bn: e.target.value })} inputProps={{ lang: "bn" }} /></Grid>
+                            <Grid item xs={12}><TextField label="Image URL" fullWidth value={itemDialog.image} onChange={(e) => setItemDialog({ ...itemDialog, image: e.target.value })} helperText="Paste a photo URL — dishes with photos look best" /></Grid>
                             <Grid item xs={12} sm={4}><TextField label="Spice level" fullWidth value={itemDialog.spice_level} onChange={(e) => setItemDialog({ ...itemDialog, spice_level: e.target.value })} /></Grid>
                             <Grid item xs={12} sm={4}><FormControlLabel control={<Switch checked={itemDialog.is_available} onChange={(e) => setItemDialog({ ...itemDialog, is_available: e.target.checked })} />} label="Available" /></Grid>
                             <Grid item xs={12} sm={4}><FormControlLabel control={<Switch checked={itemDialog.is_veg} onChange={(e) => setItemDialog({ ...itemDialog, is_veg: e.target.checked })} />} label="Veg" /></Grid>

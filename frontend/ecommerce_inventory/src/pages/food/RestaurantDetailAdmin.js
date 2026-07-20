@@ -9,7 +9,10 @@ import useApi from "../../hooks/APIHandler";
 
 const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const PROFILE_FIELDS = [
-    ["name", "Name"], ["cuisine_type", "Cuisine"], ["phone", "Phone"], ["address", "Address"],
+    ["name", "Name (English)"], ["name_bn", "নাম (বাংলা)"],
+    ["cuisine_type", "Cuisine"], ["phone", "Phone"], ["address", "Address"],
+    ["cover_image", "Cover image URL"], ["logo", "Logo URL"],
+    ["description", "Description (English)"], ["description_bn", "বিবরণ (বাংলা)"],
     ["commission_percentage", "Commission %"], ["base_delivery_fee", "Delivery fee"],
     ["min_order_amount", "Min order"], ["avg_prep_minutes", "Avg prep (min)"],
 ];

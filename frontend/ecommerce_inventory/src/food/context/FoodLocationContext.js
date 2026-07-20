@@ -27,19 +27,29 @@ export function FoodLocationProvider({ children }) {
   const [zoneId, setZoneId] = useState(() => localStorage.getItem('food_zone') || '');
   const [lang, setLangState] = useState(() => localStorage.getItem('food_lang') || 'en');
   const [coords, setCoords] = useState(null);
-
-  useEffect(() => {
-    (async () => {
-      const res = await callApi({ url: 'food/zones/', method: 'GET' });
-      const z = res?.data?.data || [];
-      if (z.length) { setZones(z); writeCache(ZONES_KEY, z); }
-    })();
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  const [pickerOpen, setPickerOpen] = useState(false);
 
   const setZone = useCallback((id) => {
     setZoneId(id);
     localStorage.setItem('food_zone', id || '');
   }, []);
+
+  useEffect(() => {
+    (async () => {
+      const res = await callApi({ url: 'food/zones/', method: 'GET' });
+      const z = res?.data?.data || [];
+      if (z.length) {
+        setZones(z);
+        writeCache(ZONES_KEY, z);
+        // Never leave checkout un-orderable: if the current zone is unset (or no
+        // longer exists) and there's exactly one serviceable area, auto-select it.
+        const saved = localStorage.getItem('food_zone') || '';
+        const stillValid = saved && z.some((zz) => String(zz.id) === saved);
+        if (!stillValid && z.length === 1) setZone(String(z[0].id));
+        else if (!stillValid) setZone('');
+      }
+    })();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const setLang = useCallback((l) => {
     setLangState(l);
@@ -67,8 +77,13 @@ export function FoodLocationProvider({ children }) {
     [zones, setZone]
   );
 
+  const currentZone = zones.find((z) => String(z.id) === String(zoneId)) || null;
+
   return (
-    <Ctx.Provider value={{ zones, zoneId, setZoneId: setZone, lang, setLang, coords, detectLocation }}>
+    <Ctx.Provider value={{
+      zones, zoneId, currentZone, setZoneId: setZone, lang, setLang, coords, detectLocation,
+      pickerOpen, openPicker: () => setPickerOpen(true), closePicker: () => setPickerOpen(false),
+    }}>
       {children}
     </Ctx.Provider>
   );

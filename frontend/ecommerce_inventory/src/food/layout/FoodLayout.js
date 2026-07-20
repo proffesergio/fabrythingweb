@@ -1,12 +1,14 @@
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
-import { AppBar, Toolbar, Box, Typography, IconButton, Badge, Button, Container, MenuItem, Select, Stack } from '@mui/material';
+import { AppBar, Toolbar, Box, Typography, IconButton, Badge, Button, Container, Stack } from '@mui/material';
 import ShoppingBagOutlinedIcon from '@mui/icons-material/ShoppingBagOutlined';
 import StorefrontOutlinedIcon from '@mui/icons-material/StorefrontOutlined';
-import PlaceOutlinedIcon from '@mui/icons-material/PlaceOutlined';
+import PlaceRoundedIcon from '@mui/icons-material/PlaceRounded';
+import KeyboardArrowDownRoundedIcon from '@mui/icons-material/KeyboardArrowDownRounded';
 import { useSelector } from 'react-redux';
 import { motion, AnimatePresence } from 'framer-motion';
 import { selectFoodCount, selectFoodSubtotal } from '../redux/foodCartSlice';
 import { useFoodLocation } from '../context/FoodLocationContext';
+import LocationPicker from '../components/LocationPicker';
 import { FOOD } from '../theme';
 
 export default function FoodLayout() {
@@ -29,20 +31,25 @@ export default function FoodLayout() {
               Fabrything<Box component="span" sx={{ color: 'primary.main' }}>·Food</Box>
             </Typography>
 
-            {loc.zones && (
-              <Select
-                size="small" value={loc.zoneId || ''} displayEmpty
-                onChange={(e) => loc.setZoneId(e.target.value)}
-                startAdornment={<PlaceOutlinedIcon sx={{ fontSize: 18, color: 'primary.main', mr: 0.5 }} />}
-                sx={{
-                  minWidth: { xs: 120, sm: 168 }, bgcolor: '#fff', borderRadius: 999,
-                  '& .MuiOutlinedInput-notchedOutline': { borderColor: FOOD.line },
-                  '& .MuiSelect-select': { py: 0.9, fontWeight: 600, fontSize: 14 },
-                }}
+            {loc.openPicker && (
+              <Button
+                onClick={loc.openPicker}
+                sx={{ px: 1.25, py: 0.6, borderRadius: 999, bgcolor: '#fff', border: `1px solid ${FOOD.line}`,
+                      color: 'text.primary', textTransform: 'none', maxWidth: { xs: 150, sm: 220 } }}
               >
-                <MenuItem value=""><em>Choose your area</em></MenuItem>
-                {loc.zones.map((z) => <MenuItem key={z.id} value={String(z.id)}>{z.name}</MenuItem>)}
-              </Select>
+                <PlaceRoundedIcon sx={{ fontSize: 18, color: 'primary.main', mr: 0.5 }} />
+                <Box sx={{ textAlign: 'left', minWidth: 0, lineHeight: 1.1 }}>
+                  <Typography variant="caption" sx={{ display: 'block', color: 'text.secondary', fontSize: 10 }}>
+                    {loc.lang === 'bn' ? 'ডেলিভারি' : 'Deliver to'}
+                  </Typography>
+                  <Typography variant="body2" noWrap sx={{ fontWeight: 800 }}>
+                    {loc.currentZone
+                      ? (loc.lang === 'bn' && loc.currentZone.name_bn ? loc.currentZone.name_bn : loc.currentZone.name)
+                      : (loc.lang === 'bn' ? 'এলাকা নির্বাচন' : 'Choose area')}
+                  </Typography>
+                </Box>
+                <KeyboardArrowDownRoundedIcon sx={{ fontSize: 18, color: 'text.secondary', ml: 0.25 }} />
+              </Button>
             )}
 
             <Box sx={{ flexGrow: 1 }} />
@@ -72,6 +79,9 @@ export default function FoodLayout() {
       <Container maxWidth="lg" sx={{ py: { xs: 2.5, md: 3.5 } }}>
         <Outlet />
       </Container>
+
+      <LocationPicker />
+
 
       {/* Sticky cart bar — the food-app hallmark */}
       <AnimatePresence>
