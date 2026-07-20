@@ -46,10 +46,21 @@ export default function useCachedApi(url, { params = {}, enabled = true } = {}) 
     }, [url]);
 
     useEffect(() => {
-        if (!enabled) return;
+        if (!enabled) return undefined;
         const entry = readCache(key);
         if (entry) { setData(entry.data); setLoading(false); }
         fetchFresh();
+        // Revalidate automatically when the tab regains focus or the network
+        // reconnects, so freshly-published data appears without a manual reload.
+        const onVisible = () => { if (document.visibilityState === 'visible') fetchFresh(); };
+        window.addEventListener('focus', onVisible);
+        document.addEventListener('visibilitychange', onVisible);
+        window.addEventListener('online', fetchFresh);
+        return () => {
+            window.removeEventListener('focus', onVisible);
+            document.removeEventListener('visibilitychange', onVisible);
+            window.removeEventListener('online', fetchFresh);
+        };
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [key, enabled]);
 

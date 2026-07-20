@@ -24,6 +24,19 @@ test('renders cached data immediately, then swaps in fresh data', async () => {
   await waitFor(() => expect(screen.getByText('data:fresh')).toBeInTheDocument());
 });
 
+test('revalidates automatically when the tab regains focus', async () => {
+  writeCache(cacheKey('store/homepage/'), { value: 'stale' });
+  axios.get
+    .mockResolvedValueOnce({ data: { data: { value: 'fresh' } } })
+    .mockResolvedValueOnce({ data: { data: { value: 'fresh2' } } });
+
+  render(<Probe url="store/homepage/" />);
+  await waitFor(() => expect(screen.getByText('data:fresh')).toBeInTheDocument());
+  // Returning to the tab pulls the latest data (e.g. newly published products).
+  window.dispatchEvent(new Event('focus'));
+  await waitFor(() => expect(screen.getByText('data:fresh2')).toBeInTheDocument());
+});
+
 test('keeps stale cache when the network fails', async () => {
   writeCache(cacheKey('store/homepage/'), { value: 'stale' });
   axios.get.mockRejectedValueOnce(new Error('offline'));
