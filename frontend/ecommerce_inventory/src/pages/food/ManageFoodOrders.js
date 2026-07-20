@@ -27,7 +27,12 @@ export default function ManageFoodOrders() {
         const params = {};
         if (st) params.status = st;
         const res = await callApi({ url: "food/admin/orders/", method: "GET", params });
-        if (res?.status === 200) setOrders(res.data.data || []);
+        if (res?.status === 200) {
+            // AdminFoodOrderListView is paginated: {data:{data:[...], totalPages}}.
+            // Tolerate both the paginated object and a bare array.
+            const payload = res.data.data;
+            setOrders(Array.isArray(payload) ? payload : (payload?.data || []));
+        }
     }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
     useEffect(() => { fetchOrders(status); }, [status, fetchOrders]);

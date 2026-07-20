@@ -11,7 +11,8 @@ jest.mock('../../hooks/APIHandler', () => {
       if (url.includes('/orders/1/')) {
         return { status: 200, data: { data: { id: 1, order_code: 'FD-1', status: confirmed ? 'CONFIRMED' : 'PLACED', restaurant_name: 'R1', guest_name: 'A', guest_phone: '017', delivery_address: 'addr', total: '150.00', items: [{ id: 9, item_name: 'Biriyani', quantity: 1, line_total: '120.00', selected_options: [] }], allowed_transitions: confirmed ? ['PREPARING', 'CANCELLED'] : ['CONFIRMED', 'CANCELLED'] } } };
       }
-      return { status: 200, data: { data: [{ id: 1, order_code: 'FD-1', status: confirmed ? 'CONFIRMED' : 'PLACED', restaurant_name: 'R1', guest_name: 'A', total: '150.00', created_at: '2026-07-19T10:00:00Z' }] } };
+      // Real endpoint is PAGINATED: {data:{data:[...], totalPages}}.
+      return { status: 200, data: { data: { data: [{ id: 1, order_code: 'FD-1', status: confirmed ? 'CONFIRMED' : 'PLACED', restaurant_name: 'R1', guest_name: 'A', total: '150.00', created_at: '2026-07-19T10:00:00Z' }], totalPages: 1 } } };
     },
   });
 });

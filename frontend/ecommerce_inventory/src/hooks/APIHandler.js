@@ -6,7 +6,9 @@ import { toast } from 'react-toastify';
 function useApi(){
     const [error,setError]=useState("");
     const [loading,setLoading]=useState(false);
-    const callApi=async ({url,method="GET",body={},header={},params={}})=>{
+    // Pass silent:true to suppress the error toast (for expected errors the caller
+    // handles itself, e.g. a 404 that just means "ask the guest for their phone").
+    const callApi=async ({url,method="GET",body={},header={},params={},silent=false})=>{
         let gUrl=config.API_URL+url;
         setLoading(true);
         let response=null;
@@ -18,12 +20,14 @@ function useApi(){
         catch(err){
             console.log(`[API ERROR] ${method} ${gUrl} ->`, err.message);
             console.log('[API ERROR details]:', err.response?.data || err.request);
-            if(err.response?.data?.message){
-                toast.error(err.response.data.message);
-            } else if (err.response?.data?.errors) {
-                toast.error(JSON.stringify(err.response.data.errors));
-            } else if (!err.response) {
-                toast.error("Network error - is the backend running?");
+            if(!silent){
+                if(err.response?.data?.message){
+                    toast.error(err.response.data.message);
+                } else if (err.response?.data?.errors) {
+                    toast.error(JSON.stringify(err.response.data.errors));
+                } else if (!err.response) {
+                    toast.error("Network error - is the backend running?");
+                }
             }
             setError(err)
         }

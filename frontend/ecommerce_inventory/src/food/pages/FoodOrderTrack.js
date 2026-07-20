@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { Box, Typography, Card, Divider, Stack, TextField, Button, CircularProgress } from '@mui/material';
 import ReceiptLongRoundedIcon from '@mui/icons-material/ReceiptLongRounded';
 import { motion } from 'framer-motion';
@@ -55,9 +55,10 @@ function DeliveryTrack({ activeStep }) {
 export default function FoodOrderTrack() {
   const { code } = useParams();
   const navigate = useNavigate();
+  const { state } = useLocation();
   const { callApi } = useApi();
   const [order, setOrder] = useState(null);
-  const [phone, setPhone] = useState('');
+  const [phone, setPhone] = useState(() => localStorage.getItem(`food_ph_${code}`) || (state && state.phone) || '');
   const [needPhone, setNeedPhone] = useState(false);
   const [loading, setLoading] = useState(true);
 
@@ -65,13 +66,24 @@ export default function FoodOrderTrack() {
     setLoading(true);
     const params = {};
     if (ph) params.phone = ph;
-    const res = await callApi({ url: `food/orders/${code}/`, method: 'GET', params });
+    // silent: a 404 here just means "guest order, ask for the phone" — we handle it,
+    // so don't fire the global "Order not found" toast.
+    const res = await callApi({ url: `food/orders/${code}/`, method: 'GET', params, silent: true });
     setLoading(false);
-    if (res?.status === 200) { setOrder(res.data.data); setNeedPhone(false); }
-    else if (res?.status === 404 && !ph) setNeedPhone(true);
+    if (res?.status === 200 && res.data?.data?.order_code) {
+      setOrder(res.data.data);
+      setNeedPhone(false);
+      if (ph) { try { localStorage.setItem(`food_ph_${code}`, ph); } catch { /* ignore */ } }
+    } else {
+      // No order returned (guest order without/with-wrong phone) — prompt for it.
+      setOrder(null);
+      setNeedPhone(true);
+    }
   }, [code]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  useEffect(() => { fetchOrder(); }, [fetchOrder]);
+  useEffect(() => {
+    fetchOrder(localStorage.getItem(`food_ph_${code}`) || (state && state.phone) || '');
+  }, [fetchOrder]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!order || ['DELIVERED', 'CANCELLED'].includes(order.status)) return undefined;

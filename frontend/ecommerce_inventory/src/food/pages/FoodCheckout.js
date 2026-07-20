@@ -56,9 +56,12 @@ export default function FoodCheckout() {
     const res = await callApi({ url: 'food/orders/', method: 'POST', body });
     if (res?.status === 201) {
       const code = res.data.data.order_code;
+      // Remember the guest phone so the tracking page can fetch this order
+      // (guest orders are phone-gated) without asking again — survives reload.
+      try { localStorage.setItem(`food_ph_${code}`, form.phone); } catch { /* ignore */ }
       dispatch(clearFoodCart());
       toast.success('Order placed!');
-      navigate(`/food/order/${code}`);
+      navigate(`/food/order/${code}`, { state: { phone: form.phone } });
     } else if (res?.data?.data) {
       setErr(Array.isArray(res.data.data) ? res.data.data.join(' ') : String(res.data.data));
     }

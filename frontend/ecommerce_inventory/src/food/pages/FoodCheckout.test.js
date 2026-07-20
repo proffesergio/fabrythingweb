@@ -43,5 +43,6 @@ test('places a COD order and navigates to tracking', async () => {
   fireEvent.change(screen.getByLabelText(/phone/i), { target: { value: '017' } });
   fireEvent.change(screen.getByLabelText(/address/i), { target: { value: 'Village Rd' } });
   fireEvent.click(screen.getByRole('button', { name: /place order/i }));
-  await waitFor(() => expect(mockNavigate).toHaveBeenCalledWith('/food/order/FD-ABC123'));
+  await waitFor(() => expect(mockNavigate).toHaveBeenCalled());
+  expect(mockNavigate.mock.calls[0][0]).toBe('/food/order/FD-ABC123');
 });
