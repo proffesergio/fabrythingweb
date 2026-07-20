@@ -1,10 +1,19 @@
 import {createSlice,createAsyncThunk} from '@reduxjs/toolkit';
 import axios from 'axios';
 import config from '../../utils/config';
+import { cacheKey, readCache, writeCache } from '../../hooks/apiCache';
+
+const MENU_CACHE_KEY = cacheKey('getMenus/');
+
+// Seed the sidebar from the last cached menus so the admin nav paints instantly
+// on reload instead of waiting for the (possibly sleeping) backend. Only trust the
+// cache when a token is present — menus are per-authenticated-user.
+const cachedMenus = () => (localStorage.getItem('token') ? (readCache(MENU_CACHE_KEY)?.data || []) : []);
 
 export const fetchSidebar=createAsyncThunk('data/fetchSidebar',async()=>{
     const response=await axios.get(`${config.API_URL}getMenus/`,{headers:{Authorization:`Bearer ${localStorage.getItem('token')}`}});
     const sidebarData=response.data.data;
+    writeCache(MENU_CACHE_KEY, sidebarData);
     const setActiveAndExpanded=(item)=>{
         if(item.module_url && window.location.pathname.indexOf(item.module_url)!==-1){
             item.active=true;
@@ -28,8 +37,10 @@ export const fetchSidebar=createAsyncThunk('data/fetchSidebar',async()=>{
 
 const sidebarSlice=createSlice({
     name:'data',
+    // Start from cached menus for an instant paint, but keep status 'idle' so the
+    // app still dispatches fetchSidebar() to revalidate against the backend.
     initialState:{
-        items:[],
+        items:cachedMenus(),
         status:'idle',
         error:null
     },

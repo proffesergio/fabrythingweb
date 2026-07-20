@@ -1,5 +1,8 @@
 import { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import useApi from '../../hooks/APIHandler';
+import { cacheKey, readCache, writeCache } from '../../hooks/apiCache';
+
+const ZONES_KEY = cacheKey('food/zones/');
 
 const Ctx = createContext(null);
 export const useFoodLocation = () => useContext(Ctx);
@@ -19,7 +22,8 @@ const km = (aLat, aLng, xLat, xLng) => {
 
 export function FoodLocationProvider({ children }) {
   const { callApi } = useApi();
-  const [zones, setZones] = useState([]);
+  // Seed zones from cache for an instant paint, then revalidate in the background.
+  const [zones, setZones] = useState(() => readCache(ZONES_KEY)?.data || []);
   const [zoneId, setZoneId] = useState(() => localStorage.getItem('food_zone') || '');
   const [lang, setLangState] = useState(() => localStorage.getItem('food_lang') || 'en');
   const [coords, setCoords] = useState(null);
@@ -27,7 +31,8 @@ export function FoodLocationProvider({ children }) {
   useEffect(() => {
     (async () => {
       const res = await callApi({ url: 'food/zones/', method: 'GET' });
-      setZones(res?.data?.data || []);
+      const z = res?.data?.data || [];
+      if (z.length) { setZones(z); writeCache(ZONES_KEY, z); }
     })();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 

@@ -1,8 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { Box, Container, Typography, Grid, Card, Skeleton } from '@mui/material';
 import { LocalShipping, Payment, Verified, Support } from '@mui/icons-material';
 import { motion } from 'framer-motion';
-import useApi from '../../hooks/APIHandler';
+import useCachedApi from '../../hooks/useCachedApi';
 import HeroCarousel from '../components/HeroCarousel';
 import FlashSaleSection from '../components/FlashSaleSection';
 import TabbedProductSection from '../components/TabbedProductSection';
@@ -11,17 +11,9 @@ import PromoBanner from '../components/PromoBanner';
 import CategoryGrid from '../components/CategoryGrid';
 
 export default function HomePage() {
-    const [data, setData] = useState(null);
-    const { callApi, loading } = useApi();
-
-    useEffect(() => {
-        const fetchHomepage = async () => {
-            const res = await callApi({ url: 'store/homepage/' });
-            if (res?.data?.data) setData(res.data.data);
-        };
-        fetchHomepage();
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
+    // Stale-while-revalidate: renders instantly from the last cached homepage,
+    // then refreshes in the background (masks the free-tier backend cold start).
+    const { data, loading } = useCachedApi('store/homepage/');
 
     const trustSignals = [
         { icon: <LocalShipping />, title: 'Free Delivery', desc: 'On orders over ৳1,500' },

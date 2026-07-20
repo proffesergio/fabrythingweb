@@ -18,4 +18,8 @@ python manage.py seed_demo
 # seed_food_modules is idempotent (update_or_create) — safe to run on every deploy.
 # Registers the Food admin-panel menu modules.
 python manage.py seed_food_modules
+
+# seed_food_demo is idempotent (get_or_create by slug) — safe on every deploy.
+# Seeds demo restaurants, delivery zones, and menus so the Food app has data.
+python manage.py seed_food_demo
 python manage.py seed_bd_store
