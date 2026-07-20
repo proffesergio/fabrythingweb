@@ -1,266 +1,147 @@
-import { useState,useEffect, useRef } from "react";
-import useApi from "../../hooks/APIHandler";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { Box, Breadcrumbs, Button, Dialog, DialogContent, Divider, Grid, IconButton, LinearProgress, Table, TextField, Typography } from "@mui/material";
-import { DataGrid, GridToolbar } from "@mui/x-data-grid";
-import { isValidUrl } from "../../utils/Helper";
-import Add from '@mui/icons-material/Add';
-import Delete from '@mui/icons-material/Delete';
-import Edit from '@mui/icons-material/Edit';
-import RenderImage from "../../components/RenderImage";
-import { Circle, Close, Dashboard, PanoramaRounded } from "@mui/icons-material";
-import { set } from "react-hook-form";
-import React from "react";
-import ViewCompactIcon from '@mui/icons-material/ViewCompact';
-import Image from "../../components/Image";
+import {
+    Box, Breadcrumbs, Button, Chip, IconButton, LinearProgress, Table, TableBody, TableCell,
+    TableContainer, TableHead, TableRow, Paper, TextField, Typography, Stack, Avatar,
+    InputAdornment, Pagination, Tooltip, Dialog, DialogContent, Divider,
+} from "@mui/material";
+import Add from "@mui/icons-material/Add";
+import Edit from "@mui/icons-material/Edit";
+import SearchIcon from "@mui/icons-material/Search";
+import RateReviewOutlinedIcon from "@mui/icons-material/RateReviewOutlined";
+import HelpOutlineIcon from "@mui/icons-material/HelpOutline";
+import useApi from "../../hooks/APIHandler";
 import ManageReviews from "./ManageReview";
 import ManageQuestions from "./ManageQuestions";
 
-const ManageProducts = ({onProductSelected}) => {
-    const [data,setData]=useState([]);
-    const [columns,setColumns]=useState([]);
-    const [paginationModel,setPaginationModel]=useState({
-        page:0,
-        pageSize:5
-    })
-    const [totalItems,setTotalItems]=useState(0);
-    const [searchQuery,setSearchQuery]=useState("");
-    const [debounceSearch,setDebounceSearch]=useState("");
-    const [ordering,setOrdering]=useState([{field:'id',sort:'desc'}]);
-    const {error,loading,callApi}=useApi();
-    const [jsonData,setJsonData]=useState([]);
-    const [open,setOpen]=useState(false);
-    const [htmldata,setHtmldata]=useState('');
-    const [openHtml,setOpenHtml]=useState(false);
-    const [modalTitle,setModalTitle]=useState('');
-    const [showImages,setShowImages]=useState(false);
-    const [selectedImages,setSelectedImages]=useState([]);
-    const [showReviews,setShowReviews]=useState(false);
-    const [showQuestions,setShowQuestions]=useState(false);
-    const [selectedProductId,setSelectedProductId]=useState(null);
-    const divImage=useRef();
+const firstImage = (img) => (Array.isArray(img) ? img[0] : img) || "";
+const cleanCategory = (c) => (typeof c === "string" ? c : "");
 
-    const navigate=useNavigate();
+const ManageProducts = ({ onProductSelected }) => {
+    const { callApi, loading } = useApi();
+    const navigate = useNavigate();
+    const [products, setProducts] = useState([]);
+    const [search, setSearch] = useState("");
+    const [debounced, setDebounced] = useState("");
+    const [page, setPage] = useState(1);
+    const [totalPages, setTotalPages] = useState(1);
+    const [reviewsFor, setReviewsFor] = useState(null);
+    const [questionsFor, setQuestionsFor] = useState(null);
 
-    useEffect(()=>{
-        const timer=setTimeout(()=>{
-            setDebounceSearch(searchQuery);
-        },1000)
+    useEffect(() => {
+        const t = setTimeout(() => { setPage(1); setDebounced(search); }, 600);
+        return () => clearTimeout(t);
+    }, [search]);
 
-        return ()=>{
-            clearTimeout(timer);
+    const getProducts = useCallback(async () => {
+        const res = await callApi({
+            url: "products/", method: "GET",
+            params: { page, pageSize: 12, search: debounced, ordering: "-id" },
+        });
+        if (res?.status === 200) {
+            setProducts(res.data.data.data || []);
+            setTotalPages(res.data.data.totalPages || 1);
         }
-    },[searchQuery])
+    }, [page, debounced]); // eslint-disable-line react-hooks/exhaustive-deps
 
-    const handleClose=()=>{
-        setOpen(false);
-    }
-
-    const handleClose2=()=>{
-        setOpenHtml(false);
-    }
-
-    const getProducts=async()=>{
-        let order='-id';
-        if(ordering.length>0){
-            order=ordering[0].sort==='asc'?ordering[0].field:'-'+ordering[0].field
-        }
-        const result=await callApi({url:'products/',method:'GET',params:{
-            page:paginationModel.page+1,
-            pageSize:paginationModel.pageSize,
-            search:debounceSearch,
-            ordering:order
-        }})
-        if(result){
-            setData(result.data.data.data);
-            setTotalItems(result.data.data.totalItems);
-            generateColumns(result.data.data.data);
-        }
-    }
-
-    const onDeleteClick=(params)=>{
-        console.log(params);
-    }
-    const onEditClick=(params)=>{
-        navigate(`/admin/form/product/${params.row.id}`)
-    }
-    const onAddClick=(params)=>{
-        if(onProductSelected){
-            onProductSelected(params.row);
-            return;
-        }
-        navigate('/admin/form/product')
-    }
-
-    const showHTMLData=(row)=>{
-        setHtmldata(row);
-        setOpenHtml(true);
-    }
-    const showJSONData=(item,title)=>{
-        setModalTitle(title)
-        setJsonData(item)
-        setOpen(true);        
-    }
-
-    useEffect(()=>{
-        if(showImages){
-            divImage.current.scrollIntoView({behavior:'smooth'})
-        }
-    },[selectedImages])
-
-
-    const generateColumns=(data)=>{
-        if(data.length>0){
-            let columns=[{field:'action',headerName:'Action',width:180,sortable:false,renderCell:(params)=>{
-                return <>
-                    <IconButton onClick={()=>onAddClick(params)}>
-                        <Add color="light" />
-                    </IconButton>
-                    <IconButton onClick={()=>onEditClick(params)}>
-                        <Edit color="primary" />
-                    </IconButton>
-                    <IconButton onClick={()=>onDeleteClick(params)}>
-                        <Delete color="secondary" />
-                    </IconButton>
-                </>
-            }}];
-            for(const key in data[0]){
-                if(key==='image'){
-                    columns.push({field:key,headerName:key.charAt(0).toUpperCase()+key.slice(1).replaceAll("_"," "),width:150,sortable:false,renderCell:(params)=>{
-                        return <Box display={"flex"}><RenderImage data={params.row.image} name={params.row.name}/><IconButton onClick={()=>{ setSelectedImages(params.row.image); setShowImages(true); }}><PanoramaRounded/></IconButton></Box>
-                    }})
-                }
-                else{
-                    columns.push({field:key,headerName:key.charAt(0).toUpperCase()+key.slice(1).replaceAll("_"," "),width:200})
-                }
-            }
-            columns.push({field:'questions',headerName:'Questions',width:150,sortable:false,renderCell:(params)=>{
-                return <Button startIcon={<ViewCompactIcon/>} variant="contained" onClick={()=>{ setShowQuestions(true);setShowReviews(false);setSelectedProductId(params.row.id) }}>View</Button>
-            }})
-            columns.push({field:'reviews',headerName:'Reviews',width:150,sortable:false,renderCell:(params)=>{
-                return <Button startIcon={<ViewCompactIcon/>} variant="contained" onClick={()=>{ setShowQuestions(false);setShowReviews(true);setSelectedProductId(params.row.id) }}>View</Button>
-            }})
-            columns=columns.map((column)=>{
-                if(column.field==='specifications' || column.field==='highlights' || column.field==='seo_keywords' || column.field==='addition_details'){
-                    return {field:column.field,headerName:column.field.charAt(0).toUpperCase()+column.field.slice(1).replaceAll("_"," "),width:150,sortable:false,renderCell:(params)=>{
-                        return <Button onClick={()=>showJSONData(params.row[column.field],column.field.charAt(0).toUpperCase()+column.field.slice(1).replaceAll("_"," "))} startIcon={<ViewCompactIcon/>} variant="contained">View</Button>
-                    }}
-                }
-                if(column.field==='html_description'){
-                    return {field:'html_description',headerName:'HTML Description',width:150,sortable:false,renderCell:(params)=>{
-                        return <Button onClick={()=>showHTMLData(params.row.html_description)} startIcon={<ViewCompactIcon/>} variant="contained">View</Button>
-                    }}
-                }
-                                
-                return column;
-            })
-            setColumns(columns);
-        }
-    }
-
-    const handleSorting=(newModel)=>{
-        setOrdering(newModel);
-    }
-
-    useEffect(()=>{
-        getProducts();
-    },[paginationModel,debounceSearch,ordering])
+    useEffect(() => { getProducts(); }, [getProducts]);
 
     return (
-        <Box component={"div"} sx={{width:'100%'}}>
-            {!onProductSelected &&
-            <Breadcrumbs>
-                <Typography variant="body2" onClick={()=>navigate('/')}>Home</Typography>
-                <Typography variant="body2" onClick={()=>navigate('/manage/product')}>Manage Products</Typography>
-            </Breadcrumbs>}
-            <Grid container spacing={2}>
-            <Grid item xs={12} sm={showImages?8:12} lg={showImages?9:12}>
-            <TextField label="Search" variant="outlined" fullWidth onChange={(e)=>setSearchQuery(e.target.value)} margin="normal"/>
-            <DataGrid
-                rows={data}
-                columns={columns}
-                autoHeight={true}
-                rowHeight={75}
-                sortingOrder={['asc','desc']}
-                sortModel={ordering}
-                onSortModelChange={handleSorting}
-                paginationMode="server"
-                initialState={{
-                    ...data.initialState,
-                    pagination:{paginationModel:paginationModel}
-                }}
-                pageSizeOptions={[5,10,20]}
-                pagination
-                rowCount={totalItems}
-                loading={loading}
-                rowSelection={false}
-                onPaginationModelChange={(pagedetails)=>{
-                    setPaginationModel({
-                        page:pagedetails.page,
-                        pageSize:pagedetails.pageSize
-                    
-                    })
-                }}
-                slots={
-                    {
+        <Box sx={{ width: "100%" }}>
+            {!onProductSelected && (
+                <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 2 }}>
+                    <Breadcrumbs>
+                        <Typography variant="body2" sx={{ cursor: "pointer" }} onClick={() => navigate("/admin")}>Home</Typography>
+                        <Typography variant="body2">Products</Typography>
+                    </Breadcrumbs>
+                    <Button variant="contained" startIcon={<Add />} onClick={() => navigate("/admin/form/product")}>
+                        Add Product
+                    </Button>
+                </Stack>
+            )}
 
-                        loadingOverlay:LinearProgress,
-                        toolbar:GridToolbar,
-                        
-                    }
-                }
+            <TextField
+                size="small" fullWidth placeholder="Search products…" value={search}
+                onChange={(e) => setSearch(e.target.value)} sx={{ mb: 2 }}
+                InputProps={{ startAdornment: <InputAdornment position="start"><SearchIcon /></InputAdornment> }}
+            />
 
-                />
-                </Grid>
-                {showImages && <Grid item xs={12} sm={4} lg={3} sx={{height:'600px',overflowY:'auto'}} ref={divImage}>
-                        <Box m={2} display={"flex"} justifyContent={"space-between"}>
-                            <Typography variant="h6">Product Images</Typography>
-                            <IconButton onClick={()=>setShowImages(false)}><Close/></IconButton>
-                        </Box>
-                        <Divider/>
-                         {
-                            selectedImages.length>0 && selectedImages.map((image,index)=>(
-                                <Box key={index} display="flex" justifyContent="center" alignItems="center" p={1}>
-                                    <Image src={image} style={{width:'100%'}} />
-                                </Box>
-                            ))
-                         }
-                </Grid>}
-                </Grid>
-                <Dialog open={open} fullWidth={true} maxWidth={"lg"} onClose={handleClose} aria-labelledby="form-dialog-title">
-                        <DialogContent>
-                            <Typography variant="h5" mb={2}>{modalTitle} Details </Typography>
-                            <Divider />
-                             {
-                                jsonData.map((item,index)=>(
-                                    <React.Fragment key={index}>
-                                       <Typography  mt={2}><Circle sx={{fontSize:'12px',marginRight:'10px'}} /> {item.key} - {item.value}</Typography>
-                                        <Divider/>
-                                    </React.Fragment>
-                                ))
-                             }
-                        </DialogContent>
-                </Dialog>
-                <Dialog open={openHtml} maxWidth={"lg"} fullWidth={true} onClose={handleClose2} aria-labelledby="form-dialog-title">
-                        <DialogContent>
-                            <Typography variant="h5" mb={2}>HTML Description </Typography>
-                            <Divider />
-                            <div dangerouslySetInnerHTML={{__html:htmldata}}/>
-                        </DialogContent>
-                </Dialog>
-                {showReviews && <Dialog maxWidth={"lg"} open={showReviews} fullWidth={true} onClose={()=>setShowReviews(false)} aria-labelledby="form-dialog-title">
-                        <DialogContent>
-                            <ManageReviews product_id={selectedProductId}/>
-                            <Divider />
-                        </DialogContent>
-                </Dialog>}
-                {showQuestions && <Dialog maxWidth={"lg"} open={showQuestions} fullWidth={true} onClose={()=>setShowQuestions(false)} aria-labelledby="form-dialog-title">
-                        <DialogContent>
-                            <ManageQuestions product_id={selectedProductId}/>
-                        </DialogContent>
-                </Dialog>}
+            {loading && <LinearProgress sx={{ mb: 1 }} />}
+            <TableContainer component={Paper}>
+                <Table>
+                    <TableHead>
+                        <TableRow>
+                            <TableCell>Product</TableCell>
+                            <TableCell>Category</TableCell>
+                            <TableCell align="right">Price</TableCell>
+                            <TableCell>Status</TableCell>
+                            <TableCell align="right">Actions</TableCell>
+                        </TableRow>
+                    </TableHead>
+                    <TableBody>
+                        {products.length === 0 && !loading && (
+                            <TableRow><TableCell colSpan={5} align="center">No products found</TableCell></TableRow>
+                        )}
+                        {products.map((p) => (
+                            <TableRow key={p.id} hover>
+                                <TableCell>
+                                    <Stack direction="row" spacing={1.5} alignItems="center">
+                                        <Avatar variant="rounded" src={firstImage(p.image)} sx={{ width: 44, height: 44 }}>
+                                            {(p.name || "?").charAt(0)}
+                                        </Avatar>
+                                        <Box>
+                                            <Typography variant="body2" fontWeight={600}>{p.name}</Typography>
+                                            <Typography variant="caption" color="text.secondary">{p.brand || p.sku}</Typography>
+                                        </Box>
+                                    </Stack>
+                                </TableCell>
+                                <TableCell><Typography variant="body2">{cleanCategory(p.category_id)}</Typography></TableCell>
+                                <TableCell align="right">
+                                    {p.discount_price ? (
+                                        <Stack alignItems="flex-end">
+                                            <Typography variant="body2" fontWeight={700} color="secondary.main">৳{p.discount_price}</Typography>
+                                            <Typography variant="caption" color="text.secondary" sx={{ textDecoration: "line-through" }}>
+                                                ৳{p.initial_selling_price}
+                                            </Typography>
+                                        </Stack>
+                                    ) : (
+                                        <Typography variant="body2" fontWeight={700}>৳{p.initial_selling_price}</Typography>
+                                    )}
+                                </TableCell>
+                                <TableCell>
+                                    <Chip size="small" label={p.status} color={p.status === "ACTIVE" ? "success" : "default"} />
+                                </TableCell>
+                                <TableCell align="right">
+                                    {onProductSelected ? (
+                                        <Button size="small" variant="contained" startIcon={<Add />} onClick={() => onProductSelected(p)}>Select</Button>
+                                    ) : (
+                                        <Stack direction="row" justifyContent="flex-end">
+                                            <Tooltip title="Edit"><IconButton size="small" onClick={() => navigate(`/admin/form/product/${p.id}`)}><Edit fontSize="small" color="primary" /></IconButton></Tooltip>
+                                            <Tooltip title="Reviews"><IconButton size="small" onClick={() => { setReviewsFor(p.id); setQuestionsFor(null); }}><RateReviewOutlinedIcon fontSize="small" /></IconButton></Tooltip>
+                                            <Tooltip title="Questions"><IconButton size="small" onClick={() => { setQuestionsFor(p.id); setReviewsFor(null); }}><HelpOutlineIcon fontSize="small" /></IconButton></Tooltip>
+                                        </Stack>
+                                    )}
+                                </TableCell>
+                            </TableRow>
+                        ))}
+                    </TableBody>
+                </Table>
+            </TableContainer>
+
+            {totalPages > 1 && (
+                <Stack alignItems="center" sx={{ mt: 2 }}>
+                    <Pagination count={totalPages} page={page} onChange={(_, p) => setPage(p)} color="primary" />
+                </Stack>
+            )}
+
+            <Dialog maxWidth="lg" fullWidth open={!!reviewsFor} onClose={() => setReviewsFor(null)}>
+                <DialogContent><ManageReviews product_id={reviewsFor} /><Divider /></DialogContent>
+            </Dialog>
+            <Dialog maxWidth="lg" fullWidth open={!!questionsFor} onClose={() => setQuestionsFor(null)}>
+                <DialogContent><ManageQuestions product_id={questionsFor} /></DialogContent>
+            </Dialog>
         </Box>
-    )
-}
+    );
+};
 
 export default ManageProducts;

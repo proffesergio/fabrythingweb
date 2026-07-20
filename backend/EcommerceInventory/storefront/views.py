@@ -5,6 +5,7 @@ from django.db.models import Avg, Count, FloatField, IntegerField, OuterRef, Q, 
 from django.db.models.functions import Coalesce
 from django.utils import timezone
 from rest_framework import generics
+from rest_framework import serializers
 from rest_framework import status as http_status
 from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -616,6 +617,41 @@ class AdminDashboardView(APIView):
             'total_customers': Users.objects.filter(role='Customer').count(),
         }
         return renderResponse(data=data, message='Dashboard data retrieved')
+
+
+class AdminCustomerSerializer(serializers.ModelSerializer):
+    order_count = serializers.IntegerField(read_only=True)
+    total_spent = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Users
+        fields = ['id', 'username', 'email', 'phone', 'city', 'country',
+                  'date_joined', 'order_count', 'total_spent']
+
+    def get_total_spent(self, obj):
+        return float(getattr(obj, 'total_spent', 0) or 0)
+
+
+class AdminCustomerListView(generics.ListAPIView):
+    """Admin view of storefront customers with order aggregates."""
+    serializer_class = AdminCustomerSerializer
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated]
+    pagination_class = CustomPageNumberPagination
+
+    def get_queryset(self):
+        qs = Users.objects.filter(role='Customer').annotate(
+            order_count=Count('orders', distinct=True),
+            total_spent=Coalesce(Sum('orders__total_amount'), 0, output_field=FloatField()),
+        ).order_by('-date_joined')
+        search = self.request.query_params.get('search')
+        if search:
+            qs = qs.filter(Q(username__icontains=search) | Q(email__icontains=search) | Q(phone__icontains=search))
+        return qs
+
+    @CommonListAPIMixin.common_list_decorator(AdminCustomerSerializer)
+    def list(self, request, *args, **kwargs):
+        return super().list(request, *args, **kwargs)
 
 
 class AdminOrderListView(generics.ListAPIView):

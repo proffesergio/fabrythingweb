@@ -28,6 +28,7 @@ import FoodDashboard from './pages/food/FoodDashboard';
 import ManageFoodOrders from './pages/food/ManageFoodOrders';
 import FoodMenuManager from './pages/food/FoodMenuManager';
 import RestaurantDetailAdmin from './pages/food/RestaurantDetailAdmin';
+import ManageCustomers from './pages/customers/ManageCustomers';
 
 // Storefront imports
 import { ThemeProvider } from '@mui/material/styles';
@@ -187,6 +188,7 @@ function App() {
           {path:"create/po/:id",element:<ProtectedRoute element={<CreatePurchaseOrder/>}/>},
           {path:"manage/purchaseorder",element:<ProtectedRoute element={<ManagePurchaseOrder/>}/>},
           {path:"manage/salesorder",element:<ProtectedRoute element={<ManageSalesOrder/>}/>},
+          {path:"manage/customers",element:<ProtectedRoute element={<ManageCustomers/>}/>},
           {path:"manage/food/dashboard",element:<ProtectedRoute element={<FoodDashboard/>}/>},
           {path:"manage/food/restaurants",element:<ProtectedRoute element={<ManageRestaurants/>}/>},
           {path:"manage/food/restaurants/:id",element:<ProtectedRoute element={<RestaurantDetailAdmin/>}/>},

@@ -49,7 +49,7 @@ MODULES = [
         'parent': None,
     },
     {
-        'module_name': 'Sales Orders',
+        'module_name': 'Store Orders',
         'module_icon': 'Store',
         'module_url': '/manage/salesorder',
         'display_order': 1,
@@ -105,6 +105,57 @@ MODULES = [
         'module_url': '/manage/moduleurls',
         'display_order': 2,
         'parent': 'Settings',
+    },
+    # Parent: Customers
+    {
+        'module_name': 'Customers',
+        'module_icon': 'AccountCircle',
+        'module_url': '/manage/customers',
+        'display_order': 6,
+        'parent': None,
+    },
+    # ── Food delivery vertical (unified here so this seeder never deletes it) ──
+    {
+        'module_name': 'Food',
+        'module_icon': 'Restaurant',
+        'module_url': None,
+        'display_order': 7,
+        'parent': None,
+    },
+    {
+        'module_name': 'Food Dashboard',
+        'module_icon': 'Dashboard',
+        'module_url': '/manage/food/dashboard',
+        'display_order': 1,
+        'parent': 'Food',
+    },
+    {
+        'module_name': 'Restaurants',
+        'module_icon': 'Storefront',
+        'module_url': '/manage/food/restaurants',
+        'display_order': 2,
+        'parent': 'Food',
+    },
+    {
+        'module_name': 'Menu Management',
+        'module_icon': 'Category',
+        'module_url': '/manage/food/menu',
+        'display_order': 3,
+        'parent': 'Food',
+    },
+    {
+        'module_name': 'Food Orders',
+        'module_icon': 'ReceiptLong',
+        'module_url': '/manage/food/orders',
+        'display_order': 4,
+        'parent': 'Food',
+    },
+    {
+        'module_name': 'Delivery Zones',
+        'module_icon': 'Map',
+        'module_url': '/manage/food/zones',
+        'display_order': 5,
+        'parent': 'Food',
     },
 ]
 

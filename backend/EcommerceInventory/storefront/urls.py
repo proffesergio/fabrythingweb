@@ -26,6 +26,7 @@ from .views import (
     CustomerQuestionCreateView,
     CustomerReviewCreateView,
     # Admin
+    AdminCustomerListView,
     AdminDashboardView,
     AdminOrderDetailView,
     AdminOrderListView,
@@ -64,6 +65,7 @@ urlpatterns = [
 
     # Admin endpoints
     path('admin/dashboard/', AdminDashboardView.as_view(), name='admin_dashboard'),
+    path('admin/customers/', AdminCustomerListView.as_view(), name='admin_customers'),
     path('admin/orders/', AdminOrderListView.as_view(), name='admin_orders'),
     path('admin/orders/<int:pk>/', AdminOrderDetailView.as_view(), name='admin_order_detail'),
 ]

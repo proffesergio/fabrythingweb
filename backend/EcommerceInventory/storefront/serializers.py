@@ -289,7 +289,7 @@ class CustomerOrderListSerializer(serializers.ModelSerializer):
         model = Order
         fields = ['id', 'order_number', 'status', 'status_display', 'payment_method',
                   'subtotal', 'shipping_amount', 'total_amount', 'currency',
-                  'item_count', 'created_at']
+                  'contact_name', 'contact_phone', 'item_count', 'created_at']
 
     def get_item_count(self, obj):
         return obj.items.count()

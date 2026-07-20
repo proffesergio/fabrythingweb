@@ -11,15 +11,13 @@ pip install -r requirements.txt
 python manage.py collectstatic --no-input
 python manage.py migrate
 
-# seed_demo is idempotent (get_or_create) — safe to run on every deploy.
-# Populates the store config + demo catalog so the storefront has data to show.
-python manage.py seed_demo
+# Unified admin navigation (ecommerce + food + customers). Idempotent and the SINGLE
+# source of truth for the Modules table — must succeed so the live sidebar always
+# reflects the current module set. Do NOT also run seed_food_modules: the two seeders
+# used to fight over this table and delete each other's menus.
+python manage.py seed_admin_modules
 
-# seed_food_modules is idempotent (update_or_create) — safe to run on every deploy.
-# Registers the Food admin-panel menu modules.
-python manage.py seed_food_modules
-
-# seed_food_demo is idempotent (get_or_create by slug) — safe on every deploy.
-# Seeds demo restaurants, delivery zones, and menus so the Food app has data.
-python manage.py seed_food_demo
-python manage.py seed_bd_store
+# Demo/seed data — best-effort. A data-seed hiccup must never fail the whole deploy
+# (which would keep the site on the old version). Migrations + nav above already applied.
+python manage.py seed_demo      || echo "WARNING: seed_demo failed (non-fatal)"
+python manage.py seed_food_demo || echo "WARNING: seed_food_demo failed (non-fatal)"
