@@ -59,8 +59,16 @@ RESTAURANTS = [
 class Command(BaseCommand):
     help = "Seed demo food restaurants, zones, and menus (idempotent)."
 
+    def add_arguments(self, parser):
+        parser.add_argument("--if-empty", action="store_true",
+                            help="Only seed when no restaurants exist yet "
+                                 "(protects real restaurants on redeploys).")
+
     @transaction.atomic
     def handle(self, *args, **options):
+        if options.get("if_empty") and Restaurant.objects.exists():
+            self.stdout.write("Restaurants already exist — skipping demo food seed (--if-empty).")
+            return
         zones = []
         for z in ZONES:
             zone, _ = DeliveryZone.objects.get_or_create(

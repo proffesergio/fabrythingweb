@@ -30,6 +30,9 @@ class Command(BaseCommand):
     def add_arguments(self, parser):
         parser.add_argument("--skip-catalog", action="store_true",
                             help="Skip the clothing catalog seeder (only build variants + config).")
+        parser.add_argument("--if-empty", action="store_true",
+                            help="Only seed the demo catalog when no products exist yet "
+                                 "(protects real data on redeploys).")
 
     @transaction.atomic
     def handle(self, *args, **options):
@@ -41,10 +44,14 @@ class Command(BaseCommand):
         cfg.currency = "BDT"
         cfg.store_name = "Fabrything"
         cfg.save()
-        self.stdout.write(self.style.SUCCESS("Store configuration ready (flat ৳60 COD shipping)."))
+        self.stdout.write(self.style.SUCCESS("Store configuration ready (flat BDT 60 COD shipping)."))
 
         # 2) Catalog (real-brand, multi-category Bangladeshi storefront).
-        if not options["skip_catalog"]:
+        #    seed_bd_store CLEARS + reseeds, so guard it behind --if-empty on deploys
+        #    to never clobber real products the owner has entered.
+        if options["if_empty"] and Products.objects.exists():
+            self.stdout.write("Products already exist — skipping demo catalog (--if-empty).")
+        elif not options["skip_catalog"]:
             self.stdout.write("Seeding branded multi-category catalog...")
             call_command("seed_bd_store")
 

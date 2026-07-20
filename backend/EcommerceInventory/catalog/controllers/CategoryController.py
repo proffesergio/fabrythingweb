@@ -23,9 +23,13 @@ class CategorySerializer(serializers.ModelSerializer):
         return CategorySerializer(children, many=True).data
 
     def get_domain_user_id(self,obj):
+        if not obj.domain_user_id:
+            return None
         return "#"+str(obj.domain_user_id.id)+" "+obj.domain_user_id.username
-    
+
     def get_added_by_user_id(self,obj):
+        if not obj.added_by_user_id:
+            return None
         return "#"+str(obj.added_by_user_id.id)+" "+obj.added_by_user_id.username
     
     def get_parent_id(self,obj):

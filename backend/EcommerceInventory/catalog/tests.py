@@ -35,3 +35,31 @@ class AdminProductListTests(TestCase):
         call_command("seed_bd_store")
         self.assertGreater(Products.objects.count(), 0)
         self.assertEqual(Products.objects.filter(domain_user_id__isnull=True).count(), 0)
+
+    def test_category_list_does_not_crash_when_owner_is_null(self):
+        # Same null-owner landmine as products — the live "Categories" tab 500'd on it.
+        Categories.objects.create(name="Orphan Cat", slug="orphan-cat", description="")
+        auth(self.client, self.admin)
+        res = self.client.get("/api/products/categories/")
+        self.assertEqual(res.status_code, 200, res.content)
+        self.assertGreaterEqual(len(res.json()["data"]["data"]), 1)
+
+
+class SeedIfEmptyGuardTests(TestCase):
+    def test_seed_food_demo_if_empty_skips_when_restaurants_exist(self):
+        from django.core.management import call_command
+        from food.models import Restaurant
+        Restaurant.objects.create(name="Real Resto", slug="real-resto")
+        call_command("seed_food_demo", "--if-empty")
+        # Guard prevented demo restaurants from being added.
+        self.assertEqual(Restaurant.objects.count(), 1)
+
+    def test_seed_demo_if_empty_skips_catalog_when_products_exist(self):
+        from django.core.management import call_command
+        cat = Categories.objects.create(name="C", slug="c", description="")
+        Products.objects.create(name="Real Product", slug="real-product", sku="R-1",
+                                category_id=cat, status="ACTIVE", description="",
+                                initial_buying_price=10, initial_selling_price=20)
+        call_command("seed_demo", "--if-empty")
+        # Only the one real product remains — demo catalog was skipped.
+        self.assertEqual(Products.objects.count(), 1)
