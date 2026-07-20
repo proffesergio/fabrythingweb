@@ -12,6 +12,8 @@ import StarRoundedIcon from "@mui/icons-material/StarRounded";
 import StarBorderRoundedIcon from "@mui/icons-material/StarBorderRounded";
 import { toast } from "react-toastify";
 import useApi from "../../hooks/APIHandler";
+import FoodLoader from "./FoodLoader";
+import ItemOptionsDialog from "./ItemOptionsDialog";
 
 const EMPTY_ITEM = {
     name: "", name_bn: "", description: "", description_bn: "", price: "", discount_price: "",
@@ -28,8 +30,8 @@ export default function FoodMenuManager() {
     const [newCat, setNewCat] = useState("");
     const [newCatBn, setNewCatBn] = useState("");
     const [itemDialog, setItemDialog] = useState(null); // {...item, category_id}
-    const [optionItem, setOptionItem] = useState(null); // item whose options we manage
-    const [groups, setGroups] = useState([]);
+    const [optionItem, setOptionItem] = useState(null); // item whose modifiers we manage
+    const [menuLoading, setMenuLoading] = useState(false);
 
     useEffect(() => {
         (async () => {
@@ -42,12 +44,17 @@ export default function FoodMenuManager() {
 
     const loadMenu = useCallback(async (rid) => {
         if (!rid) return;
-        const [c, i] = await Promise.all([
-            callApi({ url: "food/admin/categories/", method: "GET", params: { restaurant: rid } }),
-            callApi({ url: "food/admin/items/", method: "GET", params: { restaurant: rid } }),
-        ]);
-        setCategories(c?.data?.data || []);
-        setItems(i?.data?.data || []);
+        setMenuLoading(true);
+        try {
+            const [c, i] = await Promise.all([
+                callApi({ url: "food/admin/categories/", method: "GET", params: { restaurant: rid } }),
+                callApi({ url: "food/admin/items/", method: "GET", params: { restaurant: rid } }),
+            ]);
+            setCategories(c?.data?.data || []);
+            setItems(i?.data?.data || []);
+        } finally {
+            setMenuLoading(false);
+        }
     }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
     useEffect(() => { loadMenu(restaurant); }, [restaurant, loadMenu]);
@@ -90,25 +97,6 @@ export default function FoodMenuManager() {
         if (res?.status === 200) loadMenu(restaurant);
     };
 
-    const openOptions = async (item) => {
-        setOptionItem(item);
-        const res = await callApi({ url: "food/admin/option-groups/", method: "GET", params: { item: item.id } });
-        const gs = res?.data?.data || [];
-        const withOpts = await Promise.all(gs.map(async (g) => {
-            const o = await callApi({ url: "food/admin/options/", method: "GET", params: { group: g.id } });
-            return { ...g, options: o?.data?.data || [] };
-        }));
-        setGroups(withOpts);
-    };
-
-    const addGroup = async () => {
-        const res = await callApi({ url: "food/admin/option-groups/", method: "POST", body: { item: optionItem.id, name: "New group", max_select: 1 } });
-        if (res?.status === 201) openOptions(optionItem);
-    };
-    const addOption = async (groupId) => {
-        const res = await callApi({ url: "food/admin/options/", method: "POST", body: { group: groupId, name: "New option", price_delta: "0.00" } });
-        if (res?.status === 201) openOptions(optionItem);
-    };
 
     const itemsByCategory = (catId) => items.filter((i) => (i.category_id === catId || i.category_id?.id === catId));
 
@@ -133,9 +121,10 @@ export default function FoodMenuManager() {
                 </Stack>
             </CardContent></Card>
 
-            {categories.length === 0 && <Typography color="text.secondary">No categories yet — add one to start building the menu.</Typography>}
+            {menuLoading && <FoodLoader label="Loading menu…" emoji="🍛" />}
+            {!menuLoading && categories.length === 0 && <Typography color="text.secondary">No categories yet — add one to start building the menu.</Typography>}
 
-            {categories.map((cat) => (
+            {!menuLoading && categories.map((cat) => (
                 <Card key={cat.id} sx={{ mb: 2 }}><CardContent>
                     <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1 }}>
                         <Typography variant="subtitle1" fontWeight={700}>{cat.name}</Typography>
@@ -174,7 +163,7 @@ export default function FoodMenuManager() {
                                         <Switch size="small" checked={!!it.is_available} onChange={() => toggleField(it, "is_available")} />
                                     </TableCell>
                                     <TableCell align="right">
-                                        <IconButton size="small" title="Options" onClick={() => openOptions(it)}><TuneIcon /></IconButton>
+                                        <IconButton size="small" title="Modifiers" onClick={() => setOptionItem(it)}><TuneIcon /></IconButton>
                                         <IconButton size="small" title="Edit" onClick={() => setItemDialog({ ...it, category_id: cat.id })}><EditIcon /></IconButton>
                                         <IconButton size="small" color="error" title="Delete" onClick={() => deleteItem(it.id)}><DeleteIcon /></IconButton>
                                     </TableCell>
@@ -218,21 +207,8 @@ export default function FoodMenuManager() {
                 <DialogActions><Button onClick={() => setItemDialog(null)}>Cancel</Button><Button variant="contained" onClick={saveItem}>Save</Button></DialogActions>
             </Dialog>
 
-            {/* Options dialog */}
-            <Dialog open={!!optionItem} onClose={() => setOptionItem(null)} maxWidth="sm" fullWidth>
-                <DialogTitle>Options — {optionItem?.name}</DialogTitle>
-                <DialogContent>
-                    {groups.map((g) => (
-                        <Box key={g.id} sx={{ mb: 2 }}>
-                            <Typography variant="subtitle2">{g.name} (max {g.max_select})</Typography>
-                            {g.options.map((o) => <Chip key={o.id} size="small" sx={{ mr: 1, mt: 1 }} label={`${o.name} +৳${o.price_delta}`} />)}
-                            <Box><Button size="small" startIcon={<AddIcon />} onClick={() => addOption(g.id)}>Add option</Button></Box>
-                        </Box>
-                    ))}
-                    <Button startIcon={<AddIcon />} onClick={addGroup}>Add option group</Button>
-                </DialogContent>
-                <DialogActions><Button onClick={() => setOptionItem(null)}>Close</Button></DialogActions>
-            </Dialog>
+            {/* Modifier / add-on editor */}
+            <ItemOptionsDialog open={!!optionItem} item={optionItem} onClose={() => setOptionItem(null)} />
         </Box>
     );
 }

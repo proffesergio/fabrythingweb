@@ -9,6 +9,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { selectFoodCount, selectFoodSubtotal } from '../redux/foodCartSlice';
 import { useFoodLocation } from '../context/FoodLocationContext';
 import LocationPicker from '../components/LocationPicker';
+import FoodGalaxy from '../components/FoodGalaxy';
 import { FOOD } from '../theme';
 
 export default function FoodLayout() {
@@ -20,8 +21,9 @@ export default function FoodLayout() {
   const onCartPages = pathname.includes('/food/cart') || pathname.includes('/food/checkout');
 
   return (
-    <Box sx={{ minHeight: '100vh', bgcolor: 'background.default', pb: { xs: count && !onCartPages ? 10 : 0, sm: 0 } }}>
-      <AppBar position="sticky" elevation={0}>
+    <Box sx={{ minHeight: '100vh', bgcolor: 'transparent', position: 'relative', pb: { xs: count && !onCartPages ? 10 : 0, sm: 0 } }}>
+      <FoodGalaxy />
+      <AppBar position="sticky" elevation={0} sx={{ zIndex: 2 }}>
         <Container maxWidth="lg">
           <Toolbar disableGutters sx={{ gap: { xs: 1, sm: 2 }, minHeight: 68 }}>
             <Typography
@@ -76,7 +78,7 @@ export default function FoodLayout() {
         </Container>
       </AppBar>
 
-      <Container maxWidth="lg" sx={{ py: { xs: 2.5, md: 3.5 } }}>
+      <Container maxWidth="lg" sx={{ py: { xs: 2.5, md: 3.5 }, position: 'relative', zIndex: 1 }}>
         <Outlet />
       </Container>
 
