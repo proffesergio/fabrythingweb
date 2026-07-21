@@ -3,10 +3,13 @@ notifications, loyalty, and payment reconciliation."""
 from decimal import Decimal, InvalidOperation
 
 from django.contrib.auth import get_user_model
+from django.db import transaction
+from django.db.models import Q
 from django.utils import timezone
 from rest_framework.views import APIView
 from rest_framework.viewsets import ModelViewSet
 from rest_framework.generics import ListAPIView
+from rest_framework.decorators import action
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework_simplejwt.authentication import JWTAuthentication
 
@@ -81,19 +84,49 @@ class AdminRiderViewSet(EnvelopeModelViewSetMixin, ModelViewSet):
 
     def create(self, request, *args, **kwargs):
         od = request.data.get("owner") or {}
-        owner = None
-        if od.get("username") or od.get("email") or od.get("password"):
-            if not (od.get("username") and od.get("email") and od.get("password")):
-                return renderResponse(data="Owner needs username, email and password.", message="Validation error", status=400)
-            if User.objects.filter(email=od["email"]).exists() or User.objects.filter(username=od["username"]).exists():
-                return renderResponse(data="A user with that email/username already exists.", message="Validation error", status=400)
-            owner = User.objects.create_user(username=od["username"], email=od["email"], password=od["password"],
-                                             phone=od.get("phone", ""), role="Rider", country="Bangladesh")
+        wants_login = bool(od.get("username") or od.get("email") or od.get("password"))
+        if wants_login and not (od.get("username") and od.get("email") and od.get("password")):
+            return renderResponse(data="Owner needs username, email and password.",
+                                  message="Validation error", status=400)
+        if wants_login and User.objects.filter(
+                Q(email=od["email"]) | Q(username=od["username"])).exists():
+            return renderResponse(data="A user with that email/username already exists.",
+                                  message="Validation error", status=400)
+
+        # Validate the rider BEFORE touching the User table, so a rejected
+        # payload can't leave a login account behind with no rider attached.
         serializer = self.get_serializer(data=request.data)
         if not serializer.is_valid():
             return renderResponse(data=serializer.errors, message="Validation error", status=400)
-        serializer.save(user=owner)
+
+        # ATOMIC: the User and the Rider land together or not at all. Without
+        # this, a failure on the Rider insert committed the User anyway, and
+        # every retry of the same form hit "already exists" forever — the
+        # account was orphaned, invisible in the admin panel, and unusable.
+        with transaction.atomic():
+            owner = None
+            if wants_login:
+                owner = User.objects.create_user(
+                    username=od["username"], email=od["email"], password=od["password"],
+                    phone=od.get("phone", ""), role="Rider", country="Bangladesh")
+            serializer.save(user=owner)
         return renderResponse(data=serializer.data, message="Rider created", status=201)
+
+    @action(detail=True, methods=["post"], url_path="reset-password")
+    def reset_password(self, request, pk=None):
+        """Set a new password for this rider's login so an admin can hand over
+        working credentials. Riders have no self-serve password reset."""
+        rider = self.get_object()
+        if not rider.user:
+            return renderResponse(data="This rider has no login account.",
+                                  message="Validation error", status=400)
+        password = (request.data.get("password") or "").strip()
+        if len(password) < 8:
+            return renderResponse(data="Password must be at least 8 characters.",
+                                  message="Validation error", status=400)
+        rider.user.set_password(password)
+        rider.user.save(update_fields=["password"])
+        return renderResponse(data={"username": rider.user.username}, message="Password updated")
 
 
 class AdminAssignRiderView(APIView):

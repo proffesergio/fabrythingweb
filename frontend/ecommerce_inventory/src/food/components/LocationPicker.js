@@ -7,7 +7,6 @@ import MyLocationRoundedIcon from '@mui/icons-material/MyLocationRounded';
 import { toast } from 'react-toastify';
 import { useFoodLocation } from '../context/FoodLocationContext';
 import MapPicker from './MapPicker';
-import { FOOD } from '../theme';
 
 export default function LocationPicker() {
   const {
@@ -77,7 +76,7 @@ export default function LocationPicker() {
           />
 
           <Button fullWidth variant="outlined" startIcon={<MyLocationRoundedIcon />} onClick={useLocation}
-            sx={{ borderRadius: 3, borderColor: FOOD.line, color: 'primary.main', justifyContent: 'flex-start', py: 1 }}>
+            sx={{ borderRadius: 3, borderColor: 'divider', color: 'primary.main', justifyContent: 'flex-start', py: 1 }}>
             {t('Use my current location', 'আমার অবস্থান ব্যবহার করুন')}
           </Button>
 

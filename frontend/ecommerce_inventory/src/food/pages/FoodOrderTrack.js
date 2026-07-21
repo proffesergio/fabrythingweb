@@ -23,7 +23,7 @@ function DeliveryTrack({ activeStep }) {
         🛵
       </Box>
       {/* base + filled track */}
-      <Box sx={{ position: 'relative', height: 6, borderRadius: 3, bgcolor: FOOD.line }}>
+      <Box sx={{ position: 'relative', height: 6, borderRadius: 3, bgcolor: 'divider' }}>
         <Box component={motion.div} animate={{ width: `${pct}%` }} transition={{ type: 'spring', stiffness: 120, damping: 18 }}
           sx={{ position: 'absolute', inset: 0, borderRadius: 3, background: `linear-gradient(90deg, ${FOOD.turmeric}, ${FOOD.primary})` }} />
         {STEPS.map((s, i) => {
@@ -34,8 +34,8 @@ function DeliveryTrack({ activeStep }) {
               <Box component={motion.div}
                 animate={current ? { scale: [1, 1.25, 1] } : { scale: 1 }}
                 transition={current ? { repeat: Infinity, duration: 1.4 } : {}}
-                sx={{ width: 16, height: 16, borderRadius: '50%', border: `3px solid ${done ? FOOD.primary : FOOD.line}`,
-                      bgcolor: done ? FOOD.primary : '#fff' }} />
+                sx={{ width: 16, height: 16, borderRadius: '50%', border: (t) => `3px solid ${done ? t.palette.primary.main : t.palette.divider}`,
+                      bgcolor: done ? 'primary.main' : 'background.paper' }} />
             </Box>
           );
         })}
@@ -113,7 +113,9 @@ export default function FoodOrderTrack() {
     <Box sx={{ maxWidth: 620, mx: 'auto' }}>
       <Card component={motion.div} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
         sx={{ p: { xs: 2.5, md: 3 }, mb: 2.5, textAlign: 'center', overflow: 'visible',
-              background: `linear-gradient(180deg, #FFF6EC, #FFFFFF)` }}>
+              background: (t) => t.palette.mode === 'dark'
+                ? `linear-gradient(180deg, ${t.palette.background.paper}, ${t.palette.background.default})`
+                : 'linear-gradient(180deg, #FFF6EC, #FFFFFF)' }}>
         <Typography variant="overline" color="text.secondary">Order {order.order_code}</Typography>
         <Typography variant="h4" sx={{ mb: 0.5 }}>
           {delivered ? 'Delivered 🎉' : order.status === 'CANCELLED' ? 'Cancelled' : `Arriving in ~${order.eta_minutes} min`}

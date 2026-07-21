@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { Grid, Box, Typography, TextField, Stack, Button, CircularProgress, InputAdornment } from '@mui/material';
+import { Link } from 'react-router-dom';
 import SearchRoundedIcon from '@mui/icons-material/SearchRounded';
 import VoiceSearchButton from '../components/VoiceSearchButton';
 import PlaceRoundedIcon from '@mui/icons-material/PlaceRounded';
@@ -7,7 +8,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import useApi from '../../hooks/APIHandler';
 import { useFoodLocation } from '../context/FoodLocationContext';
 import RestaurantCard from '../components/RestaurantCard';
-import { FOOD } from '../theme';
 
 const CATEGORIES = [
   { label: 'All', value: '', emoji: '🍽️' },
@@ -28,6 +28,9 @@ const HEADLINES = [
 ];
 const FLOAT = ['🍛', '🍔', '🍕', '🍗', '🥘', '🧁', '🍜', '🍚'];
 
+// How many cards the "Nearest" row shows before the suggestions row starts.
+const NEAR_LIMIT = 6;
+
 function PlateTile({ item, active, onClick }) {
   return (
     <Stack alignItems="center" spacing={0.75} onClick={onClick} sx={{ cursor: 'pointer', minWidth: 68 }}>
@@ -35,8 +38,10 @@ function PlateTile({ item, active, onClick }) {
         component={motion.div} whileTap={{ scale: 0.9 }} whileHover={{ y: -3 }}
         sx={{
           width: 62, height: 62, borderRadius: '50%', display: 'grid', placeItems: 'center', fontSize: 28,
-          background: active ? 'linear-gradient(180deg,#FFF0DC,#FFDCA8)' : '#FFFFFF',
-          border: `2px solid ${active ? FOOD.turmeric : FOOD.line}`,
+          background: (t) => active
+            ? 'linear-gradient(180deg,#FFF0DC,#FFDCA8)'
+            : t.palette.background.paper,
+          border: (t) => `2px solid ${active ? t.palette.secondary.main : t.palette.divider}`,
           boxShadow: active ? '0 8px 18px rgba(244,166,42,0.28)' : '0 4px 12px rgba(120,60,20,0.05)',
           transition: 'background .2s, border-color .2s',
         }}
@@ -50,10 +55,34 @@ function PlateTile({ item, active, onClick }) {
   );
 }
 
+function RestaurantRow({ title, subtitle, restaurants, lang, sx }) {
+  return (
+    <Box sx={sx}>
+      <Stack direction="row" alignItems="baseline" spacing={1.5} sx={{ mb: 2 }}>
+        <Typography variant="h5">{title}</Typography>
+        {subtitle && (
+          <Typography variant="caption" color="text.secondary">{subtitle}</Typography>
+        )}
+      </Stack>
+      <Grid container spacing={2.5}>
+        {restaurants.map((r, i) => (
+          <Grid item xs={12} sm={6} md={4} key={r.id}>
+            <Box component={motion.div} initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: Math.min(i * 0.05, 0.3) }} sx={{ height: '100%' }}>
+              <RestaurantCard restaurant={r} lang={lang} />
+            </Box>
+          </Grid>
+        ))}
+      </Grid>
+    </Box>
+  );
+}
+
 export default function FoodHome() {
-  const { zoneId, lang, currentZone, openPicker } = useFoodLocation() || {};
+  const { zoneId, lang, currentZone, openPicker, coords } = useFoodLocation() || {};
   const { callApi, loading } = useApi();
   const [restaurants, setRestaurants] = useState([]);
+  const [suggested, setSuggested] = useState([]);
   const [search, setSearch] = useState('');
   const [cuisine, setCuisine] = useState('');
   const [hi, setHi] = useState(0);
@@ -68,13 +97,38 @@ export default function FoodHome() {
     if (zoneId) params.zone = zoneId;
     if (search) params.search = search;
     if (cuisine) params.cuisine = cuisine;
-    const res = await callApi({ url: 'food/restaurants/', method: 'GET', params });
-    setRestaurants(res?.data?.data?.data || []);
-  }, [zoneId, lang, search, cuisine]); // eslint-disable-line react-hooks/exhaustive-deps
+
+    // Nearest: sorted by real distance from the customer's dropped pin. With no
+    // pin we fall back to the selected zone's centre, so the row is still
+    // meaningfully ordered rather than alphabetical.
+    const origin = coords || (currentZone
+      ? { lat: Number(currentZone.center_lat), lng: Number(currentZone.center_lng) }
+      : null);
+    const nearParams = { ...params };
+    if (origin) {
+      nearParams.lat = origin.lat;
+      nearParams.lng = origin.lng;
+      nearParams.sort = 'distance';
+    }
+    const res = await callApi({ url: 'food/restaurants/', method: 'GET', params: nearParams });
+    const near = res?.data?.data?.data || [];
+    setRestaurants(near);
+
+    // "You may also like": most-delivered in the same area, minus everything
+    // already shown above, so the two rows never repeat a restaurant.
+    if (!zoneId || search || cuisine) { setSuggested([]); return; }
+    const shown = near.slice(0, NEAR_LIMIT).map((r) => r.id);
+    const sres = await callApi({
+      url: 'food/restaurants/', method: 'GET',
+      params: { ...params, sort: 'popular', exclude: shown.join(',') },
+    });
+    setSuggested(sres?.data?.data?.data || []);
+  }, [zoneId, lang, search, cuisine, coords, currentZone]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => { fetchRestaurants(); }, [fetchRestaurants]);
 
   const headline = HEADLINES[hi];
+  const hasDistance = restaurants.some((r) => r.distance_km != null);
 
   return (
     <Box>
@@ -131,29 +185,52 @@ export default function FoodHome() {
         ))}
       </Stack>
 
-      <Typography variant="h5" sx={{ mb: 2 }}>
-        {cuisine ? `${cuisine} places` : (lang === 'bn' ? 'আপনার কাছের রেস্তোরাঁ' : 'Restaurants near you')}
-      </Typography>
-
       {loading ? (
         <Box sx={{ textAlign: 'center', py: 8 }}><CircularProgress color="primary" /></Box>
       ) : restaurants.length === 0 ? (
         <Box sx={{ textAlign: 'center', py: 8 }}>
           <Box sx={{ fontSize: 56, mb: 1 }}>🧺</Box>
-          <Typography color="text.secondary">No restaurants deliver to this area yet.</Typography>
-          {openPicker && <Button sx={{ mt: 1 }} onClick={openPicker}>Change area</Button>}
+          <Typography color="text.secondary">
+            {lang === 'bn'
+              ? 'এই এলাকায় এখনো কোনো রেস্তোরাঁ ডেলিভারি করে না।'
+              : 'No restaurants deliver to this area yet.'}
+          </Typography>
+          <Stack direction="row" spacing={1} justifyContent="center" sx={{ mt: 1.5 }}>
+            {openPicker && (
+              <Button onClick={openPicker}>{lang === 'bn' ? 'এলাকা বদলান' : 'Change area'}</Button>
+            )}
+            {/* Always give them somewhere to go: the Browse page lists every
+                restaurant, including ones outside this union. */}
+            <Button component={Link} to="/food/restaurants" variant="outlined">
+              {lang === 'bn' ? 'সব রেস্তোরাঁ দেখুন' : 'Browse all restaurants'}
+            </Button>
+          </Stack>
         </Box>
       ) : (
-        <Grid container spacing={2.5}>
-          {restaurants.map((r, i) => (
-            <Grid item xs={12} sm={6} md={4} key={r.id}>
-              <Box component={motion.div} initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: Math.min(i * 0.05, 0.3) }} sx={{ height: '100%' }}>
-                <RestaurantCard restaurant={r} />
-              </Box>
-            </Grid>
-          ))}
-        </Grid>
+        <>
+          <RestaurantRow
+            title={cuisine
+              ? `${cuisine} places`
+              : (lang === 'bn' ? 'আপনার এলাকার সবচেয়ে কাছে' : 'Nearest to your area')}
+            subtitle={!cuisine && hasDistance
+              ? (lang === 'bn' ? 'দূরত্ব অনুসারে সাজানো' : 'Sorted by distance from you')
+              : ''}
+            restaurants={cuisine || search ? restaurants : restaurants.slice(0, NEAR_LIMIT)}
+            lang={lang}
+          />
+
+          {/* Second row is homepage-only, and only once an area is chosen —
+              suggestions are meaningless without somewhere to deliver to. */}
+          {suggested.length > 0 && (
+            <RestaurantRow
+              title={lang === 'bn' ? 'আপনার পছন্দ হতে পারে' : 'Restaurants you may also like'}
+              subtitle={lang === 'bn' ? 'এই এলাকায় জনপ্রিয়' : 'Popular in your area'}
+              restaurants={suggested}
+              lang={lang}
+              sx={{ mt: 5 }}
+            />
+          )}
+        </>
       )}
     </Box>
   );

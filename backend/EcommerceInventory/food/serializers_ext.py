@@ -14,11 +14,19 @@ class CouponSerializer(serializers.ModelSerializer):
 
 
 class RiderSerializer(serializers.ModelSerializer):
+    # The admin panel shows these so an admin can hand a rider working
+    # credentials (there is no self-serve rider signup or password reset).
+    # Never expose the password hash — only the identifier to log in with.
+    username = serializers.CharField(source="user.username", read_only=True, default=None)
+    email = serializers.CharField(source="user.email", read_only=True, default=None)
+    is_online = serializers.BooleanField(read_only=True)
+
     class Meta:
         model = Rider
         fields = ["id", "rider_code", "name", "phone", "vehicle_type", "vehicle_number",
                   "is_available", "is_verified", "total_deliveries", "created_at",
-                  "current_lat", "current_lng", "last_seen_at"]
+                  "current_lat", "current_lng", "last_seen_at",
+                  "username", "email", "is_online"]
         read_only_fields = ["rider_code", "total_deliveries",
                             "current_lat", "current_lng", "last_seen_at"]
 

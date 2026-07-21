@@ -20,6 +20,10 @@ from food.views_food_ext import (
     RiderHeartbeatView, RiderEarningsView,
 )
 from food.views_menu_copy import AdminMenuCopyView
+from food.views_settlement import (
+    AdminSettlementListView, AdminSettlementSummaryView, AdminSettlementLegView,
+    AdminSettlementBulkLegView, AdminZoneTreeView, AdminVillageViewSet,
+)
 
 urlpatterns = [
     path("restaurants/", PublicRestaurantListView.as_view(), name="food_restaurants"),
@@ -41,6 +45,12 @@ urlpatterns = [
     path("coupons/validate/", CouponValidateView.as_view(), name="food_coupon_validate"),
     path("admin/orders/<int:pk>/assign/", AdminAssignRiderView.as_view(), name="food_admin_assign_rider"),
     path("admin/payments/", AdminPaymentListView.as_view(), name="food_admin_payments"),
+    # Settlement ledger — the Payments tab's real data source.
+    path("admin/settlements/", AdminSettlementListView.as_view(), name="food_admin_settlements"),
+    path("admin/settlements/summary/", AdminSettlementSummaryView.as_view(), name="food_admin_settlement_summary"),
+    path("admin/settlements/bulk/", AdminSettlementBulkLegView.as_view(), name="food_admin_settlement_bulk"),
+    path("admin/settlements/<int:pk>/leg/", AdminSettlementLegView.as_view(), name="food_admin_settlement_leg"),
+    path("admin/zone-tree/", AdminZoneTreeView.as_view(), name="food_admin_zone_tree"),
     path("admin/menu/copy/", AdminMenuCopyView.as_view(), name="food_admin_menu_copy"),
     path("rider/me/", RiderMeView.as_view(), name="food_rider_me"),
     path("rider/availability/", RiderAvailabilityView.as_view(), name="food_rider_availability"),
@@ -64,4 +74,5 @@ router.register("admin/options", AdminOptionViewSet, basename="admin-options")
 router.register("vendor/coupons", VendorCouponViewSet, basename="vendor-coupons")
 router.register("admin/coupons", AdminCouponViewSet, basename="admin-coupons")
 router.register("admin/riders", AdminRiderViewSet, basename="admin-riders")
+router.register("admin/villages", AdminVillageViewSet, basename="admin-villages")
 urlpatterns += router.urls

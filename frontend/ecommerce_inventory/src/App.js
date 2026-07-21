@@ -54,12 +54,13 @@ import VendorMenu from './vendor/VendorMenu';
 import VendorOrders from './vendor/VendorOrders';
 
 // Food delivery app (separate themed experience mounted at /food)
-import { getFoodTheme } from './food/theme';
+import { FoodThemeProvider } from './food/context/FoodThemeContext';
 import { FoodLocationProvider } from './food/context/FoodLocationContext';
 import FoodLayout from './food/layout/FoodLayout';
 import FoodHome from './food/pages/FoodHome';
 import RestaurantDetail from './food/pages/RestaurantDetail';
 import FoodCartPage from './food/pages/FoodCartPage';
+import BrowseRestaurants from './food/pages/BrowseRestaurants';
 import FoodCheckout from './food/pages/FoodCheckout';
 import FoodOrderTrack from './food/pages/FoodOrderTrack';
 import FoodMyOrders from './food/pages/FoodMyOrders';
@@ -90,11 +91,12 @@ function StorefrontWrapper() {
 // Food delivery app shell: its own dark theme + location provider + layout,
 // mounted OUTSIDE the storefront wrapper so selecting "Food" switches the whole UI.
 function FoodApp() {
-  const theme = useMemo(() => getFoodTheme(), []);
+  // FoodThemeProvider owns the MUI ThemeProvider so the light/dark toggle in the
+  // header can re-create the theme; it persists the choice in localStorage.
   return (
-    <ThemeProvider theme={theme}>
+    <FoodThemeProvider>
       <FoodLocationProvider><FoodLayout /></FoodLocationProvider>
-    </ThemeProvider>
+    </FoodThemeProvider>
   );
 }
 
@@ -149,6 +151,7 @@ function App() {
         element:<FoodApp/>,
         children:[
           {index:true,element:<FoodHome/>},
+          {path:"restaurants",element:<BrowseRestaurants/>},
           {path:"restaurant/:slug",element:<RestaurantDetail/>},
           {path:"cart",element:<FoodCartPage/>},
           {path:"checkout",element:<FoodCheckout/>},

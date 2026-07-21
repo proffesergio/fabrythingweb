@@ -1,14 +1,46 @@
-from django.db.models import Prefetch
+from django.db.models import Prefetch, Count, Q, F, Exists, OuterRef, FloatField, Value
+from django.db.models.functions import ACos, Cos, Sin, Radians, Least, Greatest, Cast
 from rest_framework.permissions import AllowAny
 from rest_framework.views import APIView
 from rest_framework.generics import ListAPIView
 from core.helpers import renderResponse, CustomPageNumberPagination, CommonListAPIMixin
-from food.models import Restaurant, FoodCategory, FoodItem, FoodItemOptionGroup, DeliveryZone
+from food.models import (Restaurant, FoodCategory, FoodItem, FoodItemOptionGroup,
+                         DeliveryZone, FoodOrder, RestaurantZone)
 from food.serializers import RestaurantListSerializer, RestaurantDetailSerializer, DeliveryZoneSerializer
+
+EARTH_RADIUS_KM = 6371.0
 
 
 def _lang(request):
     return "bn" if request.GET.get("lang") == "bn" else "en"
+
+
+def _float(value):
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _haversine_expr(lat, lng):
+    """Great-circle km from (lat, lng) to each restaurant's pickup pin, as a DB
+    expression so the result stays a QuerySet (orderable, filterable, paginable).
+
+    Uses the spherical law of cosines — the same distance as food.geo.haversine_km
+    to well under a metre at town scale, but expressible with the math functions
+    Django ships for both SQLite and Postgres.
+
+    The ACos argument is clamped to [-1, 1]: floating-point drift can push it a
+    hair outside that range for a restaurant sitting exactly on the pin, and
+    ACos(1.0000000001) is a domain error that surfaces as a 500.
+    """
+    r_lat = Radians(Cast(F("pickup_lat"), FloatField()))
+    r_lng = Radians(Cast(F("pickup_lng"), FloatField()))
+    p_lat, p_lng = Radians(Value(lat)), Radians(Value(lng))
+
+    cos_angle = (Cos(p_lat) * Cos(r_lat) * Cos(r_lng - p_lng)) + (Sin(p_lat) * Sin(r_lat))
+    clamped = Least(Greatest(cos_angle, Value(-1.0)), Value(1.0))
+    return ACos(clamped) * Value(EARTH_RADIUS_KM)
 
 
 class PublicRestaurantListView(ListAPIView):
@@ -17,17 +49,52 @@ class PublicRestaurantListView(ListAPIView):
     pagination_class = CustomPageNumberPagination
 
     def get_queryset(self):
+        p = self.request.GET
         qs = Restaurant.objects.filter(status=Restaurant.Status.ACTIVE)
-        zone = self.request.GET.get("zone")
-        if zone:
+
+        zone = p.get("zone")
+        # `all=true` (the Browse page) keeps every restaurant in the list and only
+        # uses `zone` to mark which ones deliver to you, rather than filtering.
+        browse_all = p.get("all") == "true"
+        if zone and not browse_all:
             qs = qs.filter(zones__id=zone).distinct()
-        search = self.request.GET.get("search")
-        if search:
-            qs = qs.filter(name__icontains=search)
-        cuisine = self.request.GET.get("cuisine")
-        if cuisine:
-            qs = qs.filter(cuisine_type__icontains=cuisine)
-        return qs.order_by("name")
+
+        if p.get("search"):
+            qs = qs.filter(name__icontains=p["search"])
+        if p.get("cuisine"):
+            qs = qs.filter(cuisine_type__icontains=p["cuisine"])
+
+        # Skip restaurants already shown in another row (the "you may also like"
+        # row must not repeat the "nearest" row).
+        exclude = [i for i in (p.get("exclude") or "").split(",") if i.strip().isdigit()]
+        if exclude:
+            qs = qs.exclude(id__in=exclude)
+
+        sort = p.get("sort")
+        if sort == "popular":
+            # Delivered orders only — cancelled ones are not a popularity signal.
+            qs = qs.annotate(order_count=Count(
+                "orders", filter=Q(orders__status=FoodOrder.Status.DELIVERED))
+            ).order_by("-order_count", "name")
+        else:
+            qs = qs.order_by("name")
+
+        if zone:
+            qs = qs.annotate(delivers_to_zone=Exists(
+                RestaurantZone.objects.filter(restaurant=OuterRef("pk"), zone_id=zone)))
+
+        # Distance is annotated in SQL rather than sorted in Python: this must stay
+        # a real QuerySet, because CommonListAPIMixin.common_list_decorator calls
+        # .filter()/.order_by() on whatever get_queryset returns.
+        lat, lng = _float(p.get("lat")), _float(p.get("lng"))
+        if lat is not None and lng is not None:
+            qs = qs.annotate(distance_km=_haversine_expr(lat, lng))
+            if sort == "distance":
+                # Restaurants with no pickup pin have a NULL distance; they sort
+                # last rather than jumping to the front on a NULLS-FIRST backend.
+                qs = qs.order_by(F("distance_km").asc(nulls_last=True), "name")
+
+        return qs
 
     def get_serializer_context(self):
         return {"lang": _lang(self.request)}

@@ -8,7 +8,6 @@ import StorefrontRoundedIcon from '@mui/icons-material/StorefrontRounded';
 import {
   selectFoodCart, selectFoodSubtotal, selectFoodRestaurant, updateFoodQty, removeFoodItem,
 } from '../redux/foodCartSlice';
-import { FOOD } from '../theme';
 
 const linePrice = (i) =>
   (Number(i.unitPrice) + i.selectedOptions.reduce((s, o) => s + Number(o.priceDelta), 0)) * i.quantity;
@@ -16,7 +15,7 @@ const linePrice = (i) =>
 function Stepper({ item, dispatch }) {
   return (
     <Stack direction="row" alignItems="center" spacing={0.5}
-      sx={{ border: `1px solid ${FOOD.line}`, borderRadius: 999, px: 0.5 }}>
+      sx={{ border: 1, borderColor: 'divider', borderRadius: 999, px: 0.5 }}>
       <IconButton size="small" color="primary" onClick={() => dispatch(updateFoodQty({ lineId: item.lineId, quantity: item.quantity - 1 }))}>
         <RemoveRoundedIcon fontSize="small" />
       </IconButton>

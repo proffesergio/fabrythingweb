@@ -72,24 +72,43 @@ class Command(BaseCommand):
     def add_arguments(self, parser):
         parser.add_argument("--exclusive", action="store_true",
                             help="Deactivate every zone that is not a Bancharampur union.")
+        parser.add_argument("--force-update", action="store_true",
+                            help="Overwrite existing zones with the canonical values here, "
+                                 "DISCARDING any manual admin corrections. Off by default.")
 
     @transaction.atomic
     def handle(self, *args, **opts):
-        zones_touched, villages_created = 0, 0
+        zones_created, zones_updated, villages_created = 0, 0, 0
         keep_ids = []
         for name, name_bn, lat, lng, villages in UNIONS:
-            zone, _ = DeliveryZone.objects.update_or_create(
-                name=name,
-                defaults={
-                    "name_bn": name_bn,
-                    "center_lat": Decimal(lat),
-                    "center_lng": Decimal(lng),
-                    "radius_km": Decimal("4"),
-                    "is_active": True,
-                },
-            )
+            canonical = {
+                "name_bn": name_bn,
+                "center_lat": Decimal(lat),
+                "center_lng": Decimal(lng),
+                "radius_km": Decimal("4"),
+                "is_active": True,
+            }
+            # CREATE-ONLY by default. This command runs on every deploy, and an
+            # update_or_create here silently reverted the admin's manual zone
+            # edits (Bangla names, map centre, radius, active flag) on each
+            # release. Existing rows are left exactly as the admin set them
+            # unless --force-update is passed explicitly.
+            zone = DeliveryZone.objects.filter(name=name).first()
+            if zone is None:
+                zone = DeliveryZone.objects.create(name=name, **canonical)
+                zones_created += 1
+            elif opts["force_update"]:
+                for field, value in canonical.items():
+                    setattr(zone, field, value)
+                zone.save()
+                zones_updated += 1
+            else:
+                # Only fill a blank Bangla name — never overwrite one that's set.
+                if not zone.name_bn:
+                    zone.name_bn = name_bn
+                    zone.save(update_fields=["name_bn", "updated_at"])
+
             keep_ids.append(zone.id)
-            zones_touched += 1
             for v in villages:
                 _, made = Village.objects.get_or_create(zone=zone, name=v)
                 villages_created += int(made)
@@ -100,4 +119,6 @@ class Command(BaseCommand):
             self.stdout.write(self.style.WARNING(f"Deactivated {n} non-Bancharampur zone(s)."))
 
         self.stdout.write(self.style.SUCCESS(
-            f"Bancharampur seeded: {zones_touched} unions, {villages_created} new villages."))
+            f"Bancharampur seeded: {zones_created} new union(s), {zones_updated} overwritten, "
+            f"{villages_created} new village(s). Existing zones left untouched"
+            f"{' (--force-update was used)' if opts['force_update'] else ''}."))

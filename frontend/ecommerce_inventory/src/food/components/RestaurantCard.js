@@ -1,6 +1,7 @@
 import { Card, Box, Typography, Chip, Stack } from '@mui/material';
 import AccessTimeRoundedIcon from '@mui/icons-material/AccessTimeRounded';
 import TwoWheelerRoundedIcon from '@mui/icons-material/TwoWheelerRounded';
+import PlaceRoundedIcon from '@mui/icons-material/PlaceRounded';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { FOOD } from '../theme';
@@ -14,8 +15,14 @@ const emojiFor = (cuisine = '') => {
   return Object.keys(EMOJI).find((key) => k.includes(key)) ? EMOJI[Object.keys(EMOJI).find((key) => k.includes(key))] : EMOJI.default;
 };
 
-export default function RestaurantCard({ restaurant: r }) {
+export default function RestaurantCard({ restaurant: r, lang }) {
   const closed = !r.is_open;
+  // Only present when the caller asked for distance (the "Nearest" row and the
+  // Browse page); null for a restaurant with no pickup pin.
+  const distance = r.distance_km;
+  // Explicitly false only on the Browse page, which lists restaurants outside
+  // your union too. Undefined elsewhere, so nothing is marked by accident.
+  const undeliverable = r.delivers_to_zone === false;
   return (
     <Card
       component={motion.a}
@@ -23,7 +30,8 @@ export default function RestaurantCard({ restaurant: r }) {
       transition={{ type: 'spring', stiffness: 300, damping: 22 }}
       href={undefined}
       sx={{ textDecoration: 'none', display: 'block', overflow: 'hidden', height: '100%',
-            filter: closed ? 'grayscale(0.5)' : 'none', opacity: closed ? 0.85 : 1 }}
+            filter: closed || undeliverable ? 'grayscale(0.5)' : 'none',
+            opacity: closed || undeliverable ? 0.85 : 1 }}
     >
       <Link to={`/food/restaurant/${r.slug}`} style={{ textDecoration: 'none', color: 'inherit' }}>
         {/* Cover: real photo if present, else a warm gradient + cuisine emoji */}
@@ -47,6 +55,14 @@ export default function RestaurantCard({ restaurant: r }) {
             sx={{ position: 'absolute', bottom: 10, left: 10, bgcolor: FOOD.turmeric, color: '#3A2A05',
                   fontWeight: 800, '& .MuiChip-icon': { color: '#3A2A05' } }}
           />
+          {distance != null && (
+            <Chip
+              size="small" icon={<PlaceRoundedIcon sx={{ fontSize: 15 }} />}
+              label={`${distance < 1 ? `${Math.round(distance * 1000)} m` : `${distance.toFixed(1)} km`}`}
+              sx={{ position: 'absolute', bottom: 10, right: 10, bgcolor: 'rgba(36,24,18,0.78)',
+                    color: '#fff', fontWeight: 800, '& .MuiChip-icon': { color: '#fff' } }}
+            />
+          )}
           <Chip
             size="small" label={closed ? 'Closed' : 'Open now'}
             color={closed ? 'default' : 'success'}
@@ -60,6 +76,11 @@ export default function RestaurantCard({ restaurant: r }) {
           <Typography variant="body2" color="text.secondary" noWrap sx={{ mb: 1.2 }}>
             {r.cuisine_type || 'Restaurant'}
           </Typography>
+          {undeliverable && (
+            <Typography variant="caption" sx={{ display: 'block', mb: 1, color: 'warning.main', fontWeight: 700 }}>
+              {lang === 'bn' ? 'আপনার এলাকায় ডেলিভারি করে না' : "Doesn't deliver to your area"}
+            </Typography>
+          )}
           <Stack direction="row" spacing={2} alignItems="center">
             <Stack direction="row" spacing={0.5} alignItems="center">
               <TwoWheelerRoundedIcon sx={{ fontSize: 18, color: 'text.secondary' }} />

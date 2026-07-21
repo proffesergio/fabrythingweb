@@ -17,7 +17,6 @@ import { useFoodLocation } from '../context/FoodLocationContext';
 import {
   selectFoodCart, selectFoodSubtotal, selectFoodRestaurant, selectFoodTip, clearFoodCart,
 } from '../redux/foodCartSlice';
-import { FOOD } from '../theme';
 
 const rise = { initial: { opacity: 0, y: 14 }, animate: { opacity: 1, y: 0 } };
 const METHODS = [
@@ -161,8 +160,8 @@ export default function FoodCheckout() {
             <Grid item xs={6} key={m.key}>
               <Box onClick={() => setMethod(m.key)} component={motion.div} whileTap={{ scale: 0.97 }}
                 sx={{ cursor: 'pointer', p: 1.5, borderRadius: 3, display: 'flex', alignItems: 'center', gap: 1,
-                  border: `2px solid ${method === m.key ? FOOD.primary : FOOD.line}`,
-                  bgcolor: method === m.key ? 'rgba(232,69,43,0.06)' : '#fff' }}>
+                  border: (t) => `2px solid ${method === m.key ? t.palette.primary.main : t.palette.divider}`,
+                  bgcolor: method === m.key ? 'rgba(232,69,43,0.06)' : 'background.paper' }}>
                 <Box sx={{ fontSize: 22 }}>{m.emoji}</Box>
                 <Typography variant="body2" sx={{ fontWeight: 700 }}>{m.label}</Typography>
               </Box>
@@ -216,7 +215,7 @@ export default function FoodCheckout() {
       </Card>
 
       <Box sx={{ position: 'fixed', left: 0, right: 0, bottom: 0, p: 2, zIndex: 1100,
-        background: `linear-gradient(180deg, rgba(253,248,243,0), ${FOOD.canvas} 40%)` }}>
+        background: (t) => `linear-gradient(180deg, transparent, ${t.palette.background.default} 40%)` }}>
         <Box sx={{ maxWidth: 560, mx: 'auto' }}>
           <Button fullWidth variant="contained" size="large" disabled={loading} onClick={submit}
             sx={{ py: 1.6, borderRadius: 999, boxShadow: '0 12px 30px rgba(232,69,43,0.35)' }}>

@@ -1,6 +1,9 @@
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
-import { AppBar, Toolbar, Box, Typography, IconButton, Badge, Button, Container, Stack } from '@mui/material';
+import { AppBar, Toolbar, Box, Typography, IconButton, Badge, Button, Container, Stack, Tooltip } from '@mui/material';
 import ShoppingBagOutlinedIcon from '@mui/icons-material/ShoppingBagOutlined';
+import RestaurantMenuRoundedIcon from '@mui/icons-material/RestaurantMenuRounded';
+import DarkModeRoundedIcon from '@mui/icons-material/DarkModeRounded';
+import LightModeRoundedIcon from '@mui/icons-material/LightModeRounded';
 import StorefrontOutlinedIcon from '@mui/icons-material/StorefrontOutlined';
 import PlaceRoundedIcon from '@mui/icons-material/PlaceRounded';
 import KeyboardArrowDownRoundedIcon from '@mui/icons-material/KeyboardArrowDownRounded';
@@ -11,7 +14,7 @@ import { useFoodLocation } from '../context/FoodLocationContext';
 import LocationPicker from '../components/LocationPicker';
 import FoodGalaxy from '../components/FoodGalaxy';
 import NotificationsBell from '../components/NotificationsBell';
-import { FOOD } from '../theme';
+import { useFoodTheme } from '../context/FoodThemeContext';
 
 export default function FoodLayout() {
   const count = useSelector(selectFoodCount);
@@ -19,6 +22,8 @@ export default function FoodLayout() {
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const loc = useFoodLocation() || {};
+  const { mode, toggleMode } = useFoodTheme();
+  const isDark = mode === 'dark';
   const onCartPages = pathname.includes('/food/cart') || pathname.includes('/food/checkout');
 
   return (
@@ -37,7 +42,8 @@ export default function FoodLayout() {
             {loc.openPicker && (
               <Button
                 onClick={loc.openPicker}
-                sx={{ px: 1.25, py: 0.6, borderRadius: 999, bgcolor: '#fff', border: `1px solid ${FOOD.line}`,
+                sx={{ px: 1.25, py: 0.6, borderRadius: 999, bgcolor: 'background.paper',
+                      border: 1, borderColor: 'divider',
                       color: 'text.primary', textTransform: 'none', maxWidth: { xs: 150, sm: 220 } }}
               >
                 <PlaceRoundedIcon sx={{ fontSize: 18, color: 'primary.main', mr: 0.5 }} />
@@ -58,6 +64,29 @@ export default function FoodLayout() {
             )}
 
             <Box sx={{ flexGrow: 1 }} />
+
+            <Button
+              size="small" color="inherit" startIcon={<RestaurantMenuRoundedIcon />}
+              component={Link} to="/food/restaurants"
+              sx={{ color: pathname === '/food/restaurants' ? 'primary.main' : 'text.secondary',
+                    fontWeight: 700 }}
+            >
+              <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>
+                {loc.lang === 'bn' ? 'রেস্তোরাঁ দেখুন' : 'Browse Restaurants'}
+              </Box>
+              <Box component="span" sx={{ display: { xs: 'inline', sm: 'none' } }}>
+                {loc.lang === 'bn' ? 'রেস্তোরাঁ' : 'Browse'}
+              </Box>
+            </Button>
+
+            <Tooltip title={isDark ? 'Switch to light' : 'Switch to dark'}>
+              <IconButton
+                size="small" onClick={toggleMode} sx={{ color: 'text.secondary' }}
+                aria-label={isDark ? 'Switch to light theme' : 'Switch to dark theme'}
+              >
+                {isDark ? <LightModeRoundedIcon fontSize="small" /> : <DarkModeRoundedIcon fontSize="small" />}
+              </IconButton>
+            </Tooltip>
 
             {loc.setLang && (
               <Button

@@ -4,11 +4,12 @@ import {
     FormControlLabel, IconButton, LinearProgress, Switch, Table, TableBody, TableCell,
     TableContainer, TableHead, TableRow, Paper, TextField, Typography, Stack,
 } from "@mui/material";
-import { Add, Delete, Edit } from "@mui/icons-material";
+import { Add, Delete, Edit, Place } from "@mui/icons-material";
 import { useNavigate } from "react-router-dom";
 import { Controller, useForm } from "react-hook-form";
 import { toast } from "react-toastify";
 import useApi from "../../hooks/APIHandler";
+import ZoneVillagesDialog from "./ZoneVillagesDialog";
 
 const defaultValues = {
     name: "",
@@ -23,12 +24,13 @@ const ManageZones = () => {
     const [zones, setZones] = useState([]);
     const [open, setOpen] = useState(false);
     const [editingZone, setEditingZone] = useState(null);
+    const [villageZone, setVillageZone] = useState(null);
     const { callApi, loading } = useApi();
     const navigate = useNavigate();
     const { register, handleSubmit, control, reset, formState: { errors } } = useForm({ defaultValues });
 
     const fetchZones = async () => {
-        const res = await callApi({ url: "food/admin/zones/", method: "GET" });
+        const res = await callApi({ url: "food/admin/zone-tree/", method: "GET" });
         if (res?.data?.data) {
             setZones(res.data.data);
         }
@@ -106,6 +108,8 @@ const ManageZones = () => {
                     <TableHead>
                         <TableRow>
                             <TableCell>Name</TableCell>
+                            <TableCell>বাংলা নাম</TableCell>
+                            <TableCell align="center">Villages</TableCell>
                             <TableCell>Center Lat</TableCell>
                             <TableCell>Center Lng</TableCell>
                             <TableCell>Radius (km)</TableCell>
@@ -116,12 +120,22 @@ const ManageZones = () => {
                     <TableBody>
                         {zones.length === 0 && !loading && (
                             <TableRow>
-                                <TableCell colSpan={6} align="center">No delivery zones found</TableCell>
+                                <TableCell colSpan={8} align="center">No delivery zones found</TableCell>
                             </TableRow>
                         )}
                         {zones.map((zone) => (
                             <TableRow key={zone.id}>
                                 <TableCell>{zone.name}</TableCell>
+                                <TableCell>
+                                    {zone.name_bn || (
+                                        <Chip size="small" color="warning" variant="outlined" label="Missing" />
+                                    )}
+                                </TableCell>
+                                <TableCell align="center">
+                                    <Button size="small" startIcon={<Place />} onClick={() => setVillageZone(zone)}>
+                                        {zone.village_count ?? 0}
+                                    </Button>
+                                </TableCell>
                                 <TableCell>{zone.center_lat}</TableCell>
                                 <TableCell>{zone.center_lng}</TableCell>
                                 <TableCell>{zone.radius_km}</TableCell>
@@ -147,6 +161,13 @@ const ManageZones = () => {
                     </TableBody>
                 </Table>
             </TableContainer>
+
+            <ZoneVillagesDialog
+                zone={villageZone}
+                open={!!villageZone}
+                onClose={() => setVillageZone(null)}
+                onChanged={fetchZones}
+            />
 
             <Dialog open={open} onClose={handleClose} maxWidth="xs" fullWidth>
                 <form onSubmit={handleSubmit(onSubmit)}>

@@ -1,6 +1,8 @@
 import uuid
+from datetime import timedelta
 from django.db import models
 from django.conf import settings
+from django.utils import timezone
 from decimal import Decimal
 from food.geo import haversine_km
 
@@ -306,6 +308,15 @@ class FoodOrder(TimeStamped):
             raise ValidationError(f"Cannot move order from {self.status} to {new_status}.")
         self.status = new_status
         self.save(update_fields=["status", "updated_at"])
+
+        # Book the money the moment the order lands. This is the one choke point
+        # every caller goes through (rider, vendor and admin status views all
+        # call transition_to), so the ledger can't be bypassed by adding another
+        # endpoint later. Imported here, not at module scope: services_settlement
+        # imports this module.
+        if new_status == FoodOrder.Status.DELIVERED:
+            from food.services_settlement import settle_order
+            settle_order(self)
         return self
 
     def __str__(self):
@@ -378,6 +389,15 @@ class Rider(TimeStamped):
     current_lng = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
     last_seen_at = models.DateTimeField(null=True, blank=True)
 
+    @property
+    def is_online(self):
+        """Mirrors the dispatch filter in services_dispatch.available_riders()
+        so the admin panel shows the same presence the dispatcher acts on."""
+        if not self.last_seen_at:
+            return False
+        cutoff = timezone.now() - timedelta(minutes=self.PRESENCE_WINDOW_MINUTES)
+        return self.last_seen_at >= cutoff
+
     def __str__(self):
         return f"{self.name} ({self.rider_code})"
 
@@ -412,3 +432,93 @@ class LoyaltyLedger(TimeStamped):
     delta = models.IntegerField()  # +earn / -redeem
     reason = models.CharField(max_length=120, blank=True, default="")
     order_code = models.CharField(max_length=12, blank=True, default="")
+
+
+# ── Phase E: Settlement ledger ───────────────────────────────────────────────
+class OrderSettlement(TimeStamped):
+    """The money breakdown for one delivered order, and who has been paid.
+
+    Every figure is SNAPSHOTTED from the order at delivery time, not computed on
+    read: `Restaurant.commission_percentage` and the rider base pay change over
+    time, and a past order's books must not move when they do. This mirrors the
+    money-is-snapshotted-at-creation rule on FoodOrder itself.
+
+    Four independent money movements hang off a single delivered order, and each
+    settles on its own clock:
+      1. customer_payment  — the customer's cash/mobile money is in hand
+      2. rider_cash        — the rider handed over the COD cash they collected
+      3. rider_payout      — we paid the rider their base pay + tips
+      4. restaurant_payout — we paid the restaurant their share after commission
+
+    Derivation, all from the order total:
+        food_net         = subtotal - discount
+        commission       = food_net * commission_rate%        -> platform
+        restaurant_payout= food_net - commission              -> restaurant
+        rider_payout     = rider_base_pay + tip               -> rider
+        platform_revenue = commission + delivery_fee - rider_base_pay
+    So: total == restaurant_payout + commission + delivery_fee + tip, and the
+    platform keeps `platform_revenue` once the rider and restaurant are paid.
+    """
+
+    class Settle(models.TextChoices):
+        PENDING = "PENDING", "Pending"
+        SETTLED = "SETTLED", "Settled"
+        NA = "NA", "Not applicable"
+
+    order = models.OneToOneField(FoodOrder, on_delete=models.CASCADE, related_name="settlement")
+
+    # Snapshotted inputs — never re-read from Restaurant/settings after creation.
+    commission_rate = models.DecimalField(max_digits=5, decimal_places=2, default=Decimal("0.00"))
+    food_net = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal("0.00"))
+    delivery_fee = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal("0.00"))
+    tip = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal("0.00"))
+
+    # Derived splits.
+    commission_amount = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal("0.00"))
+    restaurant_payout = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal("0.00"))
+    rider_base_pay = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal("0.00"))
+    rider_payout = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal("0.00"))
+    platform_revenue = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal("0.00"))
+
+    # Who actually delivered it. Denormalised on purpose: FoodOrder.rider is
+    # SET_NULL, so deleting a rider would otherwise erase the delivery record
+    # from the books.
+    rider = models.ForeignKey("Rider", null=True, blank=True, on_delete=models.SET_NULL,
+                              related_name="settlements")
+    rider_name = models.CharField(max_length=120, blank=True, default="")
+
+    customer_payment_status = models.CharField(max_length=8, choices=Settle.choices, default=Settle.PENDING)
+    rider_cash_status = models.CharField(max_length=8, choices=Settle.choices, default=Settle.PENDING)
+    rider_payout_status = models.CharField(max_length=8, choices=Settle.choices, default=Settle.PENDING)
+    restaurant_payout_status = models.CharField(max_length=8, choices=Settle.choices, default=Settle.PENDING)
+
+    customer_payment_at = models.DateTimeField(null=True, blank=True)
+    rider_cash_at = models.DateTimeField(null=True, blank=True)
+    rider_payout_at = models.DateTimeField(null=True, blank=True)
+    restaurant_payout_at = models.DateTimeField(null=True, blank=True)
+
+    notes = models.TextField(blank=True, default="")
+
+    # Maps a settlement leg to (status field, timestamp field).
+    LEGS = {
+        "customer_payment": ("customer_payment_status", "customer_payment_at"),
+        "rider_cash": ("rider_cash_status", "rider_cash_at"),
+        "rider_payout": ("rider_payout_status", "rider_payout_at"),
+        "restaurant_payout": ("restaurant_payout_status", "restaurant_payout_at"),
+    }
+
+    class Meta:
+        ordering = ["-created_at"]
+        indexes = [
+            models.Index(fields=["customer_payment_status"]),
+            models.Index(fields=["rider_payout_status"]),
+            models.Index(fields=["restaurant_payout_status"]),
+        ]
+
+    @property
+    def is_fully_settled(self):
+        return all(getattr(self, f) in (self.Settle.SETTLED, self.Settle.NA)
+                   for f, _ in self.LEGS.values())
+
+    def __str__(self):
+        return f"Settlement {self.order.order_code}"

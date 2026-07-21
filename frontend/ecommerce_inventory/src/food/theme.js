@@ -1,7 +1,8 @@
 import { createTheme } from '@mui/material/styles';
 
-// "Spice market" identity — warm, appetizing, light-forward. Deliberately not the
-// dark-tech food-app default: food photography reads as appetizing on warm surfaces.
+// "Spice market" identity — warm, appetizing. Food photography reads as
+// appetizing on warm surfaces, so the dark mode below is a warm charcoal
+// (roasted-coffee browns), never the blue-grey of a generic dark theme.
 export const FOOD = {
   canvas: '#FDF8F3',   // soft warm white
   surface: '#FFFFFF',
@@ -14,21 +15,42 @@ export const FOOD = {
   cardamom: '#2F7D4F', // open / veg / success
 };
 
+// Dark counterpart. `primary` is lifted deliberately: #E8452B on a dark surface
+// goes muddy and fails contrast for text, so dark mode uses a brighter chili.
+export const FOOD_DARK = {
+  canvas: '#17110E',   // warm charcoal, not blue-grey
+  surface: '#211915',
+  ink: '#F6EDE5',      // warm off-white
+  muted: '#AD9C8E',    // readable warm taupe on dark
+  line: '#33261F',
+  primary: '#FF6B4F',
+  primaryDeep: '#E8452B',
+  turmeric: '#FFBC4D',
+  cardamom: '#4CAF7A',
+};
+
+// Components that need a raw colour (not a palette slot) should call this
+// rather than importing FOOD directly, or they will stay light in dark mode.
+export const foodTokens = (mode) => (mode === 'dark' ? FOOD_DARK : FOOD);
+
 const display = "'Bricolage Grotesque', 'Plus Jakarta Sans', sans-serif";
 const body = "'Plus Jakarta Sans', 'Inter', system-ui, sans-serif";
 
-export function getFoodTheme() {
+export function getFoodTheme(mode = 'light') {
+  const isDark = mode === 'dark';
+  const C = foodTokens(mode);
+
   return createTheme({
     palette: {
-      mode: 'light',
-      primary: { main: FOOD.primary, dark: FOOD.primaryDeep, contrastText: '#FFFFFF' },
-      secondary: { main: FOOD.turmeric, contrastText: '#3A2A05' },
-      success: { main: FOOD.cardamom, contrastText: '#FFFFFF' },
-      warning: { main: FOOD.turmeric },
-      error: { main: '#D64541' },
-      background: { default: FOOD.canvas, paper: FOOD.surface },
-      text: { primary: FOOD.ink, secondary: FOOD.muted },
-      divider: FOOD.line,
+      mode: isDark ? 'dark' : 'light',
+      primary: { main: C.primary, dark: C.primaryDeep, contrastText: '#FFFFFF' },
+      secondary: { main: C.turmeric, contrastText: '#3A2A05' },
+      success: { main: C.cardamom, contrastText: '#FFFFFF' },
+      warning: { main: C.turmeric },
+      error: { main: isDark ? '#F2665F' : '#D64541' },
+      background: { default: C.canvas, paper: C.surface },
+      text: { primary: C.ink, secondary: C.muted },
+      divider: C.line,
     },
     typography: {
       fontFamily: body,
@@ -47,15 +69,18 @@ export function getFoodTheme() {
     components: {
       MuiCssBaseline: {
         styleOverrides: {
-          body: { backgroundColor: FOOD.canvas },
+          body: { backgroundColor: C.canvas },
         },
       },
       MuiButton: {
         styleOverrides: {
           root: { borderRadius: 12, padding: '10px 20px', boxShadow: 'none' },
           containedPrimary: {
-            background: `linear-gradient(180deg, ${FOOD.primary}, ${FOOD.primaryDeep})`,
-            '&:hover': { background: FOOD.primaryDeep, boxShadow: '0 8px 20px rgba(232,69,43,0.30)' },
+            background: `linear-gradient(180deg, ${C.primary}, ${C.primaryDeep})`,
+            '&:hover': {
+              background: C.primaryDeep,
+              boxShadow: `0 8px 20px ${isDark ? 'rgba(255,107,79,0.32)' : 'rgba(232,69,43,0.30)'}`,
+            },
           },
         },
       },
@@ -64,8 +89,12 @@ export function getFoodTheme() {
           root: {
             backgroundImage: 'none',
             borderRadius: 22,
-            border: `1px solid ${FOOD.line}`,
-            boxShadow: '0 6px 22px rgba(120,60,20,0.06)',
+            border: `1px solid ${C.line}`,
+            // A pale drop shadow is invisible on a dark canvas — deepen it so
+            // cards still separate from the background.
+            boxShadow: isDark
+              ? '0 6px 22px rgba(0,0,0,0.45)'
+              : '0 6px 22px rgba(120,60,20,0.06)',
           },
         },
       },
@@ -73,11 +102,11 @@ export function getFoodTheme() {
       MuiAppBar: {
         styleOverrides: {
           root: {
-            backgroundColor: 'rgba(253,248,243,0.86)',
+            backgroundColor: isDark ? 'rgba(23,17,14,0.86)' : 'rgba(253,248,243,0.86)',
             backdropFilter: 'blur(14px)',
             WebkitBackdropFilter: 'blur(14px)',
-            color: FOOD.ink,
-            boxShadow: `inset 0 -1px 0 0 ${FOOD.line}`,
+            color: C.ink,
+            boxShadow: `inset 0 -1px 0 0 ${C.line}`,
           },
         },
       },
@@ -90,8 +119,8 @@ export function getFoodTheme() {
         styleOverrides: {
           root: {
             borderRadius: 14,
-            backgroundColor: FOOD.surface,
-            '& fieldset': { borderColor: FOOD.line },
+            backgroundColor: C.surface,
+            '& fieldset': { borderColor: C.line },
           },
         },
       },

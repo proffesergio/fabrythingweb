@@ -80,15 +80,32 @@ class FoodCategorySerializer(_LangMixin, serializers.ModelSerializer):
 
 class RestaurantListSerializer(_LangMixin, serializers.ModelSerializer):
     display_name = serializers.SerializerMethodField()
+    # Set by PublicRestaurantListView when the caller sends lat/lng — straight-line
+    # km from the customer's pin, used to order the "Nearest to you" row. Null when
+    # the restaurant has no pickup coordinates or the caller sent no position.
+    distance_km = serializers.SerializerMethodField()
+    # True when this restaurant delivers to the zone the caller asked about. The
+    # Browse page lists every restaurant, so cards need to say which ones you can
+    # actually order from.
+    delivers_to_zone = serializers.SerializerMethodField()
 
     class Meta:
         model = Restaurant
         fields = ["id", "name", "name_bn", "display_name", "slug", "logo", "cover_image",
                   "cuisine_type", "base_delivery_fee", "avg_prep_minutes", "min_order_amount",
-                  "is_open", "is_accepting_orders", "status"]
+                  "is_open", "is_accepting_orders", "status",
+                  "pickup_lat", "pickup_lng", "distance_km", "delivers_to_zone"]
 
     def get_display_name(self, obj):
         return localized(obj, "name", self.lang)
+
+    def get_distance_km(self, obj):
+        # Annotated in the view (a plain float attribute), not a DB field.
+        value = getattr(obj, "distance_km", None)
+        return round(value, 2) if value is not None else None
+
+    def get_delivers_to_zone(self, obj):
+        return getattr(obj, "delivers_to_zone", None)
 
 
 class RestaurantDetailSerializer(RestaurantListSerializer):
