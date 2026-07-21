@@ -47,6 +47,8 @@ class FoodOrderView(APIView):
                 coupon_code=d.get("coupon_code", ""),
                 payment_method=d.get("payment_method", "COD"),
                 redeem_points=int(d.get("redeem_points") or 0),
+                village_id=d.get("village_id"),
+                delivery_lat=d.get("delivery_lat"), delivery_lng=d.get("delivery_lng"),
             )
         except ValidationError as exc:
             detail = exc.detail

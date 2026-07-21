@@ -1,25 +1,46 @@
-import { Dialog, Box, Typography, Stack, Button, IconButton, List, ListItemButton, Divider } from '@mui/material';
+import { useMemo, useState, useEffect } from 'react';
+import {
+  Dialog, Box, Typography, Stack, Button, IconButton, TextField, MenuItem, Autocomplete, Divider,
+} from '@mui/material';
 import CloseRoundedIcon from '@mui/icons-material/CloseRounded';
-import PlaceRoundedIcon from '@mui/icons-material/PlaceRounded';
 import MyLocationRoundedIcon from '@mui/icons-material/MyLocationRounded';
-import CheckCircleRoundedIcon from '@mui/icons-material/CheckCircleRounded';
 import { toast } from 'react-toastify';
 import { useFoodLocation } from '../context/FoodLocationContext';
+import MapPicker from './MapPicker';
 import { FOOD } from '../theme';
 
 export default function LocationPicker() {
-  const { zones, zoneId, lang, setZoneId, detectLocation, pickerOpen, closePicker } = useFoodLocation() || {};
+  const {
+    zones, zoneId, villageId, lang, setZoneId, setVillageId, coords, setCoords,
+    detectLocation, pickerOpen, closePicker,
+  } = useFoodLocation() || {};
   const t = (en, bn) => (lang === 'bn' ? bn : en);
+  const zName = (z) => (lang === 'bn' && z?.name_bn ? z.name_bn : z?.name);
+  const vName = (v) => (lang === 'bn' && v?.name_bn ? v.name_bn : v?.name);
 
-  const pick = (id) => { setZoneId(String(id)); closePicker(); };
+  // Local draft so the sheet only commits on "Confirm".
+  const [union, setUnion] = useState(zoneId || '');
+  const [village, setVillage] = useState(villageId || '');
+  useEffect(() => { if (pickerOpen) { setUnion(zoneId || ''); setVillage(villageId || ''); } }, [pickerOpen, zoneId, villageId]);
+
+  const currentUnion = useMemo(
+    () => (zones || []).find((z) => String(z.id) === String(union)) || null, [zones, union]);
+  const villageOptions = currentUnion?.villages || [];
+  const selectedVillage = villageOptions.find((v) => String(v.id) === String(village)) || null;
 
   const useLocation = () => {
     detectLocation()
-      .then(({ zone }) => {
-        if (zone) { toast.success(t('Area detected', 'এলাকা শনাক্ত হয়েছে')); closePicker(); }
-        else toast.info(t('We don’t deliver to your exact spot yet — pick the nearest area.', 'আপনার এলাকায় ডেলিভারি নেই — কাছের এলাকা বেছে নিন।'));
+      .then(({ coords: c }) => {
+        if (c) { setCoords(c); toast.success(t('Pin set to your location', 'পিন আপনার অবস্থানে সেট হয়েছে')); }
       })
       .catch(() => toast.error(t('Could not get your location', 'অবস্থান পাওয়া যায়নি')));
+  };
+
+  const confirm = () => {
+    if (!union) { toast.info(t('Pick your union first', 'প্রথমে আপনার ইউনিয়ন বেছে নিন')); return; }
+    setZoneId(String(union));
+    setVillageId(village || '');
+    closePicker();
   };
 
   return (
@@ -34,35 +55,44 @@ export default function LocationPicker() {
           <IconButton onClick={closePicker} size="small"><CloseRoundedIcon /></IconButton>
         </Stack>
         <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-          {t('Choose your area so we show what delivers to you.', 'আপনার এলাকা বেছে নিন, আমরা সেখানে যা পাওয়া যায় দেখাবো।')}
+          {t('We deliver across Bancharampur. Pick your village, then drop a pin on your house.',
+             'আমরা বাঞ্ছারামপুর জুড়ে ডেলিভারি করি। আপনার গ্রাম বেছে নিন, তারপর বাড়ির উপর পিন দিন।')}
         </Typography>
 
-        <Button fullWidth variant="outlined" startIcon={<MyLocationRoundedIcon />} onClick={useLocation}
-          sx={{ mb: 2, borderRadius: 3, borderColor: FOOD.line, color: 'primary.main', justifyContent: 'flex-start', py: 1.2 }}>
-          {t('Use my current location', 'আমার অবস্থান ব্যবহার করুন')}
-        </Button>
+        <Stack spacing={2}>
+          <TextField select fullWidth size="small" label={t('Union', 'ইউনিয়ন')}
+            value={union} onChange={(e) => { setUnion(e.target.value); setVillage(''); }}>
+            <MenuItem value=""><em>{t('Select union', 'ইউনিয়ন বেছে নিন')}</em></MenuItem>
+            {(zones || []).map((z) => <MenuItem key={z.id} value={String(z.id)}>{zName(z)}</MenuItem>)}
+          </TextField>
 
-        <Typography variant="overline" color="text.secondary">{t('Service areas', 'সার্ভিস এলাকা')}</Typography>
-        <List sx={{ maxHeight: 320, overflowY: 'auto' }}>
-          {(zones || []).length === 0 && (
-            <Typography variant="body2" color="text.secondary" sx={{ py: 2 }}>{t('No areas yet.', 'কোনো এলাকা নেই।')}</Typography>
-          )}
-          {(zones || []).map((z, i) => {
-            const active = String(z.id) === String(zoneId);
-            return (
-              <Box key={z.id}>
-                <ListItemButton onClick={() => pick(z.id)} sx={{ borderRadius: 2, py: 1.2 }}>
-                  <PlaceRoundedIcon sx={{ mr: 1.5, color: active ? 'primary.main' : 'text.secondary' }} />
-                  <Box sx={{ flex: 1 }}>
-                    <Typography sx={{ fontWeight: active ? 800 : 600 }}>{lang === 'bn' && z.name_bn ? z.name_bn : z.name}</Typography>
-                  </Box>
-                  {active && <CheckCircleRoundedIcon color="primary" />}
-                </ListItemButton>
-                {i < zones.length - 1 && <Divider component="li" />}
-              </Box>
-            );
-          })}
-        </List>
+          <Autocomplete
+            size="small" disabled={!currentUnion} options={villageOptions}
+            getOptionLabel={vName} value={selectedVillage}
+            onChange={(_, v) => setVillage(v ? String(v.id) : '')}
+            isOptionEqualToValue={(o, v) => o.id === v.id}
+            noOptionsText={t('No villages', 'কোনো গ্রাম নেই')}
+            renderInput={(params) => <TextField {...params} label={t('Village', 'গ্রাম')}
+              placeholder={t('Search your village…', 'আপনার গ্রাম খুঁজুন…')} />}
+          />
+
+          <Button fullWidth variant="outlined" startIcon={<MyLocationRoundedIcon />} onClick={useLocation}
+            sx={{ borderRadius: 3, borderColor: FOOD.line, color: 'primary.main', justifyContent: 'flex-start', py: 1 }}>
+            {t('Use my current location', 'আমার অবস্থান ব্যবহার করুন')}
+          </Button>
+
+          <MapPicker value={coords} onChange={setCoords} height={200} />
+          <Typography variant="caption" color="text.secondary">
+            {coords?.lat
+              ? t(`Pin: ${coords.lat.toFixed(4)}, ${coords.lng.toFixed(4)}`, `পিন: ${coords.lat.toFixed(4)}, ${coords.lng.toFixed(4)}`)
+              : t('Tap the map to drop a delivery pin (optional).', 'ডেলিভারি পিন দিতে ম্যাপে ট্যাপ করুন (ঐচ্ছিক)।')}
+          </Typography>
+        </Stack>
+
+        <Divider sx={{ my: 2 }} />
+        <Button fullWidth variant="contained" onClick={confirm} sx={{ borderRadius: 999, py: 1.2 }}>
+          {t('Confirm area', 'এলাকা নিশ্চিত করুন')}
+        </Button>
       </Box>
     </Dialog>
   );

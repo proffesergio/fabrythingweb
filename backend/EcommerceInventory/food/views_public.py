@@ -72,7 +72,7 @@ class PublicZoneListView(ListAPIView):
     pagination_class = None
 
     def get_queryset(self):
-        return DeliveryZone.objects.filter(is_active=True).order_by("name")
+        return DeliveryZone.objects.filter(is_active=True).prefetch_related("villages").order_by("name")
 
     def list(self, request, *args, **kwargs):
         # Wrap in the project's standard {"data": [...]} envelope so the frontend's

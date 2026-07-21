@@ -28,6 +28,22 @@ class DeliveryZone(TimeStamped):
         return self.name
 
 
+class Village(TimeStamped):
+    """A village inside a DeliveryZone (union). Delivery is restricted to these;
+    the fee is inherited from the parent zone/union via RestaurantZone."""
+    zone = models.ForeignKey(DeliveryZone, on_delete=models.CASCADE, related_name="villages")
+    name = models.CharField(max_length=120)
+    name_bn = models.CharField(max_length=120, blank=True, default="")
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ["name"]
+        unique_together = ("zone", "name")
+
+    def __str__(self):
+        return f"{self.name} ({self.zone.name})"
+
+
 class Restaurant(TimeStamped):
     class Status(models.TextChoices):
         PENDING = "PENDING", "Pending"
@@ -253,6 +269,10 @@ class FoodOrder(TimeStamped):
     restaurant = models.ForeignKey(Restaurant, on_delete=models.PROTECT, related_name="orders")
     zone = models.ForeignKey(DeliveryZone, null=True, blank=True, on_delete=models.SET_NULL,
                              related_name="orders")
+    village = models.ForeignKey(Village, null=True, blank=True, on_delete=models.SET_NULL,
+                                related_name="orders")
+    delivery_lat = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
+    delivery_lng = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
     rider = models.ForeignKey("Rider", null=True, blank=True, on_delete=models.SET_NULL, related_name="orders")
     order_code = models.CharField(max_length=12, unique=True, default=generate_food_order_code)
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.PLACED)

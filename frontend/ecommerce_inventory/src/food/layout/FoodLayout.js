@@ -46,9 +46,11 @@ export default function FoodLayout() {
                     {loc.lang === 'bn' ? 'ডেলিভারি' : 'Deliver to'}
                   </Typography>
                   <Typography variant="body2" noWrap sx={{ fontWeight: 800 }}>
-                    {loc.currentZone
-                      ? (loc.lang === 'bn' && loc.currentZone.name_bn ? loc.currentZone.name_bn : loc.currentZone.name)
-                      : (loc.lang === 'bn' ? 'এলাকা নির্বাচন' : 'Choose area')}
+                    {loc.currentVillage
+                      ? (loc.lang === 'bn' && loc.currentVillage.name_bn ? loc.currentVillage.name_bn : loc.currentVillage.name)
+                      : loc.currentZone
+                        ? (loc.lang === 'bn' && loc.currentZone.name_bn ? loc.currentZone.name_bn : loc.currentZone.name)
+                        : (loc.lang === 'bn' ? 'এলাকা নির্বাচন' : 'Choose area')}
                   </Typography>
                 </Box>
                 <KeyboardArrowDownRoundedIcon sx={{ fontSize: 18, color: 'text.secondary', ml: 0.25 }} />

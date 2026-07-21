@@ -25,13 +25,27 @@ export function FoodLocationProvider({ children }) {
   // Seed zones from cache for an instant paint, then revalidate in the background.
   const [zones, setZones] = useState(() => readCache(ZONES_KEY)?.data || []);
   const [zoneId, setZoneId] = useState(() => localStorage.getItem('food_zone') || '');
+  const [villageId, setVillageId] = useState(() => localStorage.getItem('food_village') || '');
   const [lang, setLangState] = useState(() => localStorage.getItem('food_lang') || 'en');
-  const [coords, setCoords] = useState(null);
+  const [coords, setCoordsState] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('food_pin')) || null; } catch { return null; }
+  });
   const [pickerOpen, setPickerOpen] = useState(false);
 
   const setZone = useCallback((id) => {
     setZoneId(id);
     localStorage.setItem('food_zone', id || '');
+  }, []);
+
+  const setVillage = useCallback((id) => {
+    setVillageId(id ? String(id) : '');
+    localStorage.setItem('food_village', id ? String(id) : '');
+  }, []);
+
+  // A dropped/detected map pin — persisted so checkout can reuse it.
+  const setCoords = useCallback((c) => {
+    setCoordsState(c);
+    try { localStorage.setItem('food_pin', c ? JSON.stringify(c) : ''); } catch { /* ignore */ }
   }, []);
 
   useEffect(() => {
@@ -80,10 +94,14 @@ export function FoodLocationProvider({ children }) {
   );
 
   const currentZone = zones.find((z) => String(z.id) === String(zoneId)) || null;
+  const currentVillage =
+    (currentZone?.villages || []).find((v) => String(v.id) === String(villageId)) || null;
 
   return (
     <Ctx.Provider value={{
-      zones, zoneId, currentZone, setZoneId: setZone, lang, setLang, coords, detectLocation,
+      zones, zoneId, currentZone, setZoneId: setZone,
+      villageId, currentVillage, setVillageId: setVillage,
+      lang, setLang, coords, setCoords, detectLocation,
       pickerOpen, openPicker: () => setPickerOpen(true), closePicker: () => setPickerOpen(false),
     }}>
       {children}

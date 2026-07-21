@@ -11,7 +11,7 @@ from django.utils import timezone
 from rest_framework.exceptions import ValidationError
 
 from food.models import (Restaurant, FoodItem, FoodItemOption, DeliveryZone, RestaurantZone,
-                         FoodOrder, FoodOrderItem, Coupon, PaymentTransaction,
+                         Village, FoodOrder, FoodOrderItem, Coupon, PaymentTransaction,
                          Notification, LoyaltyAccount, LoyaltyLedger)
 
 DELIVERY_BUFFER_MINUTES = 20
@@ -61,7 +61,8 @@ def _award_points(user, order):
 @transaction.atomic
 def place_food_cod_order(*, customer, restaurant_slug, items, contact_name, contact_phone,
                          delivery_address, zone_id=None, lat=None, lng=None, tip="0.00",
-                         notes="", coupon_code="", payment_method="COD", redeem_points=0):
+                         notes="", coupon_code="", payment_method="COD", redeem_points=0,
+                         village_id=None, delivery_lat=None, delivery_lng=None):
     if not items:
         raise ValidationError("Your cart is empty.")
     now = timezone.localtime()
@@ -74,6 +75,16 @@ def place_food_cod_order(*, customer, restaurant_slug, items, contact_name, cont
         raise ValidationError("This restaurant is currently closed.")
     if not restaurant.is_accepting_orders:
         raise ValidationError("This restaurant is too busy to take orders right now.")
+
+    # A village pins the delivery to a Bancharampur union; its union IS the zone
+    # that carries the fee, so a chosen village implies the zone when none was sent.
+    village = None
+    if village_id:
+        village = Village.objects.filter(id=village_id, is_active=True).select_related("zone").first()
+        if not village:
+            raise ValidationError("Please choose a valid village for delivery.")
+        if not zone_id:
+            zone_id = village.zone_id
 
     zone = _resolve_zone(restaurant, zone_id, lat, lng)
 
@@ -139,7 +150,8 @@ def place_food_cod_order(*, customer, restaurant_slug, items, contact_name, cont
     order = FoodOrder.objects.create(
         customer=customer if is_auth else None,
         guest_name=contact_name, guest_phone=contact_phone, delivery_address=delivery_address,
-        restaurant=restaurant, zone=zone, subtotal=subtotal, discount=discount,
+        restaurant=restaurant, zone=zone, village=village,
+        delivery_lat=delivery_lat, delivery_lng=delivery_lng, subtotal=subtotal, discount=discount,
         coupon_code=coupon.code if coupon else "", delivery_fee=delivery_fee, tip=tip_amount,
         total=total, notes=notes or "", payment_method=method,
         payment_status="COLLECTED" if method in ONLINE_METHODS else "PENDING",

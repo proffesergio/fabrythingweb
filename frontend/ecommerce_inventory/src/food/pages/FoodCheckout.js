@@ -41,12 +41,13 @@ export default function FoodCheckout() {
   const subtotal = useSelector(selectFoodSubtotal);
   const restaurant = useSelector(selectFoodRestaurant);
   const tip = useSelector(selectFoodTip);
-  const { zoneId, zones, coords, detectLocation } = useFoodLocation() || {};
+  const { zoneId, zones, villageId, coords, detectLocation, openPicker } = useFoodLocation() || {};
   const { callApi, loading } = useApi();
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const [form, setForm] = useState({ name: '', phone: '', address: '' });
   const [zone, setZone] = useState(zoneId || '');
+  const [village, setVillage] = useState(villageId || '');
   const [err, setErr] = useState('');
   const [method, setMethod] = useState('COD');
   const [coupon, setCoupon] = useState('');
@@ -88,6 +89,8 @@ export default function FoodCheckout() {
     };
     if (zone) body.zone_id = zone;
     else if (coords) { body.lat = coords.lat; body.lng = coords.lng; }
+    if (village) body.village_id = village;
+    if (coords?.lat) { body.delivery_lat = coords.lat; body.delivery_lng = coords.lng; }
     const res = await callApi({ url: 'food/orders/', method: 'POST', body });
     if (res?.status === 201) {
       const code = res.data.data.order_code;
@@ -123,14 +126,31 @@ export default function FoodCheckout() {
             InputProps={{ startAdornment: <InputAdornment position="start"><PhoneOutlinedIcon color="action" /></InputAdornment> }} />
           <TextField label="Delivery address" value={form.address} onChange={set('address')} fullWidth multiline rows={2}
             InputProps={{ startAdornment: <InputAdornment position="start" sx={{ alignSelf: 'flex-start', mt: 1.5 }}><PlaceOutlinedIcon color="action" /></InputAdornment> }} />
-          <TextField select label="Delivery area" value={zone} onChange={(e) => setZone(e.target.value)} fullWidth>
-            <MenuItem value=""><em>Select area</em></MenuItem>
-            {(zones || []).map((z) => <MenuItem key={z.id} value={String(z.id)}>{z.name}</MenuItem>)}
-          </TextField>
-          <Button variant="text" startIcon={<MyLocationRoundedIcon />} sx={{ alignSelf: 'flex-start', color: 'primary.main' }}
-            onClick={() => detectLocation && detectLocation().then(() => toast.info('Location detected')).catch(() => toast.error('Could not get location'))}>
-            Use my current location
-          </Button>
+          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+            <TextField select label="Union" value={zone} fullWidth
+              onChange={(e) => { setZone(e.target.value); setVillage(''); }}>
+              <MenuItem value=""><em>Select union</em></MenuItem>
+              {(zones || []).map((z) => <MenuItem key={z.id} value={String(z.id)}>{z.name}</MenuItem>)}
+            </TextField>
+            <TextField select label="Village" value={village} fullWidth
+              disabled={!(zones || []).find((z) => String(z.id) === String(zone))?.villages?.length}
+              onChange={(e) => setVillage(e.target.value)}>
+              <MenuItem value=""><em>Optional</em></MenuItem>
+              {((zones || []).find((z) => String(z.id) === String(zone))?.villages || [])
+                .map((v) => <MenuItem key={v.id} value={String(v.id)}>{v.name}</MenuItem>)}
+            </TextField>
+          </Stack>
+          <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+            <Button variant="text" startIcon={<MyLocationRoundedIcon />} sx={{ color: 'primary.main' }}
+              onClick={() => detectLocation && detectLocation().then(() => toast.info('Location detected')).catch(() => toast.error('Could not get location'))}>
+              Use my location
+            </Button>
+            {openPicker && (
+              <Button variant="text" startIcon={<PlaceOutlinedIcon />} sx={{ color: 'text.secondary' }} onClick={openPicker}>
+                {coords?.lat ? `Pin set (${coords.lat.toFixed(3)}, ${coords.lng.toFixed(3)})` : 'Drop a map pin'}
+              </Button>
+            )}
+          </Stack>
         </Stack>
       </Card>
 

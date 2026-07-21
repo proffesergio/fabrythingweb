@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { Grid, Box, Typography, TextField, Stack, Button, CircularProgress, InputAdornment } from '@mui/material';
 import SearchRoundedIcon from '@mui/icons-material/SearchRounded';
+import VoiceSearchButton from '../components/VoiceSearchButton';
 import PlaceRoundedIcon from '@mui/icons-material/PlaceRounded';
 import { motion, AnimatePresence } from 'framer-motion';
 import useApi from '../../hooks/APIHandler';
@@ -115,7 +116,10 @@ export default function FoodHome() {
             fullWidth size="small" placeholder={lang === 'bn' ? 'রেস্তোরাঁ বা খাবার খুঁজুন' : 'Search restaurants or dishes'}
             value={search} onChange={(e) => setSearch(e.target.value)}
             sx={{ bgcolor: '#fff', borderRadius: 3, '& fieldset': { border: 'none' } }}
-            InputProps={{ startAdornment: <InputAdornment position="start"><SearchRoundedIcon color="action" /></InputAdornment> }}
+            InputProps={{
+              startAdornment: <InputAdornment position="start"><SearchRoundedIcon color="action" /></InputAdornment>,
+              endAdornment: <InputAdornment position="end"><VoiceSearchButton lang={lang} onResult={setSearch} /></InputAdornment>,
+            }}
           />
         </Box>
       </Box>

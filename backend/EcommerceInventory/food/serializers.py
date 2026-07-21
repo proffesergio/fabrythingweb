@@ -1,7 +1,7 @@
 from django.utils import timezone
 from rest_framework import serializers
 from food.models import (
-    Restaurant, FoodCategory, FoodItem, FoodItemOptionGroup, FoodItemOption, DeliveryZone,
+    Restaurant, FoodCategory, FoodItem, FoodItemOptionGroup, FoodItemOption, DeliveryZone, Village,
 )
 from food.i18n import localized
 
@@ -12,10 +12,23 @@ class _LangMixin:
         return self.context.get("lang", "en")
 
 
+class VillageSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Village
+        fields = ["id", "name", "name_bn"]
+
+
 class DeliveryZoneSerializer(serializers.ModelSerializer):
+    villages = serializers.SerializerMethodField()
+
     class Meta:
         model = DeliveryZone
-        fields = ["id", "name", "name_bn", "center_lat", "center_lng", "radius_km", "is_active"]
+        fields = ["id", "name", "name_bn", "center_lat", "center_lng", "radius_km", "is_active", "villages"]
+
+    def get_villages(self, obj):
+        return VillageSerializer(
+            [v for v in obj.villages.all() if v.is_active], many=True
+        ).data
 
 
 class FoodItemOptionSerializer(serializers.ModelSerializer):
