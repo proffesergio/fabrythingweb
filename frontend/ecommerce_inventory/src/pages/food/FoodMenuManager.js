@@ -18,8 +18,11 @@ import ItemOptionsDialog from "./ItemOptionsDialog";
 const EMPTY_ITEM = {
     name: "", name_bn: "", description: "", description_bn: "", price: "", discount_price: "",
     prep_minutes: "", image: "", is_available: true, is_veg: false, is_featured: false, spice_level: "",
+    tags: [], available_from: "", available_to: "", available_days: [],
 };
 const SPICE_LEVELS = ["", "Mild", "Medium", "Hot", "Extra Hot"];
+const TAG_OPTIONS = [["spicy", "🌶️ Spicy"], ["new", "✨ New"], ["popular", "🔥 Popular"], ["bestseller", "⭐ Bestseller"], ["veg", "🌱 Veg"]];
+const DAYS = [["0", "Mon"], ["1", "Tue"], ["2", "Wed"], ["3", "Thu"], ["4", "Fri"], ["5", "Sat"], ["6", "Sun"]];
 
 export default function FoodMenuManager() {
     const { callApi } = useApi();
@@ -73,9 +76,11 @@ export default function FoodMenuManager() {
 
     const saveItem = async () => {
         const body = { ...itemDialog, restaurant: Number(restaurant) };
-        // Optional numeric fields must be null (not "") or the backend rejects them.
-        if (body.discount_price === "" || body.discount_price == null) delete body.discount_price;
-        if (body.prep_minutes === "" || body.prep_minutes == null) delete body.prep_minutes;
+        // Optional numeric/time fields must be null (not "") or the backend rejects them.
+        ["discount_price", "prep_minutes", "available_from", "available_to"].forEach((k) => {
+            if (body[k] === "" || body[k] == null) delete body[k];
+        });
+        body.available_days = (itemDialog.available_days || []).map(Number);
         const isEdit = !!itemDialog.id;
         const res = await callApi({
             url: isEdit ? `food/admin/items/${itemDialog.id}/` : "food/admin/items/",
@@ -199,6 +204,28 @@ export default function FoodMenuManager() {
                                     <FormControlLabel control={<Switch checked={!!itemDialog.is_available} onChange={(e) => setItemDialog({ ...itemDialog, is_available: e.target.checked })} />} label="Available" />
                                     <FormControlLabel control={<Switch checked={!!itemDialog.is_veg} onChange={(e) => setItemDialog({ ...itemDialog, is_veg: e.target.checked })} />} label="Veg" />
                                     <FormControlLabel control={<Switch color="warning" checked={!!itemDialog.is_featured} onChange={(e) => setItemDialog({ ...itemDialog, is_featured: e.target.checked })} />} label="Bestseller" />
+                                </Stack>
+                            </Grid>
+                            <Grid item xs={12}>
+                                <Typography variant="caption" color="text.secondary">Tags</Typography>
+                                <Stack direction="row" sx={{ flexWrap: "wrap", gap: 1, mt: 0.5 }}>
+                                    {TAG_OPTIONS.map(([k, label]) => {
+                                        const on = (itemDialog.tags || []).includes(k);
+                                        return <Chip key={k} label={label} color={on ? "warning" : "default"} variant={on ? "filled" : "outlined"}
+                                            onClick={() => setItemDialog((d) => ({ ...d, tags: on ? d.tags.filter((t) => t !== k) : [...(d.tags || []), k] }))} />;
+                                    })}
+                                </Stack>
+                            </Grid>
+                            <Grid item xs={12} sm={6}><TextField label="Available from" type="time" fullWidth InputLabelProps={{ shrink: true }} value={itemDialog.available_from || ""} onChange={(e) => setItemDialog({ ...itemDialog, available_from: e.target.value })} helperText="Optional schedule" /></Grid>
+                            <Grid item xs={12} sm={6}><TextField label="Available to" type="time" fullWidth InputLabelProps={{ shrink: true }} value={itemDialog.available_to || ""} onChange={(e) => setItemDialog({ ...itemDialog, available_to: e.target.value })} /></Grid>
+                            <Grid item xs={12}>
+                                <Typography variant="caption" color="text.secondary">Available days (none = every day)</Typography>
+                                <Stack direction="row" sx={{ flexWrap: "wrap", gap: 0.5, mt: 0.5 }}>
+                                    {DAYS.map(([k, label]) => {
+                                        const on = (itemDialog.available_days || []).map(String).includes(k);
+                                        return <Chip key={k} size="small" label={label} color={on ? "primary" : "default"} variant={on ? "filled" : "outlined"}
+                                            onClick={() => setItemDialog((d) => { const cur = (d.available_days || []).map(String); return { ...d, available_days: on ? cur.filter((x) => x !== k) : [...cur, k] }; })} />;
+                                    })}
                                 </Stack>
                             </Grid>
                         </Grid>

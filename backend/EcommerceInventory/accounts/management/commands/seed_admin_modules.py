@@ -157,6 +157,27 @@ MODULES = [
         'display_order': 5,
         'parent': 'Food',
     },
+    {
+        'module_name': 'Coupons',
+        'module_icon': 'Redeem',
+        'module_url': '/manage/food/coupons',
+        'display_order': 6,
+        'parent': 'Food',
+    },
+    {
+        'module_name': 'Riders',
+        'module_icon': 'TwoWheeler',
+        'module_url': '/manage/food/riders',
+        'display_order': 7,
+        'parent': 'Food',
+    },
+    {
+        'module_name': 'Payments',
+        'module_icon': 'Receipt',
+        'module_url': '/manage/food/payments',
+        'display_order': 8,
+        'parent': 'Food',
+    },
 ]
 
 # The exact module_names we manage — anything else gets deactivated

@@ -1,3 +1,4 @@
+from django.utils import timezone
 from rest_framework import serializers
 from food.models import (
     Restaurant, FoodCategory, FoodItem, FoodItemOptionGroup, FoodItemOption, DeliveryZone,
@@ -35,15 +36,20 @@ class FoodItemSerializer(_LangMixin, serializers.ModelSerializer):
     display_name = serializers.SerializerMethodField()
     effective_price = serializers.DecimalField(max_digits=10, decimal_places=2, read_only=True)
     option_groups = FoodItemOptionGroupSerializer(many=True, read_only=True)
+    available_now = serializers.SerializerMethodField()
 
     class Meta:
         model = FoodItem
         fields = ["id", "name", "name_bn", "display_name", "slug", "description", "description_bn",
                   "image", "price", "discount_price", "effective_price", "prep_minutes",
-                  "is_available", "is_veg", "is_featured", "spice_level", "display_order", "option_groups"]
+                  "is_available", "is_veg", "is_featured", "tags", "available_from", "available_to",
+                  "available_days", "available_now", "spice_level", "display_order", "option_groups"]
 
     def get_display_name(self, obj):
         return localized(obj, "name", self.lang)
+
+    def get_available_now(self, obj):
+        return obj.is_available_now(timezone.localtime())
 
 
 class FoodCategorySerializer(_LangMixin, serializers.ModelSerializer):
@@ -66,7 +72,7 @@ class RestaurantListSerializer(_LangMixin, serializers.ModelSerializer):
         model = Restaurant
         fields = ["id", "name", "name_bn", "display_name", "slug", "logo", "cover_image",
                   "cuisine_type", "base_delivery_fee", "avg_prep_minutes", "min_order_amount",
-                  "is_open", "status"]
+                  "is_open", "is_accepting_orders", "status"]
 
     def get_display_name(self, obj):
         return localized(obj, "name", self.lang)

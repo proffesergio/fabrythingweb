@@ -29,6 +29,10 @@ import ManageFoodOrders from './pages/food/ManageFoodOrders';
 import FoodMenuManager from './pages/food/FoodMenuManager';
 import RestaurantDetailAdmin from './pages/food/RestaurantDetailAdmin';
 import ManageCustomers from './pages/customers/ManageCustomers';
+import ManageCoupons from './pages/food/ManageCoupons';
+import ManageRiders from './pages/food/ManageRiders';
+import FoodPayments from './pages/food/FoodPayments';
+import RiderDashboard from './rider/RiderDashboard';
 
 // Storefront imports
 import { ThemeProvider } from '@mui/material/styles';
@@ -168,6 +172,9 @@ function App() {
         ]
       },
 
+      // ── Rider dashboard (role: Rider) ──
+      {path:"/rider",element:<ProtectedRoute element={<RiderDashboard/>}/>},
+
       // ── Admin Routes ──
       {path:"/admin/auth",element:<Auth/>},
       {
@@ -195,6 +202,9 @@ function App() {
           {path:"manage/food/zones",element:<ProtectedRoute element={<ManageZones/>}/>},
           {path:"manage/food/orders",element:<ProtectedRoute element={<ManageFoodOrders/>}/>},
           {path:"manage/food/menu",element:<ProtectedRoute element={<FoodMenuManager/>}/>},
+          {path:"manage/food/coupons",element:<ProtectedRoute element={<ManageCoupons/>}/>},
+          {path:"manage/food/riders",element:<ProtectedRoute element={<ManageRiders/>}/>},
+          {path:"manage/food/payments",element:<ProtectedRoute element={<FoodPayments/>}/>},
           {path:"*",element:<Error404Page/>},
         ]},
     ]

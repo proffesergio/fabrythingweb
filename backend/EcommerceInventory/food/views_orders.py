@@ -6,9 +6,23 @@ from rest_framework_simplejwt.authentication import JWTAuthentication
 
 from core.helpers import renderResponse, CustomPageNumberPagination, CommonListAPIMixin
 from food.models import FoodOrder
-from food.services import place_food_cod_order
+from food.services import place_food_cod_order, notify
 from food.serializers_orders import FoodOrderSerializer
 from food.permissions import IsRestaurantOwner, IsPlatformAdmin
+
+STATUS_MSG = {
+    "CONFIRMED": "Your order is confirmed 🎉",
+    "PREPARING": "The kitchen is preparing your food 🍳",
+    "OUT_FOR_DELIVERY": "Your order is on the way 🛵",
+    "DELIVERED": "Delivered — enjoy your meal! 🍽️",
+    "CANCELLED": "Your order was cancelled.",
+}
+
+
+def _notify_status(order):
+    msg = STATUS_MSG.get(order.status)
+    if msg:
+        notify(order.customer, f"Order {order.order_code}", msg, order.order_code)
 
 
 class FoodOrderView(APIView):
@@ -30,6 +44,9 @@ class FoodOrderView(APIView):
                 lat=d.get("lat"), lng=d.get("lng"),
                 tip=d.get("tip", "0.00"),
                 notes=d.get("notes", ""),
+                coupon_code=d.get("coupon_code", ""),
+                payment_method=d.get("payment_method", "COD"),
+                redeem_points=int(d.get("redeem_points") or 0),
             )
         except ValidationError as exc:
             detail = exc.detail
@@ -89,6 +106,7 @@ class VendorOrderStatusView(APIView):
                                 reason=request.data.get("reason", ""))
         except ValidationError as exc:
             return renderResponse(data=str(exc.detail), message="Invalid transition", status=400)
+        _notify_status(order)
         return renderResponse(data={"id": order.id, "status": order.status}, message="Status updated")
 
 
@@ -136,4 +154,5 @@ class AdminFoodOrderStatusView(APIView):
                                 reason=request.data.get("reason", ""))
         except ValidationError as exc:
             return renderResponse(data=str(exc.detail), message="Invalid transition", status=400)
+        _notify_status(order)
         return renderResponse(data={"id": order.id, "status": order.status}, message="Status updated")

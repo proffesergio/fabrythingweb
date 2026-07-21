@@ -32,6 +32,6 @@ class VendorRestaurantSerializer(serializers.ModelSerializer):
             "id", "name", "name_bn", "slug", "description", "description_bn",
             "logo", "cover_image", "cuisine_type", "phone", "address",
             "pickup_lat", "pickup_lng", "commission_percentage", "base_delivery_fee",
-            "avg_prep_minutes", "min_order_amount", "status", "is_open",
+            "avg_prep_minutes", "min_order_amount", "status", "is_open", "is_accepting_orders",
         ]
         read_only_fields = ["id", "slug", "commission_percentage", "status"]

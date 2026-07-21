@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from "react";
 import {
     Box, Typography, Tabs, Tab, Table, TableBody, TableCell, TableHead, TableRow, Paper,
     TableContainer, Chip, LinearProgress, Drawer, Stack, Divider, Button, IconButton,
+    TextField, MenuItem,
 } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
 import { toast } from "react-toastify";
@@ -22,6 +23,23 @@ export default function ManageFoodOrders() {
     const [orders, setOrders] = useState([]);
     const [status, setStatus] = useState("");
     const [detail, setDetail] = useState(null);
+    const [riders, setRiders] = useState([]);
+    const [assignTo, setAssignTo] = useState("");
+
+    useEffect(() => {
+        (async () => {
+            const res = await callApi({ url: "food/admin/riders/", method: "GET" });
+            const rd = res?.data?.data;
+            const list = Array.isArray(rd) ? rd : (rd?.data || []);
+            setRiders(list.filter((r) => r.is_verified));
+        })();
+    }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+    const assignRider = async () => {
+        if (!assignTo) return;
+        const res = await callApi({ url: `food/admin/orders/${detail.id}/assign/`, method: "POST", body: { rider_id: assignTo } });
+        if (res?.status === 200) { toast.success("Rider assigned"); setAssignTo(""); openDetail(detail.id); }
+    };
 
     const fetchOrders = useCallback(async (st) => {
         const params = {};
@@ -108,9 +126,24 @@ export default function ManageFoodOrders() {
                         ))}
                         <Divider sx={{ my: 1 }} />
                         <Stack direction="row" justifyContent="space-between">
-                            <Typography fontWeight={700}>Total (COD)</Typography>
+                            <Typography fontWeight={700}>Total ({detail.payment_method})</Typography>
                             <Typography fontWeight={700}>৳{detail.total}</Typography>
                         </Stack>
+
+                        <Divider sx={{ my: 2 }} />
+                        <Typography variant="subtitle2" gutterBottom>Rider</Typography>
+                        {detail.rider_name ? (
+                            <Chip color="primary" label={`🛵 ${detail.rider_name} · ${detail.rider_phone || ""}`} sx={{ mb: 1 }} />
+                        ) : (
+                            <Stack direction="row" spacing={1}>
+                                <TextField select size="small" label="Assign rider" value={assignTo} onChange={(e) => setAssignTo(e.target.value)} sx={{ minWidth: 160 }}>
+                                    <MenuItem value=""><em>Choose rider</em></MenuItem>
+                                    {riders.map((r) => <MenuItem key={r.id} value={r.id}>{r.name}{r.is_available ? "" : " (offline)"}</MenuItem>)}
+                                </TextField>
+                                <Button variant="outlined" onClick={assignRider} disabled={!assignTo}>Assign</Button>
+                            </Stack>
+                        )}
+
                         <Divider sx={{ my: 2 }} />
                         <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
                             {(detail.allowed_transitions || []).map((s) => (

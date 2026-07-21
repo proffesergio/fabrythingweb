@@ -9,6 +9,14 @@ class IsRestaurantOwner(BasePermission):
         return bool(u and u.is_authenticated and u.role == "Restaurant" and getattr(u, "restaurant", None))
 
 
+class IsRider(BasePermission):
+    message = "Rider account required."
+
+    def has_permission(self, request, view):
+        u = request.user
+        return bool(u and u.is_authenticated and u.role == "Rider" and getattr(u, "rider", None))
+
+
 class IsPlatformAdmin(BasePermission):
     """Gate for /api/food/admin/* endpoints.
 

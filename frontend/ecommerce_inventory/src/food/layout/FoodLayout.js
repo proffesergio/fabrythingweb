@@ -10,6 +10,7 @@ import { selectFoodCount, selectFoodSubtotal } from '../redux/foodCartSlice';
 import { useFoodLocation } from '../context/FoodLocationContext';
 import LocationPicker from '../components/LocationPicker';
 import FoodGalaxy from '../components/FoodGalaxy';
+import NotificationsBell from '../components/NotificationsBell';
 import { FOOD } from '../theme';
 
 export default function FoodLayout() {
@@ -71,6 +72,7 @@ export default function FoodLayout() {
             >
               Store
             </Button>
+            <NotificationsBell />
             <IconButton onClick={() => navigate('/food/cart')} sx={{ color: 'text.primary' }}>
               <Badge badgeContent={count} color="primary"><ShoppingBagOutlinedIcon /></Badge>
             </IconButton>

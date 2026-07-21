@@ -13,6 +13,11 @@ from food.views_orders import (
     AdminFoodOrderListView, AdminFoodOrderStatusView, AdminFoodOrderDetailView,
 )
 from food.views_admin_dashboard import AdminFoodDashboardView
+from food.views_food_ext import (
+    VendorCouponViewSet, AdminCouponViewSet, CouponValidateView, AdminRiderViewSet,
+    AdminAssignRiderView, RiderMeView, RiderAvailabilityView, RiderOrdersView,
+    RiderOrderStatusView, NotificationView, LoyaltyView, AdminPaymentListView,
+)
 
 urlpatterns = [
     path("restaurants/", PublicRestaurantListView.as_view(), name="food_restaurants"),
@@ -30,6 +35,16 @@ urlpatterns = [
     path("admin/orders/", AdminFoodOrderListView.as_view(), name="food_admin_orders"),
     path("admin/orders/<int:pk>/", AdminFoodOrderDetailView.as_view(), name="food_admin_order_detail"),
     path("admin/orders/<int:pk>/status/", AdminFoodOrderStatusView.as_view(), name="food_admin_order_status"),
+    # Phase A–D features
+    path("coupons/validate/", CouponValidateView.as_view(), name="food_coupon_validate"),
+    path("admin/orders/<int:pk>/assign/", AdminAssignRiderView.as_view(), name="food_admin_assign_rider"),
+    path("admin/payments/", AdminPaymentListView.as_view(), name="food_admin_payments"),
+    path("rider/me/", RiderMeView.as_view(), name="food_rider_me"),
+    path("rider/availability/", RiderAvailabilityView.as_view(), name="food_rider_availability"),
+    path("rider/orders/", RiderOrdersView.as_view(), name="food_rider_orders"),
+    path("rider/orders/<int:pk>/status/", RiderOrderStatusView.as_view(), name="food_rider_order_status"),
+    path("notifications/", NotificationView.as_view(), name="food_notifications"),
+    path("loyalty/", LoyaltyView.as_view(), name="food_loyalty"),
 ]
 
 router = DefaultRouter()
@@ -41,4 +56,7 @@ router.register("admin/categories", AdminCategoryViewSet, basename="admin-catego
 router.register("admin/items", AdminItemViewSet, basename="admin-items")
 router.register("admin/option-groups", AdminOptionGroupViewSet, basename="admin-option-groups")
 router.register("admin/options", AdminOptionViewSet, basename="admin-options")
+router.register("vendor/coupons", VendorCouponViewSet, basename="vendor-coupons")
+router.register("admin/coupons", AdminCouponViewSet, basename="admin-coupons")
+router.register("admin/riders", AdminRiderViewSet, basename="admin-riders")
 urlpatterns += router.urls

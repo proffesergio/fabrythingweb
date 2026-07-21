@@ -12,10 +12,12 @@ class FoodOrderSerializer(serializers.ModelSerializer):
     items = FoodOrderItemSerializer(many=True, read_only=True)
     restaurant_name = serializers.CharField(source="restaurant.name", read_only=True)
     restaurant_slug = serializers.CharField(source="restaurant.slug", read_only=True)
+    rider_name = serializers.CharField(source="rider.name", read_only=True, default=None)
+    rider_phone = serializers.CharField(source="rider.phone", read_only=True, default=None)
 
     class Meta:
         model = FoodOrder
         fields = ["id", "order_code", "status", "restaurant_name", "restaurant_slug",
-                  "guest_name", "guest_phone", "delivery_address", "subtotal", "delivery_fee",
-                  "tip", "total", "eta_minutes", "payment_method", "payment_status",
-                  "created_at", "items"]
+                  "guest_name", "guest_phone", "delivery_address", "subtotal", "discount",
+                  "coupon_code", "delivery_fee", "tip", "total", "eta_minutes", "payment_method",
+                  "payment_status", "rider_name", "rider_phone", "created_at", "items"]

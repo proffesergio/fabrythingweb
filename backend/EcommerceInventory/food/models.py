@@ -57,6 +57,7 @@ class Restaurant(TimeStamped):
     min_order_amount = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal("0.00"))
     status = models.CharField(max_length=10, choices=Status.choices, default=Status.PENDING)
     is_open = models.BooleanField(default=True)
+    is_accepting_orders = models.BooleanField(default=True)  # "busy" pause without going offline
     zones = models.ManyToManyField(DeliveryZone, through="RestaurantZone", related_name="restaurants")
 
     class Meta:
@@ -120,6 +121,10 @@ class FoodItem(TimeStamped):
     is_available = models.BooleanField(default=True)
     is_veg = models.BooleanField(default=False)
     is_featured = models.BooleanField(default=False)  # "Bestseller" / chef's pick
+    tags = models.JSONField(default=list, blank=True)  # curated keys: spicy,new,popular,veg,bestseller
+    available_from = models.TimeField(null=True, blank=True)  # e.g. 08:00 (breakfast)
+    available_to = models.TimeField(null=True, blank=True)    # e.g. 11:00
+    available_days = models.JSONField(default=list, blank=True)  # weekday ints 0-6; empty = every day
     spice_level = models.CharField(max_length=20, blank=True, default="")
     display_order = models.PositiveIntegerField(default=0)
 
@@ -130,6 +135,19 @@ class FoodItem(TimeStamped):
     @property
     def effective_price(self):
         return self.discount_price if self.discount_price is not None else self.price
+
+    def is_available_now(self, now):
+        """Available considering the on/off flag AND any schedule window/weekdays."""
+        if not self.is_available:
+            return False
+        if self.available_days and now.weekday() not in self.available_days:
+            return False
+        if self.available_from and self.available_to:
+            t = now.time()
+            if self.available_from <= self.available_to:
+                return self.available_from <= t <= self.available_to
+            return t >= self.available_from or t <= self.available_to  # overnight window
+        return True
 
 
 class FoodItemOptionGroup(TimeStamped):
@@ -148,6 +166,55 @@ class FoodItemOption(TimeStamped):
     price_delta = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     is_default = models.BooleanField(default=False)
     display_order = models.PositiveIntegerField(default=0)
+
+
+class Coupon(TimeStamped):
+    """Promo code. restaurant=null → platform-wide (admin). restaurant set → that
+    vendor's coupon (created by admin or the vendor)."""
+    class DiscountType(models.TextChoices):
+        PERCENT = "PERCENT", "Percent"
+        FLAT = "FLAT", "Flat"
+
+    code = models.CharField(max_length=32, unique=True)
+    restaurant = models.ForeignKey(Restaurant, null=True, blank=True, on_delete=models.CASCADE, related_name="coupons")
+    discount_type = models.CharField(max_length=8, choices=DiscountType.choices, default=DiscountType.PERCENT)
+    discount_value = models.DecimalField(max_digits=10, decimal_places=2)
+    min_order_amount = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal("0.00"))
+    max_discount = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)  # cap for percent
+    valid_from = models.DateTimeField(null=True, blank=True)
+    valid_until = models.DateTimeField(null=True, blank=True)
+    usage_limit = models.PositiveIntegerField(null=True, blank=True)
+    used_count = models.PositiveIntegerField(default=0)
+    is_active = models.BooleanField(default=True)
+
+    def discount_for(self, subtotal):
+        subtotal = Decimal(subtotal)
+        if self.discount_type == self.DiscountType.PERCENT:
+            d = subtotal * self.discount_value / Decimal("100")
+            if self.max_discount is not None:
+                d = min(d, Decimal(self.max_discount))
+        else:
+            d = Decimal(self.discount_value)
+        return min(d, subtotal).quantize(Decimal("0.01"))
+
+    def error_for(self, restaurant, subtotal, now):
+        """Return a user-facing error string if not applicable, else None."""
+        if not self.is_active:
+            return "This coupon is not active."
+        if self.restaurant_id and self.restaurant_id != restaurant.id:
+            return "This coupon isn't valid for this restaurant."
+        if self.valid_from and now < self.valid_from:
+            return "This coupon isn't active yet."
+        if self.valid_until and now > self.valid_until:
+            return "This coupon has expired."
+        if Decimal(subtotal) < self.min_order_amount:
+            return f"Add more — minimum BDT {self.min_order_amount} for this coupon."
+        if self.usage_limit is not None and self.used_count >= self.usage_limit:
+            return "This coupon has reached its usage limit."
+        return None
+
+    def __str__(self):
+        return self.code
 
 
 def generate_food_order_code():
@@ -186,9 +253,12 @@ class FoodOrder(TimeStamped):
     restaurant = models.ForeignKey(Restaurant, on_delete=models.PROTECT, related_name="orders")
     zone = models.ForeignKey(DeliveryZone, null=True, blank=True, on_delete=models.SET_NULL,
                              related_name="orders")
+    rider = models.ForeignKey("Rider", null=True, blank=True, on_delete=models.SET_NULL, related_name="orders")
     order_code = models.CharField(max_length=12, unique=True, default=generate_food_order_code)
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.PLACED)
     subtotal = models.DecimalField(max_digits=10, decimal_places=2)
+    discount = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal("0.00"))
+    coupon_code = models.CharField(max_length=32, blank=True, default="")
     delivery_fee = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal("0.00"))
     tip = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal("0.00"))
     total = models.DecimalField(max_digits=10, decimal_places=2)
@@ -230,3 +300,84 @@ class FoodOrderItem(TimeStamped):
     quantity = models.PositiveIntegerField()
     selected_options = models.JSONField(default=list, blank=True)  # [{"name":..., "price_delta":...}]
     line_total = models.DecimalField(max_digits=10, decimal_places=2)
+
+
+# ── Phase B: Payments ────────────────────────────────────────────────────────
+class PaymentTransaction(TimeStamped):
+    class Method(models.TextChoices):
+        COD = "COD", "Cash on Delivery"
+        BKASH = "BKASH", "bKash"
+        NAGAD = "NAGAD", "Nagad"
+        QR = "QR", "Bangla QR"
+
+    class Status(models.TextChoices):
+        PENDING = "PENDING", "Pending"
+        SUCCESS = "SUCCESS", "Success"
+        FAILED = "FAILED", "Failed"
+
+    order = models.ForeignKey(FoodOrder, on_delete=models.CASCADE, related_name="payments")
+    method = models.CharField(max_length=10, choices=Method.choices, default=Method.COD)
+    amount = models.DecimalField(max_digits=10, decimal_places=2)
+    status = models.CharField(max_length=10, choices=Status.choices, default=Status.PENDING)
+    provider_ref = models.CharField(max_length=100, blank=True, default="")  # gateway/txn id
+
+    def __str__(self):
+        return f"{self.order.order_code} {self.method} {self.status}"
+
+
+# ── Phase C: Riders & dispatch ───────────────────────────────────────────────
+def generate_rider_code():
+    return f"RD-{uuid.uuid4().hex[:5].upper()}"
+
+
+class Rider(TimeStamped):
+    class Vehicle(models.TextChoices):
+        BIKE = "BIKE", "Motorbike"
+        CYCLE = "CYCLE", "Bicycle"
+        FOOT = "FOOT", "On foot"
+
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, null=True, blank=True,
+                                on_delete=models.SET_NULL, related_name="rider")
+    rider_code = models.CharField(max_length=12, unique=True, default=generate_rider_code)
+    name = models.CharField(max_length=120)
+    phone = models.CharField(max_length=20, blank=True, default="")
+    vehicle_type = models.CharField(max_length=8, choices=Vehicle.choices, default=Vehicle.BIKE)
+    vehicle_number = models.CharField(max_length=30, blank=True, default="")
+    is_available = models.BooleanField(default=True)
+    is_verified = models.BooleanField(default=False)
+    total_deliveries = models.PositiveIntegerField(default=0)
+
+    def __str__(self):
+        return f"{self.name} ({self.rider_code})"
+
+
+class RiderEarning(TimeStamped):
+    rider = models.ForeignKey(Rider, on_delete=models.CASCADE, related_name="earnings")
+    order = models.ForeignKey(FoodOrder, null=True, on_delete=models.SET_NULL, related_name="rider_earnings")
+    base_pay = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal("0.00"))
+    tip = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal("0.00"))
+    payout_status = models.CharField(max_length=10, default="PENDING")  # PENDING | PAID
+
+
+# ── Phase D: Notifications & loyalty ─────────────────────────────────────────
+class Notification(TimeStamped):
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="food_notifications")
+    title = models.CharField(max_length=150)
+    body = models.CharField(max_length=300, blank=True, default="")
+    order_code = models.CharField(max_length=12, blank=True, default="")
+    is_read = models.BooleanField(default=False)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+
+class LoyaltyAccount(TimeStamped):
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="loyalty")
+    points = models.PositiveIntegerField(default=0)
+
+
+class LoyaltyLedger(TimeStamped):
+    account = models.ForeignKey(LoyaltyAccount, on_delete=models.CASCADE, related_name="entries")
+    delta = models.IntegerField()  # +earn / -redeem
+    reason = models.CharField(max_length=120, blank=True, default="")
+    order_code = models.CharField(max_length=12, blank=True, default="")

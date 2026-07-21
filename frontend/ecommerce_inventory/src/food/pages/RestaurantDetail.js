@@ -22,11 +22,22 @@ function VegDot() {
   );
 }
 
+const TAG_META = {
+  spicy: { label: 'Spicy', emoji: '🌶️' }, new: { label: 'New', emoji: '✨' },
+  popular: { label: 'Popular', emoji: '🔥' }, veg: { label: 'Veg', emoji: '🌱' },
+  bestseller: { label: 'Bestseller', emoji: '⭐' },
+};
+const fmt = (t) => (t ? String(t).slice(0, 5) : '');
+
 function DishCard({ item, onClick }) {
   const hasOptions = item.option_groups && item.option_groups.length > 0;
+  const off = item.available_now === false;
+  const tags = (item.tags || []).filter((t) => TAG_META[t]);
   return (
-    <Card component={motion.div} whileHover={{ y: -4 }} transition={{ type: 'spring', stiffness: 300, damping: 22 }}
-      onClick={onClick} sx={{ cursor: 'pointer', overflow: 'hidden', height: '100%', display: 'flex', flexDirection: 'column' }}>
+    <Card component={motion.div} whileHover={off ? undefined : { y: -4 }} transition={{ type: 'spring', stiffness: 300, damping: 22 }}
+      onClick={off ? undefined : onClick}
+      sx={{ cursor: off ? 'default' : 'pointer', overflow: 'hidden', height: '100%', display: 'flex', flexDirection: 'column',
+            opacity: off ? 0.6 : 1, filter: off ? 'grayscale(0.4)' : 'none' }}>
       <Box sx={{ position: 'relative', pt: '62%' }}>
         <Box sx={{ position: 'absolute', inset: 0, background: item.image ? undefined
           : 'radial-gradient(120% 120% at 30% 0%, #FFE7C2, #F7B27A)' }}>
@@ -51,17 +62,30 @@ function DishCard({ item, onClick }) {
           {item.is_veg && <VegDot />}
           <Typography variant="subtitle1" sx={{ fontWeight: 800, lineHeight: 1.2 }}>{item.display_name}</Typography>
         </Stack>
+        {tags.length > 0 && (
+          <Stack direction="row" spacing={0.5} sx={{ mb: 0.75, flexWrap: 'wrap', gap: 0.5 }}>
+            {tags.map((t) => (
+              <Chip key={t} size="small" label={`${TAG_META[t].emoji} ${TAG_META[t].label}`}
+                sx={{ height: 22, bgcolor: 'rgba(244,166,42,0.16)', color: '#7a5310', fontWeight: 700 }} />
+            ))}
+          </Stack>
+        )}
         {item.description && (
           <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5,
             display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
             {item.description}
           </Typography>
         )}
-        <Button variant="contained" size="small" startIcon={<AddRoundedIcon />}
-          sx={{ mt: 'auto', alignSelf: 'flex-start', borderRadius: 999 }}
-          onClick={(e) => { e.stopPropagation(); onClick(); }}>
-          {hasOptions ? 'Choose' : 'Add'}
-        </Button>
+        {off ? (
+          <Chip size="small" color="default" sx={{ mt: 'auto', alignSelf: 'flex-start' }}
+            label={item.available_from ? `Available ${fmt(item.available_from)}–${fmt(item.available_to)}` : 'Unavailable now'} />
+        ) : (
+          <Button variant="contained" size="small" startIcon={<AddRoundedIcon />}
+            sx={{ mt: 'auto', alignSelf: 'flex-start', borderRadius: 999 }}
+            onClick={(e) => { e.stopPropagation(); onClick(); }}>
+            {hasOptions ? 'Choose' : 'Add'}
+          </Button>
+        )}
       </Box>
     </Card>
   );

@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
     Box, Card, CardContent, Typography, Grid, TextField, Button, Stack, Divider, Chip,
-    Checkbox, FormControlLabel, LinearProgress, Breadcrumbs,
+    Checkbox, FormControlLabel, Switch, LinearProgress, Breadcrumbs,
 } from "@mui/material";
 import { toast } from "react-toastify";
 import useApi from "../../hooks/APIHandler";
@@ -74,6 +74,12 @@ export default function RestaurantDetailAdmin() {
 
     const setHour = (i, k, v) => setHours((hs) => hs.map((h, idx) => (idx === i ? { ...h, [k]: v } : h)));
 
+    const quickToggle = async (field, value) => {
+        setR((prev) => ({ ...prev, [field]: value }));
+        await callApi({ url: `food/admin/restaurants/${id}/`, method: "PATCH", body: { [field]: value } });
+        toast.success("Updated");
+    };
+
     if (loading && !r) return <LinearProgress />;
     if (!r) return null;
 
@@ -83,9 +89,13 @@ export default function RestaurantDetailAdmin() {
                 <Typography variant="body2" sx={{ cursor: "pointer" }} onClick={() => navigate("/admin/manage/food/restaurants")}>Restaurants</Typography>
                 <Typography variant="body2">{r.name}</Typography>
             </Breadcrumbs>
-            <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 2 }}>
+            <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 2, flexWrap: "wrap", gap: 1 }}>
                 <Typography variant="h5" fontWeight={800}>{r.name} <Chip size="small" label={r.status} sx={{ ml: 1 }} /></Typography>
-                <Button variant="outlined" onClick={() => navigate("/admin/manage/food/menu")}>Manage menu</Button>
+                <Stack direction="row" spacing={2} alignItems="center">
+                    <FormControlLabel control={<Switch checked={!!r.is_open} onChange={(e) => quickToggle("is_open", e.target.checked)} />} label={r.is_open ? "Open" : "Closed"} />
+                    <FormControlLabel control={<Switch color="warning" checked={!!r.is_accepting_orders} onChange={(e) => quickToggle("is_accepting_orders", e.target.checked)} />} label={r.is_accepting_orders ? "Taking orders" : "Busy"} />
+                    <Button variant="outlined" onClick={() => navigate("/admin/manage/food/menu")}>Manage menu</Button>
+                </Stack>
             </Stack>
 
             <Grid container spacing={2}>
