@@ -17,8 +17,10 @@ class RiderSerializer(serializers.ModelSerializer):
     class Meta:
         model = Rider
         fields = ["id", "rider_code", "name", "phone", "vehicle_type", "vehicle_number",
-                  "is_available", "is_verified", "total_deliveries", "created_at"]
-        read_only_fields = ["rider_code", "total_deliveries"]
+                  "is_available", "is_verified", "total_deliveries", "created_at",
+                  "current_lat", "current_lng", "last_seen_at"]
+        read_only_fields = ["rider_code", "total_deliveries",
+                            "current_lat", "current_lng", "last_seen_at"]
 
 
 class NotificationSerializer(serializers.ModelSerializer):

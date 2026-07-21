@@ -7,6 +7,7 @@ import {
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { useNavigate } from 'react-router-dom';
 import { getUser } from '../utils/Helper';
+import roleHome from '../utils/roleHome';
 import useApi from '../hooks/APIHandler';
 
 const STATUS_COLORS = {
@@ -19,6 +20,14 @@ const Home = () => {
     const { callApi, loading } = useApi();
     const navigate = useNavigate();
     const user = getUser();
+
+    // Riders and vendors have their own home; the admin dashboard renders no
+    // modules for them, which is what made the rider screen look blank.
+    useEffect(() => {
+        const home = roleHome(user?.role);
+        if (home !== '/admin/home') navigate(home, { replace: true });
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
     useEffect(() => {
         const fetchDashboard = async () => {

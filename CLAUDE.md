@@ -31,11 +31,15 @@ frontend/ecommerce_inventory/src/
 
 ## Conventions that bite
 
-- **Response envelope.** Every endpoint returns `{data, message}` via
-  `core.helpers.renderResponse`. The frontend toasts only `message`, so
-  DRF field errors sitting in `data` are invisible unless a screen reads them.
-  `EnvelopeModelViewSetMixin` (`food/views_vendor.py`) wraps ModelViewSet in it
-  and returns the literal message `"Validation error"` on a 400.
+- **Response envelope.** `core.helpers.renderResponse` returns `{data, message}`
+  on 2xx but **a different shape on errors**: `{errors, field_errors, message}`,
+  where `errors` is a flat list of messages and `field_errors` is the original
+  `{field: [messages]}` map. Read `field_errors` to attribute an error to an
+  input. `EnvelopeModelViewSetMixin` (`food/views_vendor.py`) wraps ModelViewSet
+  and sends the literal message `"Validation error"` on a 400, so the `message`
+  alone never identifies the offending field.
+- **`callApi` swallows HTTP errors** — it returns `null` on any non-2xx unless
+  the caller passes `rawError: true`, which returns the axios error response.
 - **No default auth class.** `REST_FRAMEWORK` sets no
   `DEFAULT_AUTHENTICATION_CLASSES`; every authenticated view must declare
   `authentication_classes = [JWTAuthentication]` or `request.user` is anonymous
@@ -100,7 +104,9 @@ reach a rider only when an admin manually assigns them in `ManageFoodOrders`.
 
 ```bash
 # backend (from backend/EcommerceInventory, venv at .venv)
-python manage.py test food            # 20 test modules under food/tests/
+# Tests REQUIRE config.settings.test — it uses SQLite. The manage.py default is
+# config.settings.dev, which points at a local Postgres that usually isn't running.
+DJANGO_SETTINGS_MODULE=config.settings.test python manage.py test food
 python manage.py migrate
 python manage.py runserver
 

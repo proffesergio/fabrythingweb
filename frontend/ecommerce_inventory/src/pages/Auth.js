@@ -6,6 +6,8 @@ import { orangeDarkTheme, orangeLightTheme, basicTheme, darkTheme, lightTheme, c
 import { GlobalStyles } from '../layout/GlobalStyle';
 import { useNavigate } from 'react-router-dom';
 import useApi from '../hooks/APIHandler';
+import roleHome from '../utils/roleHome';
+import { getUser } from '../utils/Helper';
 import { toast } from 'react-toastify';
 import { useDispatch } from 'react-redux';
 import { login } from '../redux/reducer/IsLoggedInReducer';
@@ -88,7 +90,8 @@ const doLogin = async(e) => {
       localStorage.setItem("token",response.data.access);
           toast.success("Login Successfully");
           dispatch(login());
-          navigate("/admin/home");
+          // Role lives in the JWT we just stored; send each role to its own home.
+          navigate(roleHome(getUser()?.role));
 
     }
     else{

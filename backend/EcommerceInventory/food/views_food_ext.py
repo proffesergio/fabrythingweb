@@ -1,6 +1,6 @@
 """Phase A–D feature endpoints: coupons, riders + dispatch, rider dashboard,
 notifications, loyalty, and payment reconciliation."""
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 
 from django.contrib.auth import get_user_model
 from django.utils import timezone
@@ -16,6 +16,7 @@ from food.models import (Restaurant, Coupon, Rider, RiderEarning, FoodOrder, Not
 from food.permissions import IsRestaurantOwner, IsPlatformAdmin, IsRider
 from food.serializers_ext import CouponSerializer, RiderSerializer, NotificationSerializer, PaymentSerializer
 from food.serializers_orders import FoodOrderSerializer
+from food.serializers_rider import RiderOrderSerializer
 from food.services import notify
 from food.views_vendor import EnvelopeModelViewSetMixin
 
@@ -136,14 +137,78 @@ class RiderAvailabilityView(APIView):
         return renderResponse(data={"is_available": rider.is_available}, message="Availability updated")
 
 
+class RiderHeartbeatView(APIView):
+    """Presence + position ping from the rider dashboard (~every 20s while Online).
+
+    Coordinates are optional: a browser that denies geolocation should still be
+    able to keep the rider marked present. Only the current position is stored —
+    no location history is kept.
+    """
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated, IsRider]
+
+    def post(self, request):
+        rider = request.user.rider
+        fields = ["last_seen_at", "updated_at"]
+        rider.last_seen_at = timezone.now()
+        lat, lng = request.data.get("lat"), request.data.get("lng")
+        if lat is not None and lng is not None:
+            try:
+                rider.current_lat = Decimal(str(lat))
+                rider.current_lng = Decimal(str(lng))
+            except (InvalidOperation, TypeError):
+                return renderResponse(data={"lat": ["Invalid coordinate."]},
+                                      message="Validation error", status=400)
+            fields += ["current_lat", "current_lng"]
+        rider.save(update_fields=fields)
+        return renderResponse(data={"last_seen_at": rider.last_seen_at.isoformat()},
+                              message="Heartbeat")
+
+
 class RiderOrdersView(APIView):
     authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated, IsRider]
 
     def get(self, request):
         qs = FoodOrder.objects.filter(rider=request.user.rider).exclude(
-            status__in=[FoodOrder.Status.DELIVERED, FoodOrder.Status.CANCELLED]).prefetch_related("items")
-        return renderResponse(data=FoodOrderSerializer(qs, many=True).data, message="Assigned orders")
+            status__in=[FoodOrder.Status.DELIVERED, FoodOrder.Status.CANCELLED]
+        ).select_related("restaurant").prefetch_related("items")
+        return renderResponse(data=RiderOrderSerializer(qs, many=True).data, message="Assigned orders")
+
+
+class RiderEarningsView(APIView):
+    """Today's and lifetime payout, completed deliveries, and cash owed to the
+    restaurant from COD orders the rider is still carrying."""
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated, IsRider]
+
+    def get(self, request):
+        rider = request.user.rider
+        earnings = list(rider.earnings.select_related("order").order_by("-created_at"))
+        today = timezone.localdate()
+
+        lifetime = sum((e.base_pay + e.tip for e in earnings), Decimal("0.00"))
+        today_total = sum((e.base_pay + e.tip for e in earnings
+                           if timezone.localtime(e.created_at).date() == today), Decimal("0.00"))
+        cash = sum((o.total for o in FoodOrder.objects.filter(
+            rider=rider, payment_method="COD", payment_status="PENDING"
+        ).exclude(status__in=[FoodOrder.Status.DELIVERED, FoodOrder.Status.CANCELLED])),
+            Decimal("0.00"))
+
+        history = [{
+            "order_code": e.order.order_code if e.order else "",
+            "delivered_at": e.created_at.isoformat(),
+            "base_pay": str(e.base_pay),
+            "tip": str(e.tip),
+            "payout": str(e.base_pay + e.tip),
+        } for e in earnings[:50]]
+
+        return renderResponse(data={
+            "today": str(today_total.quantize(Decimal("0.01"))),
+            "lifetime": str(lifetime.quantize(Decimal("0.01"))),
+            "cash_to_collect": str(cash.quantize(Decimal("0.01"))),
+            "history": history,
+        }, message="Rider earnings")
 
 
 class RiderOrderStatusView(APIView):

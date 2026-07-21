@@ -8,7 +8,10 @@ function useApi(){
     const [loading,setLoading]=useState(false);
     // Pass silent:true to suppress the error toast (for expected errors the caller
     // handles itself, e.g. a 404 that just means "ask the guest for their phone").
-    const callApi=async ({url,method="GET",body={},header={},params={},silent=false})=>{
+    // Pass rawError:true to receive the error response ({status,data}) instead of
+    // null, so the caller can read DRF field errors out of the {data,message}
+    // envelope. Default stays null for the existing call sites.
+    const callApi=async ({url,method="GET",body={},header={},params={},silent=false,rawError=false})=>{
         let gUrl=config.API_URL+url;
         setLoading(true);
         let response=null;
@@ -30,6 +33,10 @@ function useApi(){
                 }
             }
             setError(err)
+            if(rawError && err.response){
+                setLoading(false);
+                return err.response;
+            }
         }
         setLoading(false);
         return response;

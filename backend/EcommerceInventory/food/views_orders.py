@@ -6,6 +6,7 @@ from rest_framework_simplejwt.authentication import JWTAuthentication
 
 from core.helpers import renderResponse, CustomPageNumberPagination, CommonListAPIMixin
 from food.models import FoodOrder
+from food.services_dispatch import maybe_auto_assign_rider
 from food.services import place_food_cod_order, notify
 from food.serializers_orders import FoodOrderSerializer
 from food.permissions import IsRestaurantOwner, IsPlatformAdmin
@@ -23,6 +24,9 @@ def _notify_status(order):
     msg = STATUS_MSG.get(order.status)
     if msg:
         notify(order.customer, f"Order {order.order_code}", msg, order.order_code)
+    # A confirmed order is ready to be carried — hand it to the nearest present
+    # rider. No-op when one is already assigned, so admin assignment still wins.
+    maybe_auto_assign_rider(order)
 
 
 class FoodOrderView(APIView):

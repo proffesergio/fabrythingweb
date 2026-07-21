@@ -96,7 +96,11 @@ def renderResponse(data,message,status=200):
         return Response({'data':data,'message':message},status=status)
     else:
         if isinstance(data,dict):
-            return Response({'errors':parseDictToList(data),'message':message},status=status)
+            # `errors` stays a flat list of messages so existing consumers keep
+            # working. `field_errors` preserves which field each message belongs
+            # to — without it a form can only toast "Validation error" and the
+            # user has no way to learn which input the server rejected.
+            return Response({'errors':parseDictToList(data),'field_errors':data,'message':message},status=status)
         elif isinstance(data,list):
             return Response({'errors':data,'message':message},status=status)
         else:
@@ -105,7 +109,12 @@ def renderResponse(data,message,status=200):
 def parseDictToList(data):
     values=[]
     for key,value in data.items():
-        values.extend(value)
+        # A bare string must not be extended — that would split it into
+        # characters. DRF errors are usually lists, but not always.
+        if isinstance(value,(list,tuple)):
+            values.extend(value)
+        else:
+            values.append(value)
     return values
 
 def custom_exception_handler(exc, context):

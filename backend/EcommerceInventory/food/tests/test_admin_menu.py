@@ -50,6 +50,69 @@ class AdminMenuTests(TestCase):
         self.assertEqual(res.status_code, 201, res.content)
         self.assertEqual(res.json()["data"]["slug"], "chicken-roll")
 
+    def _item_payload(self, **over):
+        base = {"restaurant": self.r.id, "category_id": self.cat.id,
+                "name": "Beef Tehari", "price": "180.00"}
+        base.update(over)
+        return base
+
+    def test_create_item_with_tags_schedule_and_spice(self):
+        """The full 'additional info' payload the admin UI sends must be accepted."""
+        auth(self.client, self.admin)
+        res = self.client.post("/api/food/admin/items/", self._item_payload(
+            tags=["spicy", "bestseller"], spice_level="Hot",
+            available_from="08:00", available_to="11:00", available_days=[0, 1, 2],
+            is_featured=True, image="https://cdn.example.com/tehari.jpg",
+        ), format="json")
+        self.assertEqual(res.status_code, 201, res.content)
+        item = FoodItem.objects.get(name="Beef Tehari")
+        self.assertEqual(item.tags, ["spicy", "bestseller"])
+        self.assertEqual(item.available_days, [0, 1, 2])
+
+    def test_blank_optional_fields_are_treated_as_unset(self):
+        """The dialog sends "" for untouched optional fields; that must mean null."""
+        auth(self.client, self.admin)
+        res = self.client.post("/api/food/admin/items/", self._item_payload(
+            discount_price="", prep_minutes="", available_from="", available_to="",
+        ), format="json")
+        self.assertEqual(res.status_code, 201, res.content)
+        item = FoodItem.objects.get(name="Beef Tehari")
+        self.assertIsNone(item.discount_price)
+        self.assertIsNone(item.prep_minutes)
+        self.assertIsNone(item.available_from)
+
+    def test_optional_fields_can_be_cleared_on_edit(self):
+        auth(self.client, self.admin)
+        item = FoodItem.objects.create(restaurant=self.r, category_id=self.cat, name="X", slug="x",
+                                       price=Decimal("100"), discount_price=Decimal("80"))
+        res = self.client.patch(f"/api/food/admin/items/{item.id}/",
+                                {"discount_price": None}, format="json")
+        self.assertEqual(res.status_code, 200, res.content)
+        item.refresh_from_db()
+        self.assertIsNone(item.discount_price)
+
+    def test_bad_image_reports_the_image_field(self):
+        """A non-URL image must fail on 'image' specifically, so the UI can point at it."""
+        auth(self.client, self.admin)
+        res = self.client.post("/api/food/admin/items/",
+                               self._item_payload(image="tehari.jpg"), format="json")
+        self.assertEqual(res.status_code, 400)
+        self.assertIn("image", res.json()["field_errors"])
+
+    def test_unknown_tag_is_rejected_readably(self):
+        auth(self.client, self.admin)
+        res = self.client.post("/api/food/admin/items/",
+                               self._item_payload(tags=["gluten-free"]), format="json")
+        self.assertEqual(res.status_code, 400)
+        self.assertIn("tags", res.json()["field_errors"])
+
+    def test_available_day_out_of_range_is_rejected(self):
+        auth(self.client, self.admin)
+        res = self.client.post("/api/food/admin/items/",
+                               self._item_payload(available_days=[9]), format="json")
+        self.assertEqual(res.status_code, 400)
+        self.assertIn("available_days", res.json()["field_errors"])
+
     def test_admin_creates_option_group_and_option(self):
         item = FoodItem.objects.create(restaurant=self.r, category_id=self.cat, name="Burger", slug="burger", price=Decimal("100"))
         auth(self.client, self.admin)

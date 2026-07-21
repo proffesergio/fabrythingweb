@@ -17,7 +17,9 @@ from food.views_food_ext import (
     VendorCouponViewSet, AdminCouponViewSet, CouponValidateView, AdminRiderViewSet,
     AdminAssignRiderView, RiderMeView, RiderAvailabilityView, RiderOrdersView,
     RiderOrderStatusView, NotificationView, LoyaltyView, AdminPaymentListView,
+    RiderHeartbeatView, RiderEarningsView,
 )
+from food.views_menu_copy import AdminMenuCopyView
 
 urlpatterns = [
     path("restaurants/", PublicRestaurantListView.as_view(), name="food_restaurants"),
@@ -39,9 +41,12 @@ urlpatterns = [
     path("coupons/validate/", CouponValidateView.as_view(), name="food_coupon_validate"),
     path("admin/orders/<int:pk>/assign/", AdminAssignRiderView.as_view(), name="food_admin_assign_rider"),
     path("admin/payments/", AdminPaymentListView.as_view(), name="food_admin_payments"),
+    path("admin/menu/copy/", AdminMenuCopyView.as_view(), name="food_admin_menu_copy"),
     path("rider/me/", RiderMeView.as_view(), name="food_rider_me"),
     path("rider/availability/", RiderAvailabilityView.as_view(), name="food_rider_availability"),
+    path("rider/heartbeat/", RiderHeartbeatView.as_view(), name="food_rider_heartbeat"),
     path("rider/orders/", RiderOrdersView.as_view(), name="food_rider_orders"),
+    path("rider/earnings/", RiderEarningsView.as_view(), name="food_rider_earnings"),
     path("rider/orders/<int:pk>/status/", RiderOrderStatusView.as_view(), name="food_rider_order_status"),
     path("notifications/", NotificationView.as_view(), name="food_notifications"),
     path("loyalty/", LoyaltyView.as_view(), name="food_loyalty"),

@@ -367,6 +367,17 @@ class Rider(TimeStamped):
     is_verified = models.BooleanField(default=False)
     total_deliveries = models.PositiveIntegerField(default=0)
 
+    # Presence. The rider dashboard is a web page, not a native app, so "online"
+    # is derived rather than declared: the page posts a heartbeat every ~20s
+    # while the rider has the Online switch on. A rider is dispatchable only if
+    # is_available AND last_seen_at is inside PRESENCE_WINDOW_MINUTES AND a
+    # position is known — closing the tab drops them out with no explicit action.
+    PRESENCE_WINDOW_MINUTES = 3
+
+    current_lat = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
+    current_lng = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
+    last_seen_at = models.DateTimeField(null=True, blank=True)
+
     def __str__(self):
         return f"{self.name} ({self.rider_code})"
 
