@@ -4,7 +4,7 @@ import { LightMode, DarkMode, Menu as MenuIcon, ExpandLess, ExpandMore, Search a
 import { ThemeProvider as Emotion10ThemeProvider } from '@emotion/react';
 import './style.scss';
 import { orangeDarkTheme, orangeLightTheme, basicTheme,darkTheme,lightTheme,customTheme,blueLightTheme,blueDarkTheme,greenLightTheme,greenDarkTheme,redLightTheme,redDarkTheme } from './themes';
-import logo from '../assets/logo.svg';
+import BrandLogo from '../components/BrandLogo';
 import { GlobalStyles } from './GlobalStyle';
 import TextField from '@mui/material/TextField';
 import { Outlet,useLocation,useNavigate } from 'react-router-dom'; // Import Outlet
@@ -22,6 +22,10 @@ const Layout = ({sidebarList,pageTitle,childPage}) => {
   const navigate=useNavigate();
   const dispatch=useDispatch();
   const location=useLocation();
+  // Every food admin page lives under /admin/manage/food/* (see App.js), so one
+  // prefix test covers dashboard, restaurants, menu, orders, zones, riders and
+  // payments without each page having to declare its own branding.
+  const isFoodSection = location.pathname.startsWith('/admin/manage/food');
   console.log(sidebarItems);
 
   useEffect(()=>{
@@ -188,18 +192,16 @@ const Layout = ({sidebarList,pageTitle,childPage}) => {
       }}
       className='sidebar'
     >
+      {/* The admin shell is Fabrything-branded, but the Food section carries its
+          own logo so the operator can see which side of the business they are in.
+          Store/ERP pages stay Fabrything — the two brands never mix on one screen. */}
       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '16px', py: 2 }}>
-        <Typography variant="h5" sx={{
-          fontWeight: 900,
-          letterSpacing: '0.12em',
-          background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
-          WebkitBackgroundClip: 'text',
-          WebkitTextFillColor: 'transparent',
-          backgroundClip: 'text',
-          userSelect: 'none',
-        }}>
-          FABRYTHING
-        </Typography>
+        <BrandLogo
+          brand={isFoodSection ? 'food' : 'fabrything'}
+          variant="horizontal"
+          mode={theme.palette.mode === 'dark' ? 'dark' : 'light'}
+          height={isFoodSection ? 30 : 26}
+        />
       </Box>
       <List sx={{ '& .MuiListItem-root': { transition: 'background-color 0.3s' } }}>
         {sidebarItems.map((sidebarItem) => (

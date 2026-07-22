@@ -11,7 +11,7 @@ import FoodLayout from './FoodLayout';
 // via the sidebar thunk and breaks CRA's Jest parser).
 const store = configureStore({ reducer: { foodCart: foodCartReducer } });
 
-test('food layout renders the brand', () => {
+const renderLayout = () =>
   render(
     <Provider store={store}>
       <ThemeProvider theme={getFoodTheme()}>
@@ -21,5 +21,20 @@ test('food layout renders the brand', () => {
       </ThemeProvider>
     </Provider>
   );
-  expect(screen.getByText(/food/i)).toBeInTheDocument();
+
+test('food layout renders the Fabrything Food brand mark', () => {
+  renderLayout();
+  // The brand is an image now, not a text wordmark, so it is asserted through
+  // its alt text — which is also what a screen reader announces.
+  expect(screen.getByAltText('Fabrything Food')).toBeInTheDocument();
+});
+
+test('the food brand mark is the food logo, never the store one', () => {
+  // The two brands must not leak into each other's surfaces. Pinning the asset
+  // catches a wrong `brand` prop, which otherwise looks fine until someone
+  // notices the store logo sitting on the food header.
+  renderLayout();
+  expect(screen.getByAltText('Fabrything Food'))
+    .toHaveAttribute('src', expect.stringContaining('/food-horizontal'));
+  expect(screen.queryByAltText('Fabrything')).not.toBeInTheDocument();
 });

@@ -55,6 +55,19 @@ python manage.py backfill_settlements || echo "WARNING: backfill_settlements fai
 # Riders page). DELETES USERS, so it is opt-in: set PRUNE_ORPHAN_LOGINS=true in
 # the Render dashboard, deploy once, then REMOVE the variable again. Only ever
 # touches Rider/Restaurant accounts that no Rider or Restaurant row points at.
+# Free a username/email held by an account that was never meant to own it — the
+# would-be rider who signed up at /auth/signup and got a Customer account, so the
+# admin can't onboard them from the Riders tab. DELETES A USER, so it is opt-in and
+# self-disarming: set RELEASE_LOGIN=<username-or-email> in the Render dashboard,
+# deploy once, then REMOVE the variable. Refuses admins, accounts owning a
+# Rider/Restaurant, and anything with order history (see accounts/management/
+# commands/release_login.py) — a wrong value fails the step, it does not guess.
+if [ -n "$RELEASE_LOGIN" ]; then
+  echo "RELEASE_LOGIN=$RELEASE_LOGIN — releasing this login:"
+  python manage.py release_login "$RELEASE_LOGIN"            # report the cascade first
+  python manage.py release_login "$RELEASE_LOGIN" --apply || echo "WARNING: release_login failed (non-fatal)"
+fi
+
 if [ "$PRUNE_ORPHAN_LOGINS" = "true" ]; then
   echo "PRUNE_ORPHAN_LOGINS=true — removing orphaned rider/restaurant logins:"
   python manage.py prune_orphan_logins            # report what is about to go

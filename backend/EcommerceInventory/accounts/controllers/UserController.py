@@ -31,7 +31,7 @@ class UserListView(APIView):
     permission_classes = [IsAuthenticated]
     authentication_classes = [JWTAuthentication]
     def get(self,request):
-        users=Users.objects.filter(domain_user_id=request.user.domain_user_id.id)
+        users=Users.objects.filter(domain_user_id=request.user.domain_user_id_id)
         serializer=UserSerializer(users,many=True)
         return renderResponse(data=serializer.data,message="All Users",status=200)
 
@@ -42,7 +42,7 @@ class UserWithFilterListView(generics.ListAPIView):
     pagination_class = CustomPageNumberPagination
 
     def get_queryset(self):
-        queryset=Users.objects.filter(domain_user_id=self.request.user.domain_user_id.id)
+        queryset=Users.objects.filter(domain_user_id=self.request.user.domain_user_id_id)
         return queryset
     
     @CommonListAPIMixinWithFilter.common_list_decorator(UserSerializerWithFilters)
@@ -56,7 +56,7 @@ class UpdateUsers(generics.UpdateAPIView):
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
-        return Users.objects.filter(domain_user_id=self.request.user.domain_user_id.id,id=self.kwargs['pk'])
+        return Users.objects.filter(domain_user_id=self.request.user.domain_user_id_id,id=self.kwargs['pk'])
 
     def perform_update(self,serializer):
         serializer.save()

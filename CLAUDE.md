@@ -4,6 +4,19 @@ Read this before exploring. It exists so a fresh session does not have to
 re-derive the layout with Glob/Grep. If something here contradicts the code,
 the code wins — fix this file in the same commit.
 
+**Exploration budget.** In order, cheapest first — stop as soon as you can act:
+1. This file. The layout, the API surface and the traps below are current.
+2. A targeted `Grep` for a **symbol** (`grep -rn "domain_user_id\.id"`), not a
+   concept. One grep across the repo beats opening five files to compare them.
+3. Run the tests (~200, ~5s) — they answer "is the code broken?" far more cheaply
+   than reading the code does, and they tell you *which* layer to open.
+4. Only then `Read`, and read the *one* file the evidence pointed at.
+
+Do not open a file to confirm something already written here, do not read a
+module "for context" before you have a specific question, and do not spawn a
+subagent for work that is a grep and two reads. `graphify-out/` and the
+code-review-graph MCP are stale (see the note at the end) — prefer grep.
+
 ## Stack & layout
 
 Django 5 + DRF backend, Create-React-App (React 18 + MUI 5 + Redux Toolkit)
@@ -29,6 +42,46 @@ frontend/ecommerce_inventory/src/
   layout/      shell + MUI theme
 ```
 
+## Diagnosing a production 500 — do this FIRST
+
+A blank `Server Error (500)` page from `fabrythingweb.onrender.com` carries no
+traceback (`DEBUG=False`). Do **not** start grepping views. Cost of the wrong
+order here has been measured in whole sessions.
+
+1. **`curl https://fabrythingweb.onrender.com/api/health/`** (`core.views.HealthView`).
+   It reports `pending_migrations` and answers 503 when the schema lags the code.
+   *A schema that lags the deployed code is the single most common cause of a
+   cluster of unrelated 500s* — it has happened twice.
+2. **Does the failure set share a table?** Group the failing URLs by the model
+   they touch before suspecting any view. `rider/me` + `rider/orders` +
+   `rider/earnings` + `admin/riders` + `admin/dashboard` all failing at once is
+   not five bugs, it is one missing column on `food_rider`.
+3. **Run the suite before reading code**: `DJANGO_SETTINGS_MODULE=config.settings.test
+   python manage.py test`. ~200 tests, ~5s. **Green suite + broken prod ⇒ the bug
+   is environmental, not in the code** — stop reading views and go look at the
+   database or the deploy.
+4. Only then read source, and only the views for the *shared* model from step 2.
+
+**Query the live DB directly** instead of guessing (read-only is safe):
+
+```bash
+# neonctl is authenticated; the MCP server may be bound to the WRONG Neon org
+# (it saw only the "neWell" org, which does not contain this project).
+export DBURL="$(npx -y neonctl connection-string --project-id crimson-wind-60301476)"
+python -c "import os,psycopg; ..."   # psycopg3 — psycopg2 is NOT installed
+```
+
+Neon project `fabrything` = `crimson-wind-60301476`, org `org-restless-field-32561692`,
+**one branch only** (`production`) — so there is no "migrated the wrong branch"
+explanation to chase. Useful probes: `SELECT app,name FROM django_migrations`,
+and `information_schema.columns` for the suspect table.
+
+**`render.yaml` describes a service named `fabrything-api`, but the live host is
+`fabrythingweb.onrender.com`** — the running service was created by hand, so its
+Build Command is whatever the dashboard says and **may not be `./build.sh`**.
+That is why migrations can be missing even though `build.sh` runs `migrate` under
+`set -o errexit`. Never conclude "migrations ran because build.sh runs them".
+
 ## Conventions that bite
 
 - **Response envelope.** `core.helpers.renderResponse` returns `{data, message}`
@@ -48,8 +101,22 @@ frontend/ecommerce_inventory/src/
   `Admin`, `Supplier`, `Customer`, `Staff`, `Restaurant`, `Rider`.
   Food permission classes: `IsRestaurantOwner`, `IsRider`, `IsPlatformAdmin`
   (`food/permissions.py`).
-- **Login redirect is role-blind.** `pages/Auth.js` sends every successful login
-  to `/admin/home`. Non-admin roles land on an empty admin dashboard.
+- **`accounts.Users.domain_user_id` is nullable and is dereferenced everywhere.**
+  ~25 call sites did `request.user.domain_user_id.id`, which is an
+  `AttributeError` — a blank 500 — whenever it is NULL. `Users.save()` now
+  self-assigns it after the INSERT (it used to only self-heal on UPDATE, so every
+  account made by `create_user()` — i.e. every admin-created rider and vendor —
+  was born NULL), and `accounts/0003_backfill_domain_user_id` repairs old rows.
+  **Always write `user.domain_user_id_id`, never `user.domain_user_id.id`.**
+- **Each audience has its OWN login route.** `/admin/auth` (admin),
+  `/rider/login` (rider, `rider/RiderLogin.js`), `/auth/login` (customer +
+  vendor). `utils/ProtectedRoute.js` picks the target from the path prefix.
+  The customer page defaults its post-login redirect to `/`, so routing a rider
+  through it silently dumps them on the storefront homepage — that was the
+  reported "login bounces to fabrything.com". `utils/roleHome.js` is the single
+  table mapping role → landing page; use it rather than a fresh `if role ===`.
+- **Login redirect is role-blind in the admin panel.** `pages/Auth.js` sends every
+  successful login to `/admin/home`. Non-admin roles land on an empty dashboard.
 - **Image fields are `URLField`, not `ImageField`** (`FoodItem.image`,
   `Restaurant.logo/cover_image`). Upload goes through
   `POST /api/uploads/` (`core/views.FileUploadViewInS3` — S3 when AWS keys are
@@ -144,6 +211,21 @@ login alongside the rider and can set a password via
 `POST admin/riders/<pk>/reset-password/`. `RiderSerializer` exposes `username`
 so the admin panel can hand over working credentials.
 
+Riders sign in at **`/rider/login`** (`rider/RiderLogin.js`), which posts to the
+role-agnostic `store/auth/login/` and rejects any non-`Rider` role client-side.
+It is login-only by design — `/auth/signup` creates `Customer` accounts, so a
+rider who "signs up" there gets a customer account that can never open `/rider`
+(prod really had one: user `riderbills`, role `Customer`). Adding a signup tab
+means building the admin-approval flow first.
+
+When that happens the username/email is stuck — `prune_orphan_logins` won't help,
+because it only prunes `Rider`/`Restaurant` roles. Use `release_login`
+(`accounts/management/commands/`), which refuses admins, accounts already owning a
+Rider/Restaurant, and anything with order history, and prints the exact cascade
+before acting. On Render (free plan, no Shell) set `RELEASE_LOGIN=<username>` in
+the dashboard, deploy once, then **remove the variable** — same opt-in pattern as
+`PRUNE_ORPHAN_LOGINS`.
+
 ### Traps that have bitten this module
 
 - **Creating a User before the thing it belongs to.** Both rider and restaurant
@@ -182,6 +264,42 @@ every restaurant and mark the un-orderable ones. `distance_km` is null when the
 restaurant has no `pickup_lat/lng`; those sort last (`nulls_last=True`).
 The homepage falls back to the zone centre when the customer has no dropped pin.
 
+## Brand assets
+
+Two brands, and they **never appear on the same screen**:
+
+| Surface | Brand |
+| --- | --- |
+| Storefront header/drawer/footer, `/auth/login`, `/admin/auth`, admin shell | Fabrything |
+| `/food/*` header, vendor panel, rider dashboard + `/rider/login`, and admin pages under `/admin/manage/food/*` | Fabrything Food |
+
+Everything goes through **`components/BrandLogo.js`** — the only file that maps
+brand + variant + canvas to a filename. Never hardcode a logo path in a
+component; add the case there instead.
+
+```jsx
+<BrandLogo brand="food" variant="horizontal" mode={isDark ? 'dark' : 'light'} height={28} />
+```
+
+- **`mode` is the canvas the logo sits ON, not the theme name.** The storefront
+  footer is dark in both themes, so it passes `mode="dark"` while the site is in
+  light mode. Get this wrong and the logo is *invisible*, not broken — the
+  artwork is monochrome-on-transparent, so there is no missing-image icon to
+  notice. `BrandLogo.test.js` pins every combination.
+- The food files are named `-vertical-`, the Fabrything ones `-stacked-`.
+  `BrandLogo` absorbs that; callers always say `variant="stacked"`.
+- The admin shell picks its brand from
+  `location.pathname.startsWith('/admin/manage/food')` (`layout/layout.js`), so a
+  new food admin page is branded automatically — but a food page mounted outside
+  that prefix will silently show the store logo.
+- `themes.js` used to carry `logo:{rectangle,square}` in all 12 variants. It was
+  **dead config that nothing read**, pointing at deleted files; it is gone. Don't
+  reintroduce per-theme logo paths — `BrandLogo` owns this.
+- Favicons are polarity-split via `media="(prefers-color-scheme: …)"` in
+  `public/index.html`, with `favicon.ico` as the fallback. `logo192/512.png` are
+  opaque (white ground) because a transparent PWA icon renders as a black square
+  on some Android launchers.
+
 ### Food theme (light/dark)
 
 `getFoodTheme(mode)` builds from `FOOD` / `FOOD_DARK` tokens; `foodTokens(mode)`
@@ -199,6 +317,9 @@ The few remaining direct `FOOD.*` imports (`RestaurantCard`, `RestaurantDetail`,
 ## Commands
 
 ```bash
+# Is prod healthy? (schema vs. deployed code) — always the first move on a 500
+curl https://fabrythingweb.onrender.com/api/health/
+
 # backend (from backend/EcommerceInventory, venv at .venv)
 # Tests REQUIRE config.settings.test — it uses SQLite. The manage.py default is
 # config.settings.dev, which points at a local Postgres that usually isn't running.
@@ -210,6 +331,7 @@ python manage.py runserver
 python manage.py seed_bancharampur          # create-only; --force-update to overwrite
 python manage.py backfill_settlements       # settlements for pre-ledger delivered orders
 python manage.py prune_orphan_logins        # dry run; --apply to actually delete
+python manage.py release_login <user|email> # dry run; --apply frees the name for reuse
 
 # frontend (from frontend/ecommerce_inventory)
 npm start        # CRA dev server

@@ -381,7 +381,22 @@ class Users(AbstractUser):
         if not is_hashed:
             self.password = make_password(self.password)
 
+        is_insert = self.id is None
         super().save(*args, **kwargs)
+
+        # A top-level account is its own domain owner. The block above can only
+        # self-heal an UPDATE — on an INSERT `self.id` is still None up there, so
+        # every account ever created in one shot (`create_user()`, which is how the
+        # admin panel onboards riders and restaurant vendors) was left with
+        # domain_user_id NULL. That is not cosmetic: PermissionMiddleware and
+        # SidebarController both dereference `user.domain_user_id.id`, so a NULL is
+        # an AttributeError — a blank 500 on /api/getMenus/ and every gated /api/
+        # route, forever, for that account. Close the gap right after the insert.
+        if is_insert and self.domain_user_id_id is None:
+            self.domain_user_id_id = self.id
+            # Bypass this method (and the hashing above) so the second write can
+            # never re-hash an already-hashed password.
+            super().save(update_fields=["domain_user_id"])
 
 
 class UserShippingAddress(models.Model):

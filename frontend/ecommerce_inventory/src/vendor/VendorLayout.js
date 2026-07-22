@@ -1,9 +1,10 @@
 import React from "react";
-import { AppBar, Toolbar, Typography, Tabs, Tab, Box, IconButton, Container } from "@mui/material";
+import { AppBar, Toolbar, Typography, Tabs, Tab, Box, IconButton, Container, useTheme } from "@mui/material";
 import { Logout } from "@mui/icons-material";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useDispatch } from "react-redux";
 import { logout } from "../redux/reducer/IsLoggedInReducer";
+import BrandLogo from "../components/BrandLogo";
 
 // Slim, mobile-first layout for the vendor (restaurant-owner) dashboard.
 // Deliberately lighter than the admin `Layout` (no theme switcher, no
@@ -16,6 +17,7 @@ const NAV_ITEMS = [
 ];
 
 const VendorLayout = () => {
+    const theme = useTheme();
     const location = useLocation();
     const navigate = useNavigate();
     const dispatch = useDispatch();
@@ -33,7 +35,15 @@ const VendorLayout = () => {
     return (
         <Box sx={{ minHeight: "100vh", display: "flex", flexDirection: "column", bgcolor: "background.default" }}>
             <AppBar position="sticky" color="default" elevation={1}>
-                <Toolbar>
+                <Toolbar sx={{ gap: 1.5 }}>
+                    {/* Vendors are restaurant owners — a food-module surface, so it
+                        carries the Fabrything Food mark rather than the store one. */}
+                    <BrandLogo
+                        brand="food"
+                        variant="horizontal"
+                        mode={theme.palette.mode === "dark" ? "dark" : "light"}
+                        height={26}
+                    />
                     <Typography variant="h6" sx={{ flexGrow: 1, fontWeight: 700 }}>
                         Vendor Dashboard
                     </Typography>

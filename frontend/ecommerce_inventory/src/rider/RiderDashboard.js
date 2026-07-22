@@ -11,6 +11,7 @@ import RiderHeader from "./RiderHeader";
 import EarningsPanel from "./EarningsPanel";
 import DeliveryCard from "./DeliveryCard";
 import useRiderHeartbeat from "./useRiderHeartbeat";
+import BrandLogo from "../components/BrandLogo";
 
 export default function RiderDashboard() {
     const { callApi } = useApi();
@@ -44,22 +45,28 @@ export default function RiderDashboard() {
         const res = await callApi({ url: `food/rider/orders/${id}/status/`, method: "PATCH", body: { status } });
         if (res?.status === 200) { toast.success("Updated"); load(); }
     };
-    const logout = () => { localStorage.removeItem("token"); navigate("/auth/login"); };
+    // Both of these used to point at "/auth/login" — the customer page, which
+    // redirects to "/" after a successful login. That is the bounce riders hit:
+    // dashboard fails to load → "Log in" → storefront homepage → never /rider.
+    const logout = () => { localStorage.removeItem("token"); navigate("/rider/login"); };
 
     if (loading) return <Box sx={{ textAlign: "center", py: 10 }}><CircularProgress /></Box>;
     if (!me) return (
         <Box sx={{ textAlign: "center", py: 10 }}>
             <Typography variant="h6">Rider access required</Typography>
             <Typography color="text.secondary" sx={{ mb: 2 }}>Log in with your rider account.</Typography>
-            <Button variant="contained" onClick={() => navigate("/auth/login")}>Log in</Button>
+            <Button variant="contained" onClick={() => navigate("/rider/login")}>Log in</Button>
         </Box>
     );
 
     return (
         <Box sx={{ minHeight: "100vh", bgcolor: "#FDF8F3" }}>
             <AppBar position="sticky" color="default" elevation={1} sx={{ bgcolor: "#fff" }}>
-                <Toolbar>
-                    <TwoWheelerIcon sx={{ mr: 1, color: "#E8452B" }} />
+                <Toolbar sx={{ gap: 1 }}>
+                    {/* Food-module surface, and the bar is pinned white, so the
+                        light-canvas Food mark is correct regardless of OS theme. */}
+                    <BrandLogo brand="food" variant="horizontal" mode="light" height={24} />
+                    <TwoWheelerIcon sx={{ color: "#E8452B" }} />
                     <Typography variant="h6" sx={{ flexGrow: 1, fontWeight: 800 }}>Rider</Typography>
                     <IconButton onClick={logout}><LogoutIcon /></IconButton>
                 </Toolbar>

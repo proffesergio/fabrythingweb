@@ -8,6 +8,7 @@ import { useNavigate } from 'react-router-dom';
 import useApi from '../hooks/APIHandler';
 import roleHome from '../utils/roleHome';
 import { getUser } from '../utils/Helper';
+import BrandLogo from '../components/BrandLogo';
 import { toast } from 'react-toastify';
 import { useDispatch } from 'react-redux';
 import { login } from '../redux/reducer/IsLoggedInReducer';
@@ -117,16 +118,9 @@ const doLogin = async(e) => {
           <Card sx={{ maxWidth: 400, width: '100%' }}>
             <CardContent>
               <Box sx={{ display: 'flex', justifyContent: 'center', mb: 2 }}>
-                <Typography variant="h4" sx={{
-                  fontWeight: 900,
-                  letterSpacing: '0.12em',
-                  background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent',
-                  backgroundClip: 'text',
-                }}>
-                  FABRYTHING
-                </Typography>
+                {/* Admin login is the shell's front door, so it stays Fabrything-
+                    branded even though the panel also administers the food module. */}
+                <BrandLogo brand="fabrything" variant="stacked" mode="light" height={88} />
               </Box>
               <Typography variant="subtitle2" align="center" color="text.secondary" gutterBottom>
                 Admin Panel

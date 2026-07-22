@@ -10,11 +10,14 @@ from django.db.models import Q
 #   - the whole storefront (it enforces its own auth via DRF permission_classes)
 #   - the public food-delivery read API (restaurants/zones; AllowAny via DRF)
 #   - login / signup (you cannot present a token before you have logged in)
+#   - the deploy health check (it must answer even when the DB is unreachable,
+#     which is precisely when you most need it)
 PUBLIC_API_PREFIXES = (
     '/api/store/',
     '/api/food/',
     '/api/auth/login',
     '/api/auth/signup',
+    '/api/health/',
 )
 
 
@@ -45,8 +48,13 @@ class PermissionMiddleware:
 
         response = self.get_response(request)
 
-        # Skip Permission Logic for Super Admin and Top Domain Level User
-        if user.role == "Super Admin" or user.domain_user_id.id == user.id:
+        # Skip Permission Logic for Super Admin and Top Domain Level User.
+        # `domain_user_id` is nullable and was NULL on every account created before
+        # accounts migration 0003 backfilled it — dereferencing `.id` on that turned
+        # a routine request into a blank 500. Compare the raw FK column instead: a
+        # NULL simply means "not a top-level account" and falls through to the normal
+        # module-permission check below.
+        if user.role == "Super Admin" or user.domain_user_id_id == user.id:
             return response
 
         module = find_matching_module(current_url)

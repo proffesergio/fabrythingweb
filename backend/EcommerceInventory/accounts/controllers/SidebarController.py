@@ -17,8 +17,13 @@ class ModuleView(generics.CreateAPIView):
 
     def get(self,request):
         permission_module_ids=[]
+        # Compare the raw FK column, not `domain_user_id.id`: the field is nullable
+        # and every account created before accounts migration 0003 has it NULL, which
+        # made this line an AttributeError — a blank 500 on /api/getMenus/ that broke
+        # the whole admin shell for rider and vendor logins.
+        is_top_level = request.user.domain_user_id_id == request.user.id
         #Return all Modules for Super Admin and Top Domain Level User
-        if request.user.role=='Super Admin' or request.user.domain_user_id.id==request.user.id:
+        if request.user.role=='Super Admin' or is_top_level:
             menus=Modules.objects.filter(is_menu=True,parent_id=None,is_active=True).order_by('display_order')
         else:
             permission_module_ids=UserPermissions.objects.filter(user=request.user.id,is_permission=True).values_list('module_id',flat=True)
@@ -30,7 +35,7 @@ class ModuleView(generics.CreateAPIView):
         cleaned_menus=[]
         for menu in serialized_menus:
             menu['fields']['id']=menu['pk']
-            if request.user.role=='Super Admin' or request.user.domain_user_id.id==request.user.id:
+            if request.user.role=="Super Admin" or is_top_level:
                 menu['fields']['submenus']=Modules.objects.filter(parent_id=menu['pk'],is_active=True,is_menu=True).order_by('display_order').values('id','module_name','module_icon','is_menu','is_active','parent_id','display_order','module_url','module_description')
             else:
                 menu['fields']['submenus']=Modules.objects.filter(parent_id=menu['pk'],is_active=True,is_menu=True).filter(id__in=permission_module_ids).order_by('display_order').values('id','module_name','module_icon','is_menu','is_active','parent_id','display_order','module_url','module_description')

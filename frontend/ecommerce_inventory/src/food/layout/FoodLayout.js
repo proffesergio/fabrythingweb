@@ -15,6 +15,7 @@ import LocationPicker from '../components/LocationPicker';
 import FoodGalaxy from '../components/FoodGalaxy';
 import NotificationsBell from '../components/NotificationsBell';
 import { useFoodTheme } from '../context/FoodThemeContext';
+import BrandLogo from '../../components/BrandLogo';
 
 export default function FoodLayout() {
   const count = useSelector(selectFoodCount);
@@ -32,12 +33,14 @@ export default function FoodLayout() {
       <AppBar position="sticky" elevation={0} sx={{ zIndex: 2 }}>
         <Container maxWidth="lg">
           <Toolbar disableGutters sx={{ gap: { xs: 1, sm: 2 }, minHeight: 68 }}>
-            <Typography
-              variant="h5" component={Link} to="/food"
-              sx={{ textDecoration: 'none', whiteSpace: 'nowrap', color: 'text.primary', fontWeight: 800 }}
-            >
-              Fabrything<Box component="span" sx={{ color: 'primary.main' }}>·Food</Box>
-            </Typography>
+            <Box component={Link} to="/food" sx={{ display: 'flex', alignItems: 'center', flexShrink: 0 }}>
+              <BrandLogo
+                brand="food"
+                variant="horizontal"
+                mode={isDark ? 'dark' : 'light'}
+                height={{ xs: 24, sm: 28 }}
+              />
+            </Box>
 
             {loc.openPicker && (
               <Button

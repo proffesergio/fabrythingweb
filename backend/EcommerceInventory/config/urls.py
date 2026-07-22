@@ -17,7 +17,7 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import include, path, re_path
 
-from core.views import index,FileUploadViewInS3
+from core.views import index,FileUploadViewInS3,HealthView
 from django.conf import settings
 from accounts.controllers.DynamicFormController import DynamicFormController
 from accounts.controllers.SuperAdminDynamicFormController import SuperAdminDynamicFormController
@@ -36,6 +36,9 @@ urlpatterns = [
     path('api/products/',include('catalog.urls')),
     path('api/inventory/',include('inventory.urls')),
     path('api/orders/',include('purchasing.urls')),
+    # Public deploy check: reports whether the DB schema matches the shipped code.
+    # See core.views.HealthView — a lagging schema is otherwise a blank 500.
+    path('api/health/',HealthView.as_view(),name='health'),
     path('api/uploads/',FileUploadViewInS3.as_view(),name='fileupload'),
     path('api/store/',include('storefront.urls')),
     path('api/food/',include('food.urls')),

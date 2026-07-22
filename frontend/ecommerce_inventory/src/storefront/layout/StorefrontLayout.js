@@ -19,6 +19,7 @@ import { isAuthenticated } from '../../utils/Helper';
 import useApi from '../../hooks/APIHandler';
 import MegaMenu, { MobileCategoryMenu } from '../components/MegaMenu';
 import LiveSearch from '../components/LiveSearch';
+import BrandLogo from '../../components/BrandLogo';
 
 // Animated, highlighted "Food" nav entry — points at the Phase-1 `/food`
 // placeholder. Transform-only animation (scale pulse) so it stays cheap on
@@ -225,26 +226,15 @@ export default function StorefrontLayout({ toggleDarkMode, darkMode }) {
                                         <MenuIcon />
                                     </IconButton>
                                 )}
-                                <Typography
-                                    variant="h6"
-                                    component={Link}
-                                    to="/"
-                                    sx={{
-                                        textDecoration: 'none',
-                                        fontWeight: 900,
-                                        letterSpacing: '-0.04em',
-                                        fontSize: scrolled ? { xs: '1.05rem', md: '1.2rem' } : { xs: '1.1rem', md: '1.4rem' },
-                                        transition: 'font-size 0.25s ease',
-                                        background: darkMode
-                                            ? 'linear-gradient(135deg,#A5B4FC,#E879F9)'
-                                            : 'linear-gradient(135deg,#4F46E5,#E85D4A)',
-                                        WebkitBackgroundClip: 'text',
-                                        WebkitTextFillColor: 'transparent',
-                                        backgroundClip: 'text',
-                                    }}
-                                >
-                                    FABRYTHING
-                                </Typography>
+                                <Box component={Link} to="/" sx={{ display: 'flex', alignItems: 'center' }}>
+                                    <BrandLogo
+                                        brand="fabrything"
+                                        variant="horizontal"
+                                        mode={darkMode ? 'dark' : 'light'}
+                                        height={scrolled ? { xs: 20, md: 24 } : { xs: 22, md: 28 }}
+                                        sx={{ transition: 'height 0.25s ease' }}
+                                    />
+                                </Box>
                             </Box>
 
                             {/* Center: live search (desktop) grows to fill */}
@@ -305,20 +295,12 @@ export default function StorefrontLayout({ toggleDarkMode, darkMode }) {
                     <Drawer anchor="left" open={mobileMenuOpen} onClose={() => setMobileMenuOpen(false)}>
                         <Box sx={{ width: 280, pt: 2 }}>
                             <Box sx={{ px: 2, pb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                <Typography
-                                    variant="h6"
-                                    sx={{
-                                        fontWeight: 900, letterSpacing: '-0.04em',
-                                        background: darkMode
-                                            ? 'linear-gradient(135deg,#A5B4FC,#E879F9)'
-                                            : 'linear-gradient(135deg,#4F46E5,#E85D4A)',
-                                        WebkitBackgroundClip: 'text',
-                                        WebkitTextFillColor: 'transparent',
-                                        backgroundClip: 'text',
-                                    }}
-                                >
-                                    FABRYTHING
-                                </Typography>
+                                <BrandLogo
+                                    brand="fabrything"
+                                    variant="horizontal"
+                                    mode={darkMode ? 'dark' : 'light'}
+                                    height={24}
+                                />
                                 <IconButton size="small" onClick={toggleDarkMode}>
                                     {darkMode ? <LightMode fontSize="small" /> : <DarkMode fontSize="small" />}
                                 </IconButton>
@@ -368,18 +350,15 @@ export default function StorefrontLayout({ toggleDarkMode, darkMode }) {
                         <Container maxWidth="lg">
                             <Grid container spacing={4}>
                                 <Grid item xs={12} md={4}>
-                                    <Typography
-                                        variant="h6"
-                                        sx={{
-                                            fontWeight: 900, letterSpacing: '-0.04em', mb: 1,
-                                            background: 'linear-gradient(135deg,#A5B4FC,#E879F9)',
-                                            WebkitBackgroundClip: 'text',
-                                            WebkitTextFillColor: 'transparent',
-                                            backgroundClip: 'text',
-                                        }}
-                                    >
-                                        FABRYTHING
-                                    </Typography>
+                                    {/* The footer canvas is dark in both themes, so the logo is
+                                        pinned to the dark artwork rather than following darkMode. */}
+                                    <BrandLogo
+                                        brand="fabrything"
+                                        variant="horizontal"
+                                        mode="dark"
+                                        height={30}
+                                        sx={{ mb: 2 }}
+                                    />
                                     <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.6)', mb: 2 }}>
                                         Bangladesh's destination for authentic branded fashion, footwear, watches, home appliances & beauty — with Cash on Delivery nationwide.
                                     </Typography>

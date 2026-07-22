@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import {
-    Box, Container, Card, Typography, TextField, Button, Tab, Tabs, Alert,
+    Box, Container, Card, TextField, Button, Tab, Tabs, Alert,
     CircularProgress,
 } from '@mui/material';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
@@ -9,6 +9,8 @@ import { login } from '../../redux/reducer/IsLoggedInReducer';
 import { syncCartOnLogin } from '../../redux/reducer/cartSlice';
 import useApi from '../../hooks/APIHandler';
 import { getUser } from '../../utils/Helper';
+import roleHome from '../../utils/roleHome';
+import BrandLogo from '../../components/BrandLogo';
 
 export default function CustomerAuth() {
     const [tab, setTab] = useState(0);
@@ -32,12 +34,17 @@ export default function CustomerAuth() {
             localStorage.setItem('token', res.data.access);
             dispatch(login());
             await dispatch(syncCartOnLogin());  // merge guest cart into the account
-            // Restaurant-role accounts (vendors) land on their dashboard rather than
-            // wherever the customer flow was headed — the role claim is embedded in
-            // the JWT at login time (storefront/views.py issue_tokens), so this is
-            // just a decode, no extra request.
-            const user = getUser();
-            navigate(user?.role === 'Restaurant' ? '/vendor' : redirect);
+            // Staff-side accounts (vendors, riders) land on their own dashboard
+            // rather than wherever the customer flow was headed — the role claim is
+            // embedded in the JWT at login time (storefront/views.py issue_tokens),
+            // so this is just a decode, no extra request.
+            //
+            // This used to hardcode the Restaurant case only, so a rider signing in
+            // here fell through to `redirect`, which defaults to "/" — the reported
+            // "login sends me to fabrything.com" bounce. Route through roleHome so
+            // every non-customer role is covered by one table.
+            const role = getUser()?.role;
+            navigate(role && role !== 'Customer' ? roleHome(role) : redirect);
         }
     };
 
@@ -59,10 +66,11 @@ export default function CustomerAuth() {
 
     return (
         <Container maxWidth="sm" sx={{ py: 6 }}>
-            <Box sx={{ textAlign: 'center', mb: 4 }}>
-                <Typography variant="h4" fontWeight={800} component={Link} to="/" sx={{ textDecoration: 'none', color: 'text.primary' }}>
-                    FABRYTHING
-                </Typography>
+            <Box sx={{ display: 'flex', justifyContent: 'center', mb: 4 }}>
+                <Box component={Link} to="/" sx={{ display: 'inline-flex' }}>
+                    {/* StorefrontAuthTheme renders this page on a light canvas. */}
+                    <BrandLogo brand="fabrything" variant="stacked" mode="light" height={96} />
+                </Box>
             </Box>
 
             <Card sx={{ p: 4 }}>

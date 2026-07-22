@@ -72,10 +72,6 @@ export const orangeDarkTheme = createTheme({
       },
     },
   },
-  logo:{
-    rectangle:'/logo_light.png',
-    square:'/logo_square_light.png',
-  },
 });
 
 export const orangeLightTheme = createTheme({
@@ -149,10 +145,6 @@ export const orangeLightTheme = createTheme({
         },
       },
     },
-  },
-  logo:{
-    rectangle:'/logo_dark.png',
-    square:'/logo_square_dark.png',
   },
 });
 
@@ -231,10 +223,6 @@ export const redDarkTheme = createTheme({
       },
     },
   },
-  logo:{
-    rectangle:'/logo_light.png',
-    square:'/logo_square_light.png',
-  },
 });
 
 export const redLightTheme = createTheme({
@@ -311,10 +299,6 @@ export const redLightTheme = createTheme({
       },
     },
   },
-  logo:{
-    rectangle:'/logo_dark.png',
-    square:'/logo_square_dark.png',
-  },
 
 });
 export const greenDarkTheme = createTheme({
@@ -388,10 +372,6 @@ export const greenDarkTheme = createTheme({
         },
       },
     },
-  },
-  logo:{
-    rectangle:'/logo_light.png',
-    square:'/logo_square_light.png',
   },
 });
 export const greenLightTheme = createTheme({
@@ -468,10 +448,6 @@ export const greenLightTheme = createTheme({
       },
     },
   },
-  logo:{
-    rectangle:'/logo_dark.png',
-    square:'/logo_square_dark.png',
-  },
 
 });
 
@@ -546,10 +522,6 @@ export const blueDarkTheme = createTheme({
         },
       },
     },
-  },
-  logo:{
-    rectangle:'/logo_light.png',
-    square:'/logo_square_light.png',
   },
 
 });
@@ -628,10 +600,6 @@ export const blueLightTheme = createTheme({
       },
     },
   },
-  logo:{
-    rectangle:'/logo_dark.png',
-    square:'/logo_square_dark.png',
-  },
 });
 
 
@@ -700,10 +668,6 @@ export const customTheme = createTheme({
         },
       },
     },
-  },
-  logo:{
-    rectangle:'/logo_dark.png',
-    square:'/logo_square_dark.png',
   },
 });
 export const lightTheme = createTheme({
@@ -801,10 +765,6 @@ export const lightTheme = createTheme({
       },
     },
   },
-  logo:{
-    rectangle:'/logo_dark.png',
-    square:'/logo_square_dark.png',
-  },
 
 });
 
@@ -877,10 +837,6 @@ export const darkTheme = createTheme({
       },
     },
   },
-  logo:{
-    rectangle:'/logo_light.png',
-    square:'/logo_square_light.png',
-  },
 });
 export const basicTheme = createTheme({
   typography: {
@@ -912,10 +868,6 @@ export const basicTheme = createTheme({
     text: {
       primary: 'rgba(255, 255, 255, 1)',
     },
-  },
-  logo:{
-    rectangle:'/logo_light.png',
-    square:'/logo_square_light.png',
   },
   components: {
     MuiButton: {

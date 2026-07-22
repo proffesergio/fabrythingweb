@@ -33,6 +33,7 @@ import ManageCoupons from './pages/food/ManageCoupons';
 import ManageRiders from './pages/food/ManageRiders';
 import FoodPayments from './pages/food/FoodPayments';
 import RiderDashboard from './rider/RiderDashboard';
+import RiderLogin from './rider/RiderLogin';
 
 // Storefront imports
 import { ThemeProvider } from '@mui/material/styles';
@@ -176,6 +177,10 @@ function App() {
       },
 
       // ── Rider dashboard (role: Rider) ──
+      // Riders get their own login route. Routing them through the customer page
+      // at /auth/login sent them to the storefront homepage after signing in,
+      // because that page defaults its post-login redirect to "/".
+      {path:"/rider/login",element:<RiderLogin/>},
       {path:"/rider",element:<ProtectedRoute element={<RiderDashboard/>}/>},
 
       // ── Admin Routes ──

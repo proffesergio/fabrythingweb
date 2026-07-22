@@ -62,10 +62,10 @@ class ProductListView(generics.ListAPIView):
 
     def get_queryset(self):
         # Super Admin sees all products; others see only their domain's products
-        if self.request.user.role == 'Super Admin' or self.request.user.domain_user_id.id == self.request.user.id:
+        if self.request.user.role == 'Super Admin' or self.request.user.domain_user_id_id == self.request.user.id:
             queryset = Products.objects.all()
         else:
-            queryset = Products.objects.filter(domain_user_id=self.request.user.domain_user_id.id)
+            queryset = Products.objects.filter(domain_user_id=self.request.user.domain_user_id_id)
         return queryset
     
     @CommonListAPIMixin.common_list_decorator(ProductSerializer)
@@ -80,7 +80,7 @@ class ProductReviewListView(generics.ListAPIView):
     pagination_class = CustomPageNumberPagination
 
     def get_queryset(self):
-        queryset=ProductReviews.objects.filter(domain_user_id=self.request.user.domain_user_id.id,product_id=self.kwargs['product_id'])
+        queryset=ProductReviews.objects.filter(domain_user_id=self.request.user.domain_user_id_id,product_id=self.kwargs['product_id'])
         return queryset
     
     @CommonListAPIMixin.common_list_decorator(ProductReviewSerializer)
@@ -94,7 +94,7 @@ class ProductQuestionsListView(generics.ListAPIView):
     pagination_class = CustomPageNumberPagination
 
     def get_queryset(self):
-        queryset=ProductQuestions.objects.filter(domain_user_id=self.request.user.domain_user_id.id,product_id=self.kwargs['product_id'])
+        queryset=ProductQuestions.objects.filter(domain_user_id=self.request.user.domain_user_id_id,product_id=self.kwargs['product_id'])
         return queryset
     
     @CommonListAPIMixin.common_list_decorator(ProductQuestionSerializer)
@@ -132,7 +132,7 @@ class UpdateProductReviewView(generics.UpdateAPIView):
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
-        return ProductReviews.objects.filter(domain_user_id=self.request.user.domain_user_id.id,product_id=self.kwargs['product_id'],id=self.kwargs['pk'])
+        return ProductReviews.objects.filter(domain_user_id=self.request.user.domain_user_id_id,product_id=self.kwargs['product_id'],id=self.kwargs['pk'])
 
     def perform_update(self,serializer):
         serializer.save()
@@ -144,7 +144,7 @@ class UpdateProductQuestionsView(generics.UpdateAPIView):
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
-        return ProductQuestions.objects.filter(domain_user_id=self.request.user.domain_user_id.id,product_id=self.kwargs['product_id'],id=self.kwargs['pk'])
+        return ProductQuestions.objects.filter(domain_user_id=self.request.user.domain_user_id_id,product_id=self.kwargs['product_id'],id=self.kwargs['pk'])
 
     def perform_update(self,serializer):
         if self.request.data.get('answer'):

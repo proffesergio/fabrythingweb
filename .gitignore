@@ -52,3 +52,4 @@ graphify-out/
 backend/backenv/
 # Added by code-review-graph
 .code-review-graph/
+.neon
