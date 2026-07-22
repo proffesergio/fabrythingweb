@@ -99,6 +99,30 @@ class Restaurant(TimeStamped):
                    for h in self.hours.all()
                    if h.weekday == weekday and not h.is_closed)
 
+    def next_opening(self, now):
+        """When this restaurant next opens: ``{weekday, open_time, days_ahead}``.
+
+        None means "no answer to give" — the master switch is off, or no hours
+        have been configured at all. The menu tells the customer *when* to come
+        back rather than a bare "Closed", so this walks forward up to 7 days
+        from ``now``. Iterates ``hours.all()`` for the same prefetch reason as
+        is_currently_open().
+        """
+        if not self.is_open:
+            return None
+        rows = [h for h in self.hours.all() if not h.is_closed]
+        if not rows:
+            return None
+        t, today = now.time(), now.weekday()
+        for days_ahead in range(8):
+            weekday = (today + days_ahead) % 7
+            for h in sorted((h for h in rows if h.weekday == weekday), key=lambda h: h.open_time):
+                # Today only counts if the doors have not opened yet; a slot
+                # already in progress means is_currently_open() is True anyway.
+                if days_ahead > 0 or h.open_time > t:
+                    return {"weekday": weekday, "open_time": h.open_time, "days_ahead": days_ahead}
+        return None
+
     def __str__(self):
         return self.name
 

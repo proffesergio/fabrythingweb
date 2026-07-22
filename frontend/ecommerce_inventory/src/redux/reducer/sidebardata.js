@@ -2,16 +2,22 @@ import {createSlice,createAsyncThunk} from '@reduxjs/toolkit';
 import axios from 'axios';
 import config from '../../utils/config';
 import { cacheKey, readCache, writeCache } from '../../hooks/apiCache';
+import { getToken } from '../../utils/authToken';
 
 const MENU_CACHE_KEY = cacheKey('getMenus/');
 
 // Seed the sidebar from the last cached menus so the admin nav paints instantly
 // on reload instead of waiting for the (possibly sleeping) backend. Only trust the
 // cache when a token is present — menus are per-authenticated-user.
-const cachedMenus = () => (localStorage.getItem('token') ? (readCache(MENU_CACHE_KEY)?.data || []) : []);
+const cachedMenus = () => (getToken() ? (readCache(MENU_CACHE_KEY)?.data || []) : []);
 
 export const fetchSidebar=createAsyncThunk('data/fetchSidebar',async()=>{
-    const response=await axios.get(`${config.API_URL}getMenus/`,{headers:{Authorization:`Bearer ${localStorage.getItem('token')}`}});
+    // The sidebar is admin-only, but this thunk runs at app start for *every*
+    // visitor — including an incognito first-timer on the storefront, whose
+    // console then showed `GET getMenus/ 401`. No usable session, no request.
+    const token=getToken();
+    if(!token) return [];
+    const response=await axios.get(`${config.API_URL}getMenus/`,{headers:{Authorization:`Bearer ${token}`}});
     const sidebarData=response.data.data;
     writeCache(MENU_CACHE_KEY, sidebarData);
     const setActiveAndExpanded=(item)=>{

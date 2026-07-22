@@ -2,12 +2,16 @@ import { useEffect, useState, useCallback } from 'react';
 import { IconButton, Badge, Menu, Box, Typography, Divider } from '@mui/material';
 import NotificationsNoneRoundedIcon from '@mui/icons-material/NotificationsNoneRounded';
 import useApi from '../../hooks/APIHandler';
+import { isSignedIn } from '../../utils/authToken';
 
 export default function NotificationsBell() {
   const { callApi } = useApi();
   const [data, setData] = useState({ unread: 0, items: [] });
   const [anchor, setAnchor] = useState(null);
-  const loggedIn = !!localStorage.getItem('token');
+  // isSignedIn, not a raw localStorage read: an expired token used to keep this
+  // bell mounted and polling `food/notifications/` every 30s, producing a 401
+  // in the console twice a minute for a visitor who was not really signed in.
+  const loggedIn = isSignedIn();
 
   const load = useCallback(async () => {
     const r = await callApi({ url: 'food/notifications/', method: 'GET', silent: true });

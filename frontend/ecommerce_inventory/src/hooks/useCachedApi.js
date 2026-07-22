@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import axios from "axios";
 import config from "../utils/config";
 import { cacheKey, readCache, writeCache } from "./apiCache";
+import { getToken } from "../utils/authToken";
 
 /**
  * Stale-while-revalidate GET hook.
@@ -29,7 +30,7 @@ export default function useCachedApi(url, { params = {}, enabled = true } = {}) 
         setRevalidating(true);
         try {
             const headers = {};
-            const token = localStorage.getItem("token");
+            const token = getToken();   // never attach an expired one
             if (token) headers.Authorization = `Bearer ${token}`;
             const res = await axios.get(config.API_URL + url, { params: paramsRef.current, headers });
             const payload = res?.data?.data ?? res?.data;

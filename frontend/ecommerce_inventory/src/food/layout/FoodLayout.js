@@ -14,6 +14,8 @@ import { useFoodLocation } from '../context/FoodLocationContext';
 import LocationPicker from '../components/LocationPicker';
 import FoodGalaxy from '../components/FoodGalaxy';
 import NotificationsBell from '../components/NotificationsBell';
+import NoticeMarquee from '../components/NoticeMarquee';
+import FoodBottomNav from '../components/FoodBottomNav';
 import { useFoodTheme } from '../context/FoodThemeContext';
 import BrandLogo from '../../components/BrandLogo';
 
@@ -28,7 +30,16 @@ export default function FoodLayout() {
   const onCartPages = pathname.includes('/food/cart') || pathname.includes('/food/checkout');
 
   return (
-    <Box sx={{ minHeight: '100vh', bgcolor: 'transparent', position: 'relative', pb: { xs: count && !onCartPages ? 10 : 0, sm: 0 } }}>
+    <Box sx={{
+      minHeight: '100vh', bgcolor: 'transparent', position: 'relative',
+      // Nothing may sit under the fixed furniture at the bottom of a phone:
+      // the tab bar (~60px) always, plus the cart bar (~64px) when it is up.
+      // md and above has neither.
+      pb: { xs: count && !onCartPages ? 17 : 9, md: 0 },
+      // A single overflowing child used to make the whole page pan sideways,
+      // which on a phone reads as a broken app rather than a wide element.
+      overflowX: 'hidden',
+    }}>
       <FoodGalaxy />
       <AppBar position="sticky" elevation={0} sx={{ zIndex: 2 }}>
         <Container maxWidth="lg">
@@ -75,16 +86,13 @@ export default function FoodLayout() {
             <Button
               size="small" color="inherit" startIcon={<RestaurantMenuRoundedIcon />}
               component={Link} to="/food/restaurants"
-              // Icon-only on xs. The area button now refuses to shrink, so the
-              // slack has to come from somewhere — this label is the cheapest to
-              // drop, since the icon still reads as "restaurants".
-              sx={{ color: pathname === '/food/restaurants' ? 'primary.main' : 'text.secondary',
-                    fontWeight: 700, minWidth: 0,
-                    '& .MuiButton-startIcon': { mr: { xs: 0, sm: 1 }, ml: { xs: 0, sm: -0.5 } } }}
+              // Hidden on phones: FoodBottomNav owns navigation there, and this
+              // was one of seven controls competing for a 360px toolbar.
+              sx={{ display: { xs: 'none', md: 'inline-flex' },
+                    color: pathname === '/food/restaurants' ? 'primary.main' : 'text.secondary',
+                    fontWeight: 700, minWidth: 0 }}
             >
-              <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>
-                {loc.lang === 'bn' ? 'রেস্তোরাঁ দেখুন' : 'Browse Restaurants'}
-              </Box>
+              {loc.lang === 'bn' ? 'রেস্তোরাঁ দেখুন' : 'Browse Restaurants'}
             </Button>
 
             <Tooltip title={isDark ? 'Switch to light' : 'Switch to dark'}>
@@ -112,11 +120,16 @@ export default function FoodLayout() {
               Store
             </Button>
             <NotificationsBell />
-            <IconButton onClick={() => navigate('/food/cart')} sx={{ color: 'text.primary' }}>
+            {/* The bag lives in the tab bar on phones. */}
+            <IconButton onClick={() => navigate('/food/cart')}
+              sx={{ display: { xs: 'none', md: 'inline-flex' }, color: 'text.primary' }}>
               <Badge badgeContent={count} color="primary"><ShoppingBagOutlinedIcon /></Badge>
             </IconButton>
           </Toolbar>
         </Container>
+        {/* Inside the AppBar so it sticks with the header rather than scrolling
+            away — these notices apply to every page of the food module. */}
+        <NoticeMarquee />
       </AppBar>
 
       <Container maxWidth="lg" sx={{ py: { xs: 2.5, md: 3.5 }, position: 'relative', zIndex: 1 }}>
@@ -124,6 +137,7 @@ export default function FoodLayout() {
       </Container>
 
       <LocationPicker />
+      <FoodBottomNav />
 
 
       {/* Sticky cart bar — the food-app hallmark */}
@@ -133,7 +147,11 @@ export default function FoodLayout() {
             component={motion.div}
             initial={{ y: 90 }} animate={{ y: 0 }} exit={{ y: 90 }}
             transition={{ type: 'spring', stiffness: 320, damping: 30 }}
-            sx={{ position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: 1200, px: 2, pb: 'calc(env(safe-area-inset-bottom) + 12px)' }}
+            // Rides above the tab bar on phones, flush to the bottom on desktop
+            // where there is no tab bar to clear.
+            sx={{ position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: 1200, px: 2,
+                  pb: { xs: 'calc(env(safe-area-inset-bottom) + 72px)',
+                        md: 'calc(env(safe-area-inset-bottom) + 12px)' } }}
           >
             <Container maxWidth="sm" disableGutters>
               <Button

@@ -89,6 +89,9 @@ class RestaurantListSerializer(_LangMixin, serializers.ModelSerializer):
     # place_food_cod_order — which calls is_currently_open() — rejected the order
     # as closed. This is the field the UI must use.
     is_open_now = serializers.SerializerMethodField()
+    # When the doors next open, so a closed card/menu can say "Opens 10:00 AM"
+    # instead of a dead end. Null when there is nothing to promise.
+    next_open = serializers.SerializerMethodField()
     # Set by PublicRestaurantListView when the caller sends lat/lng — straight-line
     # km from the customer's pin, used to order the "Nearest to you" row. Null when
     # the restaurant has no pickup coordinates or the caller sent no position.
@@ -102,7 +105,7 @@ class RestaurantListSerializer(_LangMixin, serializers.ModelSerializer):
         model = Restaurant
         fields = ["id", "name", "name_bn", "display_name", "slug", "logo", "cover_image",
                   "cuisine_type", "base_delivery_fee", "avg_prep_minutes", "min_order_amount",
-                  "is_open", "is_open_now", "is_accepting_orders", "status",
+                  "is_open", "is_open_now", "next_open", "is_accepting_orders", "status",
                   "pickup_lat", "pickup_lng", "distance_km", "delivers_to_zone"]
 
     def get_display_name(self, obj):
@@ -111,6 +114,13 @@ class RestaurantListSerializer(_LangMixin, serializers.ModelSerializer):
     def get_is_open_now(self, obj):
         # obj.hours is prefetched by both public views, so this is 0 queries.
         return obj.is_currently_open(timezone.localtime())
+
+    def get_next_open(self, obj):
+        nxt = obj.next_opening(timezone.localtime())
+        if not nxt:
+            return None
+        return {"weekday": nxt["weekday"], "days_ahead": nxt["days_ahead"],
+                "open_time": nxt["open_time"].strftime("%H:%M")}
 
     def get_distance_km(self, obj):
         # Annotated in the view (a plain float attribute), not a DB field.
@@ -127,11 +137,20 @@ class RestaurantDetailSerializer(RestaurantListSerializer):
     # the delivery-area dropdown can never present an area the order endpoint will
     # then reject — that mismatch was the "Couldn't place order" 400.
     served_zone_ids = serializers.SerializerMethodField()
+    # The whole week, so a closed menu can show the schedule rather than only
+    # the next opening. `hours` is prefetched, so this adds no query.
+    opening_hours = serializers.SerializerMethodField()
 
     class Meta(RestaurantListSerializer.Meta):
         fields = RestaurantListSerializer.Meta.fields + ["description", "description_bn",
                  "address", "phone", "pickup_lat", "pickup_lng", "categories",
-                 "served_zone_ids"]
+                 "served_zone_ids", "opening_hours"]
+
+    def get_opening_hours(self, obj):
+        rows = sorted(obj.hours.all(), key=lambda h: (h.weekday, h.open_time))
+        return [{"weekday": h.weekday, "is_closed": h.is_closed,
+                 "open_time": h.open_time.strftime("%H:%M"),
+                 "close_time": h.close_time.strftime("%H:%M")} for h in rows]
 
     def get_served_zone_ids(self, obj):
         # null means "unconfigured — delivers everywhere", matching

@@ -123,3 +123,66 @@ class PublicApiTests(TestCase):
     def test_detail_404_for_unknown_slug(self):
         res = self.client.get("/api/food/restaurants/does-not-exist/")
         self.assertEqual(res.status_code, 404)
+
+
+class NextOpeningTests(TestCase):
+    """What a closed restaurant promises the customer.
+
+    A bare "Closed" is a dead end — the menu has to say when to come back, and
+    checkout rejects the order until then (services.place_food_cod_order calls
+    is_currently_open), so this is the field that keeps the two in agreement.
+    """
+
+    def setUp(self):
+        self.client = APIClient()
+        self.r = Restaurant.objects.create(name="R", slug="r", status=Restaurant.Status.ACTIVE)
+        self.today = timezone.localtime().weekday()
+
+    def _row(self):
+        rows = self.client.get("/api/food/restaurants/").json()["data"]["data"]
+        return next(x for x in rows if x["slug"] == "r")
+
+    def _hours(self, weekday, open_t, close_t, is_closed=False):
+        return RestaurantHours.objects.create(restaurant=self.r, weekday=weekday,
+                                              open_time=open_t, close_time=close_t,
+                                              is_closed=is_closed)
+
+    def test_no_hours_configured_promises_nothing(self):
+        self.assertIsNone(self._row()["next_open"])
+
+    def test_later_today_wins_over_tomorrow(self):
+        self._hours((self.today + 1) % 7, time(9, 0), time(12, 0))
+        self._hours(self.today, time(23, 58), time(23, 59))
+        nxt = self._row()["next_open"]
+        self.assertEqual(nxt["days_ahead"], 0)
+        self.assertEqual(nxt["open_time"], "23:58")
+
+    def test_a_slot_already_past_today_rolls_to_the_next_day(self):
+        # 00:00–00:01 has certainly passed by the time any test runs at a
+        # non-midnight hour; the guard below keeps that honest.
+        now = timezone.localtime()
+        if now.time() <= time(0, 1):
+            self.skipTest("clock is inside the fixture's window")
+        self._hours(self.today, time(0, 0), time(0, 1))
+        self._hours((self.today + 2) % 7, time(9, 0), time(12, 0))
+        nxt = self._row()["next_open"]
+        self.assertEqual(nxt["days_ahead"], 2)
+        self.assertEqual(nxt["weekday"], (self.today + 2) % 7)
+
+    def test_days_marked_closed_are_skipped(self):
+        self._hours((self.today + 1) % 7, time(9, 0), time(12, 0), is_closed=True)
+        self._hours((self.today + 3) % 7, time(9, 0), time(12, 0))
+        self.assertEqual(self._row()["next_open"]["days_ahead"], 3)
+
+    def test_master_switch_off_promises_nothing(self):
+        self._hours((self.today + 1) % 7, time(9, 0), time(12, 0))
+        Restaurant.objects.filter(pk=self.r.pk).update(is_open=False)
+        self.assertIsNone(self._row()["next_open"])
+
+    def test_detail_exposes_the_weekly_schedule(self):
+        self._hours(2, time(9, 0), time(12, 0))
+        self._hours(0, time(10, 30), time(22, 0))
+        hours = self.client.get("/api/food/restaurants/r/").json()["data"]["opening_hours"]
+        self.assertEqual([h["weekday"] for h in hours], [0, 2])   # sorted, not insertion order
+        self.assertEqual(hours[0]["open_time"], "10:30")
+        self.assertEqual(hours[0]["close_time"], "22:00")

@@ -1,6 +1,7 @@
 import { createSlice } from "@reduxjs/toolkit";
 import axios from "axios";
 import config from "../../utils/config";
+import { getToken } from "../../utils/authToken";
 
 const STORAGE_KEY = "fabrything_cart_v2";
 
@@ -80,7 +81,7 @@ export const selectCartTotal = (state) =>
  * server result. Failure is non-fatal — the local cart is kept.
  */
 export const syncCartOnLogin = () => async (dispatch, getState) => {
-    const token = localStorage.getItem("token");
+    const token = getToken();   // an expired one would 401 the merge
     if (!token) return;
     const localItems = getState().cart.items;
     try {

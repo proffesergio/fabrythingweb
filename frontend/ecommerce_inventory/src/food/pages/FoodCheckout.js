@@ -13,6 +13,7 @@ import LocalOfferRoundedIcon from '@mui/icons-material/LocalOfferRounded';
 import { motion } from 'framer-motion';
 import { toast } from 'react-toastify';
 import useApi from '../../hooks/APIHandler';
+import { isSignedIn } from '../../utils/authToken';
 import { useFoodLocation } from '../context/FoodLocationContext';
 import {
   selectFoodCart, selectFoodSubtotal, selectFoodRestaurant, selectFoodTip, clearFoodCart,
@@ -82,7 +83,9 @@ export default function FoodCheckout() {
   }, [servedIds]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
-    if (!localStorage.getItem('token')) return;
+    // Loyalty is per-account; an expired token made this 401 on every guest
+    // checkout. isSignedIn() also purges the dead token (utils/authToken.js).
+    if (!isSignedIn()) return;
     (async () => {
       const res = await callApi({ url: 'food/loyalty/', method: 'GET', silent: true });
       if (res?.status === 200) setPoints(res.data.data.points || 0);

@@ -4,6 +4,7 @@ import TwoWheelerRoundedIcon from '@mui/icons-material/TwoWheelerRounded';
 import PlaceRoundedIcon from '@mui/icons-material/PlaceRounded';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import { nextOpenText } from '../utils/hours';
 import { FOOD } from '../theme';
 
 const EMOJI = {
@@ -68,9 +69,14 @@ export default function RestaurantCard({ restaurant: r, lang }) {
             />
           )}
           <Chip
-            size="small" label={closed ? 'Closed' : 'Open now'}
+            size="small"
+            // A closed card says when to come back rather than just "Closed" —
+            // otherwise the customer's only option is to keep re-checking.
+            label={closed
+              ? (r.next_open ? nextOpenText(r.next_open, lang) : (lang === 'bn' ? 'বন্ধ' : 'Closed'))
+              : (lang === 'bn' ? 'এখন খোলা' : 'Open now')}
             color={closed ? 'default' : 'success'}
-            sx={{ position: 'absolute', top: 10, right: 10, fontWeight: 800,
+            sx={{ position: 'absolute', top: 10, right: 10, fontWeight: 800, maxWidth: 'calc(100% - 20px)',
                   bgcolor: closed ? 'rgba(36,24,18,0.72)' : undefined, color: closed ? '#fff' : undefined }}
           />
         </Box>

@@ -7,11 +7,13 @@ import {Provider} from 'react-redux';
 import store from './redux/store/store'
 import axios from 'axios';
 import config from './utils/config';
+import { getToken } from './utils/authToken';
 
-// Set default Authorization header
-axios.defaults.headers.common['Authorization'] = localStorage.getItem('token') 
-    ? `Bearer ${localStorage.getItem('token')}` 
-    : '';
+// Set default Authorization header. getToken() refuses to hand back an expired
+// token (and drops it), so a months-old session can't poison every request the
+// app makes — see utils/authToken.js.
+const bootToken = getToken();
+axios.defaults.headers.common['Authorization'] = bootToken ? `Bearer ${bootToken}` : '';
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(

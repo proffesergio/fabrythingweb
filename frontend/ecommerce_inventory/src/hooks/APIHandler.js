@@ -2,6 +2,7 @@ import {useState} from 'react';
 import axios from 'axios';
 import config from '../utils/config';
 import { toast } from 'react-toastify';
+import { getToken, clearToken, isTokenRejection } from '../utils/authToken';
 
 function useApi(){
     const [error,setError]=useState("");
@@ -15,12 +16,32 @@ function useApi(){
         let gUrl=config.API_URL+url;
         setLoading(true);
         let response=null;
-        header['Authorization']=localStorage.getItem('token')?`Bearer ${localStorage.getItem('token')}`:"";
+        // getToken() drops an already-expired token instead of attaching it —
+        // see utils/authToken.js for why a stale JWT broke *guest* checkout.
+        const token=getToken();
+        header['Authorization']=token?`Bearer ${token}`:"";
         try{
             response=await axios.request({params:params,url:gUrl,method:method,data:body,headers:header});
             console.log(`[API] ${method} ${gUrl} ->`, response?.status, response?.data);
         }
         catch(err){
+            // The server rejected the token itself (revoked, re-signed, or from
+            // an older deployment's SECRET_KEY — none of which the expiry check
+            // can see). Drop it and retry once as an anonymous caller: public
+            // endpoints then succeed, and authenticated ones fail the same way
+            // they would for a logged-out visitor instead of failing forever.
+            if(token && err.response?.status===401 && isTokenRejection(err.response?.data)){
+                clearToken();
+                try{
+                    response=await axios.request({params:params,url:gUrl,method:method,data:body,
+                                                  headers:{...header,Authorization:""}});
+                    console.log(`[API] ${method} ${gUrl} (retried anonymously) ->`, response?.status);
+                    setLoading(false);
+                    return response;
+                }catch(retryErr){
+                    err=retryErr;
+                }
+            }
             console.log(`[API ERROR] ${method} ${gUrl} ->`, err.message);
             console.log('[API ERROR details]:', err.response?.data || err.request);
             if(!silent){
