@@ -1,9 +1,12 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
-import { Box, Typography, Card, Divider, Stack, TextField, Button, CircularProgress } from '@mui/material';
+import { Box, Typography, Card, Divider, Stack, TextField, Button, CircularProgress, Avatar } from '@mui/material';
 import ReceiptLongRoundedIcon from '@mui/icons-material/ReceiptLongRounded';
+import CallRoundedIcon from '@mui/icons-material/CallRounded';
+import TwoWheelerRoundedIcon from '@mui/icons-material/TwoWheelerRounded';
 import { motion } from 'framer-motion';
 import useApi from '../../hooks/APIHandler';
+import LiveTrackMap from '../components/LiveTrackMap';
 import { FOOD } from '../theme';
 
 const STEPS = ['PLACED', 'CONFIRMED', 'PREPARING', 'OUT_FOR_DELIVERY', 'DELIVERED'];
@@ -49,6 +52,67 @@ function DeliveryTrack({ activeStep }) {
         ))}
       </Stack>
     </Box>
+  );
+}
+
+// How long after the last heartbeat we still call the rider's pin "live". The
+// dashboard beats every ~20s, so a minute of silence means they've lost signal
+// or closed the app — better to say so than to show a pin frozen in the past.
+const PRESENCE_WINDOW_MS = 60 * 1000;
+
+function RiderCard({ order }) {
+  const enRoute = order.status === 'OUT_FOR_DELIVERY';
+  // The server only sends the pin while OUT_FOR_DELIVERY (LIVE_TRACKING_STATUSES
+  // in serializers_orders.py); contact details arrive as soon as one is assigned.
+  const hasPin = order.rider_lat != null && order.rider_lng != null;
+  const lastSeen = order.rider_last_seen_at ? new Date(order.rider_last_seen_at) : null;
+  const stale = !lastSeen || Date.now() - lastSeen.getTime() > PRESENCE_WINDOW_MS;
+
+  return (
+    <Card sx={{ p: 2.5, mb: 2.5 }}>
+      <Stack direction="row" alignItems="center" spacing={1.5}>
+        <Avatar sx={{ bgcolor: 'primary.main', width: 44, height: 44 }}>
+          <TwoWheelerRoundedIcon />
+        </Avatar>
+        <Box sx={{ minWidth: 0, flexGrow: 1 }}>
+          <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+            {enRoute ? 'Your rider is on the way' : 'Your rider'}
+          </Typography>
+          <Typography noWrap sx={{ fontWeight: 800 }}>{order.rider_name}</Typography>
+        </Box>
+        {order.rider_phone && (
+          <Button
+            variant="contained" href={`tel:${order.rider_phone}`}
+            startIcon={<CallRoundedIcon />}
+            sx={{ borderRadius: 999, flexShrink: 0 }}
+          >
+            Call
+          </Button>
+        )}
+      </Stack>
+
+      {enRoute && (
+        <Box sx={{ mt: 2 }}>
+          {hasPin ? (
+            <>
+              <LiveTrackMap
+                rider={{ lat: order.rider_lat, lng: order.rider_lng }}
+                destination={{ lat: order.delivery_lat, lng: order.delivery_lng }}
+              />
+              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
+                {stale
+                  ? 'Last known position — the rider may have lost signal.'
+                  : '🛵 Rider · 🏠 Your address · updates automatically'}
+              </Typography>
+            </>
+          ) : (
+            <Typography variant="caption" color="text.secondary">
+              Live location isn’t available for this rider right now — call them if you need to.
+            </Typography>
+          )}
+        </Box>
+      )}
+    </Card>
   );
 }
 
@@ -126,6 +190,9 @@ export default function FoodOrderTrack() {
           <Typography color="error" sx={{ mt: 2, fontWeight: 700 }}>This order was cancelled.</Typography>
         )}
       </Card>
+
+      {/* Shown from assignment onward; the live map only once out for delivery. */}
+      {order.rider_name && order.status !== 'CANCELLED' && <RiderCard order={order} />}
 
       <Card sx={{ p: 2.5 }}>
         <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 1.5 }}>

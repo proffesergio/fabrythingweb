@@ -3,7 +3,9 @@
 // Bump CACHE_VERSION whenever a response shape changes or you need every client
 // to drop its cached copies on the next load — old-version entries are ignored
 // by readCache, so a stale cache can never permanently hide new data.
-export const CACHE_VERSION = "v1";
+// v2: restaurant responses gained is_open_now and served_zone_ids. A v1 entry
+// would render "Open now" from the old master-switch field.
+export const CACHE_VERSION = "v2";
 const PREFIX = `swr:${CACHE_VERSION}:`;
 
 export function cacheKey(url, params) {

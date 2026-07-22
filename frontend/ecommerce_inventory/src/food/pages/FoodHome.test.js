@@ -3,30 +3,22 @@ import { MemoryRouter } from 'react-router-dom';
 
 const mockCalls = [];
 
-const NEAR = {
-  id: 1, slug: 'r1', display_name: 'Tasty', cover_image: '', cuisine_type: 'Bengali',
-  avg_prep_minutes: 25, base_delivery_fee: '30.00', is_open: true, distance_km: 0.8,
-};
-const POPULAR = {
-  id: 2, slug: 'r2', display_name: 'Crowd Favourite', cover_image: '', cuisine_type: 'Biryani',
-  avg_prep_minutes: 30, base_delivery_fee: '40.00', is_open: true, distance_km: 4.2,
-};
+// 8 restaurants: NEAR_LIMIT is 6, so 6 land in "Nearest" and 2 in "Also available".
+const makeRestaurant = (id) => ({
+  id, slug: `r${id}`, display_name: `Place ${id}`, cover_image: '', cuisine_type: 'Bengali',
+  avg_prep_minutes: 25, base_delivery_fee: '30.00', is_open_now: true, distance_km: id * 0.5,
+});
+const ALL = Array.from({ length: 8 }, (_, i) => makeRestaurant(i + 1));
 
-jest.mock('../../hooks/APIHandler', () => () => ({
-  loading: false,
-  error: '',
-  callApi: async ({ url, params }) => {
-    mockCalls.push({ url, params });
-    if (!String(url).startsWith('food/restaurants')) return { data: { data: [] } };
-    // Mirror the backend: `sort=popular` returns the popular row, honouring
-    // `exclude` so a restaurant never appears in both rows.
-    if (params?.sort === 'popular') {
-      const excluded = String(params.exclude || '').split(',');
-      return { data: { data: { data: [NEAR, POPULAR].filter((r) => !excluded.includes(String(r.id))) } } };
-    }
-    return { data: { data: { data: [NEAR] } } };
-  },
-}));
+let mockRows = ALL;
+
+// FoodHome reads through useCachedApi (stale-while-revalidate over localStorage),
+// which returns the unwrapped payload — for a paginated list that is
+// { data: [...], totalPages, totalItems }.
+jest.mock('../../hooks/useCachedApi', () => (url, opts) => {
+  mockCalls.push({ url, params: opts?.params });
+  return { data: { data: mockRows }, loading: false, revalidating: false, error: null, refetch: jest.fn() };
+});
 
 jest.mock('../context/FoodLocationContext', () => ({
   useFoodLocation: () => ({
@@ -41,33 +33,45 @@ jest.mock('../context/FoodLocationContext', () => ({
 
 import FoodHome from './FoodHome';
 
-beforeEach(() => { mockCalls.length = 0; });
+beforeEach(() => { mockCalls.length = 0; mockRows = ALL; });
 
 const renderHome = () => render(<MemoryRouter><FoodHome /></MemoryRouter>);
 
 test('renders both discovery rows', async () => {
   renderHome();
   await waitFor(() => expect(screen.getByText('Nearest to your area')).toBeInTheDocument());
-  expect(screen.getByText('Restaurants you may also like')).toBeInTheDocument();
+  expect(screen.getByText('Also available')).toBeInTheDocument();
 });
 
 test('shows the nearest restaurant in the first row', async () => {
   renderHome();
-  await waitFor(() => expect(screen.getByText('Tasty')).toBeInTheDocument());
+  await waitFor(() => expect(screen.getByText('Place 1')).toBeInTheDocument());
 });
 
-test('asks the API to sort the first row by distance from the pin', async () => {
+test('every restaurant reaches the page, not just the nearest handful', async () => {
+  // The whole point of the second row: nothing is stranded off the homepage.
+  renderHome();
+  await waitFor(() => expect(screen.getByText('Place 1')).toBeInTheDocument());
+  ALL.forEach((r) => expect(screen.getByText(r.display_name)).toBeInTheDocument());
+});
+
+test('asks the API to sort by distance from the pin, in one request', async () => {
   renderHome();
   await waitFor(() => expect(mockCalls.length).toBeGreaterThan(0));
   expect(mockCalls[0].params).toMatchObject({ sort: 'distance', lat: 23.75, lng: 90.78 });
+  // One endpoint, one query shape — the rows are a client-side split.
+  expect(new Set(mockCalls.map((c) => c.url))).toEqual(new Set(['food/restaurants/']));
 });
 
 test('does not repeat a restaurant across the two rows', async () => {
   renderHome();
-  await waitFor(() => expect(screen.getByText('Crowd Favourite')).toBeInTheDocument());
-  // "Tasty" is in the nearest row, so the suggestions request must exclude it
-  // and it must appear exactly once on the page.
-  const popularCall = mockCalls.find((c) => c.params?.sort === 'popular');
-  expect(popularCall.params.exclude).toBe('1');
-  expect(screen.getAllByText('Tasty')).toHaveLength(1);
+  await waitFor(() => expect(screen.getByText('Place 1')).toBeInTheDocument());
+  ALL.forEach((r) => expect(screen.getAllByText(r.display_name)).toHaveLength(1));
+});
+
+test('the second row is hidden when everything fits in the first', async () => {
+  mockRows = ALL.slice(0, 3);
+  renderHome();
+  await waitFor(() => expect(screen.getByText('Place 1')).toBeInTheDocument());
+  expect(screen.queryByText('Also available')).not.toBeInTheDocument();
 });

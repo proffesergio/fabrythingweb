@@ -88,9 +88,16 @@ class Restaurant(TimeStamped):
     def is_currently_open(self, now):
         if not self.is_open:
             return False
-        hours = self.hours.filter(weekday=now.weekday(), is_closed=False)
+        # Filtered in Python, not with .filter(): the list endpoints serialize this
+        # for every row, and a queryset .filter() ignores prefetch_related and
+        # re-queries per restaurant (a textbook N+1). Iterating .all() uses the
+        # prefetch cache when there is one and costs a single query when there
+        # isn't. A restaurant has at most 7 hours rows, so this is free.
         t = now.time()
-        return any(h.open_time <= t <= h.close_time for h in hours)
+        weekday = now.weekday()
+        return any(h.open_time <= t <= h.close_time
+                   for h in self.hours.all()
+                   if h.weekday == weekday and not h.is_closed)
 
     def __str__(self):
         return self.name

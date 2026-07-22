@@ -75,7 +75,11 @@ class FoodOrderTrackView(APIView):
     permission_classes = [AllowAny]
 
     def get(self, request, order_code):
-        order = FoodOrder.objects.filter(order_code=order_code).prefetch_related("items").first()
+        # rider/restaurant are select_related because the serializer reads the
+        # rider's live pin and the restaurant's pickup pin on every poll.
+        order = (FoodOrder.objects.filter(order_code=order_code)
+                 .select_related("rider", "restaurant")
+                 .prefetch_related("items").first())
         if not order:
             return renderResponse(data={}, message="Order not found", status=404)
         if request.user.is_authenticated and order.customer_id == request.user.id:

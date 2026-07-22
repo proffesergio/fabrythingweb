@@ -21,36 +21,50 @@ import MegaMenu, { MobileCategoryMenu } from '../components/MegaMenu';
 import LiveSearch from '../components/LiveSearch';
 import BrandLogo from '../../components/BrandLogo';
 
-// Animated, highlighted "Food" nav entry — points at the Phase-1 `/food`
-// placeholder. Transform-only animation (scale pulse) so it stays cheap on
-// low-end/rural devices; no layout-affecting properties are animated.
+// Highlighted "Food" nav entry pointing at `/food`. Two separate motions, and
+// only two: the icon blinks (opacity) and the background gradient slides
+// (background-position). The whole badge used to scale-pulse, which made the
+// nav bar's text shift as it grew — the animation is now confined to paint-only
+// properties that can't affect layout or reflow its neighbours.
 function FoodNavBadge() {
     return (
         <Box
-            component={motion.div}
-            animate={{ scale: [1, 1.06, 1] }}
-            transition={{ repeat: Infinity, duration: 2, ease: 'easeInOut' }}
-            sx={{ display: 'inline-flex' }}
+            component={Link}
+            to="/food"
+            sx={{
+                display: 'flex', alignItems: 'center', gap: 0.5,
+                textDecoration: 'none',
+                px: 1.5, py: 0.5,
+                borderRadius: 5,
+                fontWeight: 700,
+                fontSize: '0.85rem',
+                color: 'white',
+                // Oversized gradient panned by background-position — the cheap way
+                // to animate a gradient, since gradient color-stops themselves are
+                // not interpolable.
+                backgroundImage: 'linear-gradient(100deg,#F97316,#E85D4A,#F2A03D,#F97316)',
+                backgroundSize: '300% 100%',
+                animation: 'foodBadgeGradient 6s linear infinite',
+                boxShadow: '0 2px 10px rgba(232,93,74,0.45)',
+                transition: 'box-shadow .22s ease',
+                '&:hover': { boxShadow: '0 4px 14px rgba(232,93,74,0.6)' },
+                '@keyframes foodBadgeGradient': {
+                    '0%': { backgroundPosition: '0% 50%' },
+                    '100%': { backgroundPosition: '300% 50%' },
+                },
+                '@media (prefers-reduced-motion: reduce)': { animation: 'none' },
+            }}
         >
             <Box
-                component={Link}
-                to="/food"
-                sx={{
-                    display: 'flex', alignItems: 'center', gap: 0.5,
-                    textDecoration: 'none',
-                    px: 1.5, py: 0.5,
-                    borderRadius: 5,
-                    fontWeight: 700,
-                    fontSize: '0.85rem',
-                    color: 'white',
-                    background: 'linear-gradient(135deg,#F97316,#E85D4A)',
-                    boxShadow: '0 2px 10px rgba(232,93,74,0.45)',
-                    '&:hover': { boxShadow: '0 4px 14px rgba(232,93,74,0.6)' },
-                }}
+                component={motion.span}
+                aria-hidden
+                animate={{ opacity: [1, 0.25, 1] }}
+                transition={{ repeat: Infinity, duration: 1.6, ease: 'easeInOut' }}
+                sx={{ display: 'inline-flex' }}
             >
                 <RestaurantIcon fontSize="small" />
-                Food
             </Box>
+            Food
         </Box>
     );
 }

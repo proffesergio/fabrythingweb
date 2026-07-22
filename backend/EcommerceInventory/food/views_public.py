@@ -51,7 +51,10 @@ class PublicRestaurantListView(ListAPIView):
 
     def get_queryset(self):
         p = self.request.GET
-        qs = Restaurant.objects.filter(status=Restaurant.Status.ACTIVE)
+        # `hours` feeds is_open_now for every row — without the prefetch that is
+        # one query per restaurant.
+        qs = (Restaurant.objects.filter(status=Restaurant.Status.ACTIVE)
+              .prefetch_related("hours"))
 
         zone = p.get("zone")
         # `all=true` (the Browse page) keeps every restaurant in the list and only
@@ -125,7 +128,8 @@ def _detail_prefetch():
     # `zones` feeds served_zone_ids; prefetching keeps the detail endpoint's query
     # count flat instead of adding one per request.
     zones = Prefetch("zones", queryset=DeliveryZone.objects.filter(is_active=True))
-    return cats, zones
+    # `hours` feeds is_open_now (see RestaurantListSerializer).
+    return cats, zones, "hours"
 
 
 class PublicRestaurantDetailView(APIView):

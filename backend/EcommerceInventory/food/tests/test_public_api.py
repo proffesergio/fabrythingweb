@@ -1,7 +1,10 @@
+from datetime import time
 from decimal import Decimal
 from django.test import TestCase
+from django.utils import timezone
 from rest_framework.test import APIClient
-from food.models import (Restaurant, FoodCategory, FoodItem, DeliveryZone, RestaurantZone)
+from food.models import (Restaurant, FoodCategory, FoodItem, DeliveryZone, RestaurantZone,
+                         RestaurantHours)
 from food.services import served_zones
 
 
@@ -24,9 +27,10 @@ class PublicApiTests(TestCase):
 
     def test_detail_is_query_bounded(self):
         # Detail must not scale queries with item count (no N+1).
-        # 5 = restaurant + categories + items + option groups + zones. `zones`
-        # feeds served_zone_ids and is prefetched precisely so this stays flat.
-        with self.assertNumQueries(5):
+        # 6 = restaurant + categories + items + option groups + zones + hours.
+        # `zones` feeds served_zone_ids and `hours` feeds is_open_now; both are
+        # prefetched precisely so this stays flat as the menu grows.
+        with self.assertNumQueries(6):
             self.client.get("/api/food/restaurants/active/")
 
     def test_detail_query_count_invariant_under_more_items(self):
@@ -39,11 +43,49 @@ class PublicApiTests(TestCase):
             FoodItem.objects.create(restaurant=big, category_id=c2, name=f"BigItem{i}",
                                     slug=f"bigitem{i}", price=Decimal("100"), is_available=True)
 
-        with self.assertNumQueries(5):
+        with self.assertNumQueries(6):
             self.client.get("/api/food/restaurants/active/")
 
-        with self.assertNumQueries(5):
+        with self.assertNumQueries(6):
             self.client.get("/api/food/restaurants/big/")
+
+    def _row(self, slug="active"):
+        rows = self.client.get("/api/food/restaurants/").json()["data"]["data"]
+        return next(r for r in rows if r["slug"] == slug)
+
+    def test_is_open_now_follows_the_hours_not_the_master_switch(self):
+        """The card must not say "Open now" when checkout would reject the order.
+
+        `is_open` is only the owner's master switch; the schedule lives in
+        RestaurantHours. Serializing the raw column made every restaurant look
+        open around the clock while place_food_cod_order rejected them as closed.
+        """
+        self.assertTrue(self.active.is_open)          # master switch on…
+        self.assertFalse(self._row()["is_open_now"])  # …but no hours: closed.
+
+        now = timezone.localtime()
+        RestaurantHours.objects.create(restaurant=self.active, weekday=now.weekday(),
+                                       open_time=time(0, 0), close_time=time(23, 59))
+        self.assertTrue(self._row()["is_open_now"])
+
+    def test_is_open_now_is_false_when_the_master_switch_is_off(self):
+        now = timezone.localtime()
+        RestaurantHours.objects.create(restaurant=self.active, weekday=now.weekday(),
+                                       open_time=time(0, 0), close_time=time(23, 59))
+        Restaurant.objects.filter(pk=self.active.pk).update(is_open=False)
+        self.assertFalse(self._row()["is_open_now"])
+
+    def test_is_open_now_does_not_add_a_query_per_restaurant(self):
+        """is_currently_open filters hours in Python precisely so the prefetch
+        works — a .filter() call here would be an N+1 across the whole list."""
+        now = timezone.localtime()
+        for i in range(6):
+            r = Restaurant.objects.create(name=f"R{i}", slug=f"r{i}",
+                                          status=Restaurant.Status.ACTIVE)
+            RestaurantHours.objects.create(restaurant=r, weekday=now.weekday(),
+                                           open_time=time(0, 0), close_time=time(23, 59))
+        with self.assertNumQueries(3):  # count + page + hours prefetch
+            self.client.get("/api/food/restaurants/")
 
     def _served_ids(self, slug="active"):
         return self.client.get(f"/api/food/restaurants/{slug}/").json()["data"]["served_zone_ids"]

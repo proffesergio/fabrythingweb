@@ -1,11 +1,11 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { Grid, Box, Typography, TextField, Stack, Button, CircularProgress, InputAdornment } from '@mui/material';
 import { Link } from 'react-router-dom';
 import SearchRoundedIcon from '@mui/icons-material/SearchRounded';
 import VoiceSearchButton from '../components/VoiceSearchButton';
 import PlaceRoundedIcon from '@mui/icons-material/PlaceRounded';
 import { motion, AnimatePresence } from 'framer-motion';
-import useApi from '../../hooks/APIHandler';
+import useCachedApi from '../../hooks/useCachedApi';
 import { useFoodLocation } from '../context/FoodLocationContext';
 import RestaurantCard from '../components/RestaurantCard';
 
@@ -28,8 +28,12 @@ const HEADLINES = [
 ];
 const FLOAT = ['🍛', '🍔', '🍕', '🍗', '🥘', '🧁', '🍜', '🍚'];
 
-// How many cards the "Nearest" row shows before the suggestions row starts.
+// How many cards the "Nearest" row shows before the "Also available" row starts.
 const NEAR_LIMIT = 6;
+// One page big enough to hold every restaurant in Bancharampur, so the homepage
+// is a single request that we split into rows client-side. Capped at the API's
+// max_page_size (CustomPageNumberPagination).
+const PAGE_SIZE = 100;
 
 function PlateTile({ item, active, onClick }) {
   return (
@@ -80,10 +84,8 @@ function RestaurantRow({ title, subtitle, restaurants, lang, sx }) {
 
 export default function FoodHome() {
   const { zoneId, lang, currentZone, openPicker, coords } = useFoodLocation() || {};
-  const { callApi, loading } = useApi();
-  const [restaurants, setRestaurants] = useState([]);
-  const [suggested, setSuggested] = useState([]);
   const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [cuisine, setCuisine] = useState('');
   const [hi, setHi] = useState(0);
 
@@ -92,43 +94,53 @@ export default function FoodHome() {
     return () => clearInterval(t);
   }, []);
 
-  const fetchRestaurants = useCallback(async () => {
-    const params = { lang };
-    if (zoneId) params.zone = zoneId;
-    if (search) params.search = search;
-    if (cuisine) params.cuisine = cuisine;
+  // Typing fired one request per keystroke and wrote a cache entry for every
+  // prefix. Settle first, then ask.
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(search), 350);
+    return () => clearTimeout(t);
+  }, [search]);
 
-    // Nearest: sorted by real distance from the customer's dropped pin. With no
-    // pin we fall back to the selected zone's centre, so the row is still
-    // meaningfully ordered rather than alphabetical.
+  // ONE request for the whole page, split into rows below. Two requests used to
+  // fetch overlapping sets and needed an `exclude` param to stop a restaurant
+  // appearing twice; slicing a single ordered list makes that impossible and
+  // halves the homepage's network cost.
+  const params = useMemo(() => {
+    const p = { lang, pageSize: PAGE_SIZE };
+    // No zone selected is legitimate: the customer can browse everything and
+    // choose their area at checkout. Omitting `zone` returns every restaurant.
+    if (zoneId) p.zone = zoneId;
+    if (debouncedSearch) p.search = debouncedSearch;
+    if (cuisine) p.cuisine = cuisine;
+
+    // Sorted by real distance from the customer's dropped pin. With no pin we
+    // fall back to the selected zone's centre, so the row is still meaningfully
+    // ordered rather than alphabetical.
     const origin = coords || (currentZone
       ? { lat: Number(currentZone.center_lat), lng: Number(currentZone.center_lng) }
       : null);
-    const nearParams = { ...params };
     if (origin) {
-      nearParams.lat = origin.lat;
-      nearParams.lng = origin.lng;
-      nearParams.sort = 'distance';
+      p.lat = origin.lat;
+      p.lng = origin.lng;
+      p.sort = 'distance';
     }
-    const res = await callApi({ url: 'food/restaurants/', method: 'GET', params: nearParams });
-    const near = res?.data?.data?.data || [];
-    setRestaurants(near);
+    return p;
+  }, [zoneId, lang, debouncedSearch, cuisine, coords, currentZone]);
 
-    // "You may also like": most-delivered in the same area, minus everything
-    // already shown above, so the two rows never repeat a restaurant.
-    if (!zoneId || search || cuisine) { setSuggested([]); return; }
-    const shown = near.slice(0, NEAR_LIMIT).map((r) => r.id);
-    const sres = await callApi({
-      url: 'food/restaurants/', method: 'GET',
-      params: { ...params, sort: 'popular', exclude: shown.join(',') },
-    });
-    setSuggested(sres?.data?.data?.data || []);
-  }, [zoneId, lang, search, cuisine, coords, currentZone]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  useEffect(() => { fetchRestaurants(); }, [fetchRestaurants]);
+  // Cached: a returning customer sees their restaurants immediately from
+  // localStorage while the fresh list loads behind it.
+  const { data, loading } = useCachedApi('food/restaurants/', { params });
+  const restaurants = data?.data || [];
 
   const headline = HEADLINES[hi];
   const hasDistance = restaurants.some((r) => r.distance_km != null);
+  // While searching or filtering by cuisine the split is noise — the customer
+  // asked a question, so show the whole answer in one row.
+  // debouncedSearch, not search: this must describe the data on screen, which
+  // still reflects the previous query until the debounce fires.
+  const filtering = Boolean(debouncedSearch || cuisine);
+  const nearest = restaurants.slice(0, NEAR_LIMIT);
+  const alsoAvailable = filtering ? [] : restaurants.slice(NEAR_LIMIT);
 
   return (
     <Box>
@@ -191,9 +203,17 @@ export default function FoodHome() {
         <Box sx={{ textAlign: 'center', py: 8 }}>
           <Box sx={{ fontSize: 56, mb: 1 }}>🧺</Box>
           <Typography color="text.secondary">
-            {lang === 'bn'
-              ? 'এই এলাকায় এখনো কোনো রেস্তোরাঁ ডেলিভারি করে না।'
-              : 'No restaurants deliver to this area yet.'}
+            {/* Don't blame the area when no area is set — that message sent
+                customers to the picker to "fix" something that was fine. */}
+            {filtering
+              ? (lang === 'bn' ? 'কোনো রেস্তোরাঁ পাওয়া যায়নি।' : 'No restaurants match that.')
+              : zoneId
+                ? (lang === 'bn'
+                    ? 'এই এলাকায় এখনো কোনো রেস্তোরাঁ ডেলিভারি করে না।'
+                    : 'No restaurants deliver to this area yet.')
+                : (lang === 'bn'
+                    ? 'এখনো কোনো রেস্তোরাঁ নেই।'
+                    : 'No restaurants available yet.')}
           </Typography>
           <Stack direction="row" spacing={1} justifyContent="center" sx={{ mt: 1.5 }}>
             {openPicker && (
@@ -211,21 +231,26 @@ export default function FoodHome() {
           <RestaurantRow
             title={cuisine
               ? `${cuisine} places`
-              : (lang === 'bn' ? 'আপনার এলাকার সবচেয়ে কাছে' : 'Nearest to your area')}
+              : zoneId
+                ? (lang === 'bn' ? 'আপনার এলাকার সবচেয়ে কাছে' : 'Nearest to your area')
+                : (lang === 'bn' ? 'সব রেস্তোরাঁ' : 'All restaurants')}
             subtitle={!cuisine && hasDistance
               ? (lang === 'bn' ? 'দূরত্ব অনুসারে সাজানো' : 'Sorted by distance from you')
               : ''}
-            restaurants={cuisine || search ? restaurants : restaurants.slice(0, NEAR_LIMIT)}
+            restaurants={filtering ? restaurants : nearest}
             lang={lang}
           />
 
-          {/* Second row is homepage-only, and only once an area is chosen —
-              suggestions are meaningless without somewhere to deliver to. */}
-          {suggested.length > 0 && (
+          {/* Everything else that delivers here — so no restaurant is stranded
+              off the homepage just because it isn't in the nearest handful.
+              Sliced from the same ordered list, so the rows can never repeat. */}
+          {alsoAvailable.length > 0 && (
             <RestaurantRow
-              title={lang === 'bn' ? 'আপনার পছন্দ হতে পারে' : 'Restaurants you may also like'}
-              subtitle={lang === 'bn' ? 'এই এলাকায় জনপ্রিয়' : 'Popular in your area'}
-              restaurants={suggested}
+              title={lang === 'bn' ? 'আরও পাওয়া যাচ্ছে' : 'Also available'}
+              subtitle={zoneId
+                ? (lang === 'bn' ? 'আপনার এলাকায় ডেলিভারি করে' : 'Also delivering to your area')
+                : ''}
+              restaurants={alsoAvailable}
               lang={lang}
               sx={{ mt: 5 }}
             />

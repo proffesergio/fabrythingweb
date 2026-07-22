@@ -254,8 +254,33 @@ export default function FoodCheckout() {
       <Box sx={{ position: 'fixed', left: 0, right: 0, bottom: 0, p: 2, zIndex: 1100,
         background: (t) => `linear-gradient(180deg, transparent, ${t.palette.background.default} 40%)` }}>
         <Box sx={{ maxWidth: 560, mx: 'auto' }}>
-          <Button fullWidth variant="contained" size="large" disabled={loading} onClick={submit}
-            sx={{ py: 1.6, borderRadius: 999, boxShadow: '0 12px 30px rgba(232,69,43,0.35)' }}>
+          <Button
+            component={motion.button}
+            // Transform-only animation (the sweep is a moving gradient, the press
+            // is a scale) so it stays cheap on the low-end phones this is built
+            // for — nothing here triggers layout.
+            whileHover={{ scale: 1.015 }}
+            whileTap={{ scale: 0.985 }}
+            transition={{ type: 'spring', stiffness: 420, damping: 26 }}
+            fullWidth variant="contained" size="large" disabled={loading} onClick={submit}
+            sx={{
+              py: 1.6, borderRadius: 999, position: 'relative', overflow: 'hidden',
+              // No hardcoded boxShadow here: it used to sit at a bigger blur than
+              // the theme's hover shadow, so hovering made the glow *shrink*.
+              // Let the theme own both states.
+              '&::after': loading ? {} : {
+                content: '""', position: 'absolute', inset: 0,
+                background: 'linear-gradient(100deg, transparent 20%, rgba(255,255,255,0.28) 50%, transparent 80%)',
+                transform: 'translateX(-100%)',
+                animation: 'placeOrderSheen 2.6s ease-in-out infinite',
+              },
+              '@keyframes placeOrderSheen': {
+                '0%': { transform: 'translateX(-100%)' },
+                '60%, 100%': { transform: 'translateX(100%)' },
+              },
+              '@media (prefers-reduced-motion: reduce)': { '&::after': { animation: 'none' } },
+            }}
+          >
             {loading ? 'Placing order…' : `Place order · ${METHODS.find((m) => m.key === method)?.label}`}
           </Button>
         </Box>

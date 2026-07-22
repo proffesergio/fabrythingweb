@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useParams } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { Box, Typography, Grid, Chip, Stack, CircularProgress, Button, Card } from '@mui/material';
@@ -7,7 +7,7 @@ import AccessTimeRoundedIcon from '@mui/icons-material/AccessTimeRounded';
 import TwoWheelerRoundedIcon from '@mui/icons-material/TwoWheelerRounded';
 import StarRoundedIcon from '@mui/icons-material/StarRounded';
 import { motion } from 'framer-motion';
-import useApi from '../../hooks/APIHandler';
+import useCachedApi from '../../hooks/useCachedApi';
 import { useFoodLocation } from '../context/FoodLocationContext';
 import { addFoodItem, selectFoodRestaurant } from '../redux/foodCartSlice';
 import ItemOptionModal from '../components/ItemOptionModal';
@@ -94,18 +94,15 @@ function DishCard({ item, onClick }) {
 export default function RestaurantDetail() {
   const { slug } = useParams();
   const { lang } = useFoodLocation() || {};
-  const { callApi, loading } = useApi();
   const dispatch = useDispatch();
   const cartRestaurant = useSelector(selectFoodRestaurant);
-  const [data, setData] = useState(null);
   const [modalItem, setModalItem] = useState(null);
 
-  useEffect(() => {
-    (async () => {
-      const res = await callApi({ url: `food/restaurants/${slug}/`, method: 'GET', params: { lang } });
-      setData(res?.data?.data || null);
-    })();
-  }, [slug, lang]); // eslint-disable-line react-hooks/exhaustive-deps
+  // Stale-while-revalidate: a revisited menu paints instantly from localStorage
+  // and refreshes in the background. This is the heaviest payload in the app
+  // (every category, item and option group), and the one customers re-open most.
+  const params = useMemo(() => ({ lang }), [lang]);
+  const { data, loading } = useCachedApi(`food/restaurants/${slug}/`, { params });
 
   const addLine = (line) => {
     if (cartRestaurant.id && cartRestaurant.id !== line.restaurantId) {
@@ -125,6 +122,8 @@ export default function RestaurantDetail() {
 
   if (loading || !data) return <Box sx={{ textAlign: 'center', py: 10 }}><CircularProgress color="primary" /></Box>;
 
+  const openNow = data.is_open_now ?? data.is_open;
+
   return (
     <Box>
       <Box sx={{ position: 'relative', height: { xs: 190, md: 260 }, borderRadius: 4, overflow: 'hidden', mb: 2 }}>
@@ -139,7 +138,8 @@ export default function RestaurantDetail() {
       </Box>
 
       <Stack direction="row" spacing={1} sx={{ mb: 3, flexWrap: 'wrap', gap: 1 }}>
-        <Chip label={data.is_open ? 'Open now' : 'Closed'} color={data.is_open ? 'success' : 'default'} sx={{ fontWeight: 800 }} />
+        {/* is_open_now consults the opening hours; is_open is only the master switch. */}
+        <Chip label={openNow ? 'Open now' : 'Closed'} color={openNow ? 'success' : 'default'} sx={{ fontWeight: 800 }} />
         <Chip icon={<AccessTimeRoundedIcon />} label={`${data.avg_prep_minutes}+ min`} variant="outlined" />
         <Chip icon={<TwoWheelerRoundedIcon />} label={`Delivery ৳${data.base_delivery_fee}`} variant="outlined" />
         {Number(data.min_order_amount) > 0 && <Chip label={`Min ৳${data.min_order_amount}`} variant="outlined" />}

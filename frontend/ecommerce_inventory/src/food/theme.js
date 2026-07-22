@@ -74,13 +74,28 @@ export function getFoodTheme(mode = 'light') {
       },
       MuiButton: {
         styleOverrides: {
-          root: { borderRadius: 12, padding: '10px 20px', boxShadow: 'none' },
+          root: {
+            borderRadius: 12, padding: '10px 20px', boxShadow: 'none',
+            // Animate the properties that actually change on hover. Without this
+            // the gradient/shadow swap below lands in a single frame and reads as
+            // a flicker.
+            transition: 'background-image .22s ease, box-shadow .22s ease, transform .22s ease',
+          },
           containedPrimary: {
-            background: `linear-gradient(180deg, ${C.primary}, ${C.primaryDeep})`,
+            // Declared as background-IMAGE, not the `background` shorthand. The
+            // shorthand also resets background-color, so hovering swapped the
+            // gradient for a flat fill and the button visibly jumped colour.
+            // Keeping the gradient on both states means hover only deepens it.
+            backgroundImage: `linear-gradient(180deg, ${C.primary}, ${C.primaryDeep})`,
+            backgroundColor: C.primaryDeep,
             '&:hover': {
-              background: C.primaryDeep,
-              boxShadow: `0 8px 20px ${isDark ? 'rgba(255,107,79,0.32)' : 'rgba(232,69,43,0.30)'}`,
+              backgroundImage: `linear-gradient(180deg, ${C.primaryDeep}, ${C.primaryDeep})`,
+              backgroundColor: C.primaryDeep,
+              boxShadow: `0 10px 26px ${isDark ? 'rgba(255,107,79,0.34)' : 'rgba(232,69,43,0.32)'}`,
             },
+            // A disabled button must not keep the vivid gradient — MUI only
+            // overrides background-color, which the image would paint over.
+            '&.Mui-disabled': { backgroundImage: 'none' },
           },
         },
       },

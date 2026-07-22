@@ -16,7 +16,11 @@ const emojiFor = (cuisine = '') => {
 };
 
 export default function RestaurantCard({ restaurant: r, lang }) {
-  const closed = !r.is_open;
+  // is_open_now, not is_open: the latter is only the owner's master switch and
+  // ignores the opening hours, so cards read "Open now" around the clock while
+  // checkout rejected the order as closed. Fall back to is_open for a cached
+  // response written before the field existed.
+  const closed = !(r.is_open_now ?? r.is_open);
   // Only present when the caller asked for distance (the "Nearest" row and the
   // Browse page); null for a restaurant with no pickup pin.
   const distance = r.distance_km;

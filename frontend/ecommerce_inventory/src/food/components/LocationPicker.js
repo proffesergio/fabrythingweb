@@ -5,6 +5,7 @@ import {
 import CloseRoundedIcon from '@mui/icons-material/CloseRounded';
 import MyLocationRoundedIcon from '@mui/icons-material/MyLocationRounded';
 import PlaceRoundedIcon from '@mui/icons-material/PlaceRounded';
+import RestartAltRoundedIcon from '@mui/icons-material/RestartAltRounded';
 import { toast } from 'react-toastify';
 import { useFoodLocation } from '../context/FoodLocationContext';
 import MapPicker from './MapPicker';
@@ -43,6 +44,17 @@ export default function LocationPicker() {
     if (!union) { toast.info(t('Pick your union first', 'প্রথমে আপনার ইউনিয়ন বেছে নিন')); return; }
     setZoneId(String(union));
     setVillageId(village || '');
+    closePicker();
+  };
+
+  // Escape hatch for picking the wrong area. The map pin is deliberately kept:
+  // it's an independent signal that's still useful (and fiddly to re-place), and
+  // an area is no longer required to browse or reach checkout.
+  const clearArea = () => {
+    setUnion(''); setVillage('');
+    setZoneId(''); setVillageId('');
+    toast.info(t('Area cleared — showing all restaurants',
+                 'এলাকা মুছে ফেলা হয়েছে — সব রেস্তোরাঁ দেখানো হচ্ছে'));
     closePicker();
   };
 
@@ -134,7 +146,14 @@ export default function LocationPicker() {
         </Box>
 
         <Stack direction={{ xs: 'column-reverse', md: 'row' }} spacing={1.5}
-               justifyContent="flex-end" sx={{ mt: 3 }}>
+               justifyContent="flex-end" alignItems={{ md: 'center' }} sx={{ mt: 3 }}>
+          {/* Only offered once an area is actually set — nothing to clear otherwise. */}
+          {zoneId && (
+            <Button onClick={clearArea} startIcon={<RestartAltRoundedIcon />}
+                    sx={{ borderRadius: 999, px: 3, color: 'text.secondary', mr: { md: 'auto' } }}>
+              {t('Clear area', 'এলাকা মুছুন')}
+            </Button>
+          )}
           <Button onClick={closePicker} sx={{ borderRadius: 999, px: 3, color: 'text.secondary' }}>
             {t('Cancel', 'বাতিল')}
           </Button>
