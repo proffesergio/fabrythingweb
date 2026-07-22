@@ -63,6 +63,32 @@ class PlaceFoodOrderTests(TestCase):
                                  contact_name="A", contact_phone="017",
                                  delivery_address="a", zone_id=other.id)
 
+    def test_restaurant_with_no_zones_delivers_everywhere(self):
+        """No RestaurantZone rows means "not configured yet", not "delivers nowhere".
+
+        A freshly onboarded restaurant used to reject every checkout with an opaque
+        400 until an admin remembered to tick its zones. Assigning even one zone
+        switches it back to an explicit allow-list (the test below).
+        """
+        RestaurantZone.objects.filter(restaurant=self.r).delete()
+        other = DeliveryZone.objects.create(name="Z2", center_lat="10", center_lng="10", radius_km="1")
+        order = place_food_cod_order(customer=None, restaurant_slug="r", items=self._lines(qty=2),
+                                     contact_name="A", contact_phone="017",
+                                     delivery_address="a", zone_id=other.id)
+        self.assertEqual(order.zone_id, other.id)
+        # No per-zone row, so the fee falls back to the restaurant's base fee.
+        self.assertEqual(order.delivery_fee, Decimal("30.00"))
+
+    def test_inactive_zone_still_rejected_when_unconfigured(self):
+        """The everywhere fallback covers *active* zones only."""
+        RestaurantZone.objects.filter(restaurant=self.r).delete()
+        dead = DeliveryZone.objects.create(name="Z3", center_lat="10", center_lng="10",
+                                           radius_km="1", is_active=False)
+        with self.assertRaises(ValidationError):
+            place_food_cod_order(customer=None, restaurant_slug="r", items=self._lines(qty=2),
+                                 contact_name="A", contact_phone="017",
+                                 delivery_address="a", zone_id=dead.id)
+
     def test_unavailable_item_rejected(self):
         self.item.is_available = False; self.item.save()
         with self.assertRaises(ValidationError):

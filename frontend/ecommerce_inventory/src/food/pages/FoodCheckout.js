@@ -53,8 +53,33 @@ export default function FoodCheckout() {
   const [applied, setApplied] = useState(null); // { code, discount }
   const [points, setPoints] = useState(0);
   const [redeem, setRedeem] = useState(false);
+  // Zone ids this restaurant delivers to. null means "offer every zone" — that
+  // covers both "still loading" and the server's own null for an unconfigured
+  // restaurant, which delivers everywhere (food.services.served_zones).
+  const [servedIds, setServedIds] = useState(null);
 
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
+
+  // Offering an area the restaurant does not serve is what produced the opaque
+  // "Could not place order" 400 — the union list must come from the restaurant,
+  // not from the global zone list.
+  useEffect(() => {
+    if (!restaurant?.slug) return;
+    (async () => {
+      const res = await callApi({ url: `food/restaurants/${restaurant.slug}/`, method: 'GET', silent: true });
+      const ids = res?.data?.data?.served_zone_ids;
+      if (Array.isArray(ids)) setServedIds(ids.map(String));
+    })();
+  }, [restaurant?.slug]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const zoneOptions = (zones || []).filter(
+    (z) => !servedIds || servedIds.includes(String(z.id)));
+
+  // The area carried over from the header picker may not be one this restaurant
+  // serves; drop it rather than submitting an order the server will reject.
+  useEffect(() => {
+    if (zone && servedIds && !servedIds.includes(String(zone))) { setZone(''); setVillage(''); }
+  }, [servedIds]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!localStorage.getItem('token')) return;
@@ -90,16 +115,28 @@ export default function FoodCheckout() {
     else if (coords) { body.lat = coords.lat; body.lng = coords.lng; }
     if (village) body.village_id = village;
     if (coords?.lat) { body.delivery_lat = coords.lat; body.delivery_lng = coords.lng; }
-    const res = await callApi({ url: 'food/orders/', method: 'POST', body });
+    // rawError, because callApi returns null on any non-2xx — without it the
+    // server's actual reason ("This restaurant does not deliver to the selected
+    // area", "Minimum order is BDT 100"…) was dropped and the customer only ever
+    // saw a generic failure toast with nothing to act on.
+    // silent too: we render the precise reason in the Alert above, so the generic
+    // toast would only be a duplicate that says less.
+    const res = await callApi({ url: 'food/orders/', method: 'POST', body, rawError: true, silent: true });
     if (res?.status === 201) {
       const code = res.data.data.order_code;
       try { localStorage.setItem(`food_ph_${code}`, form.phone); } catch { /* ignore */ }
       dispatch(clearFoodCart());
       toast.success('Order placed!');
       navigate(`/food/order/${code}`, { state: { phone: form.phone } });
-    } else if (res?.data?.data) {
-      setErr(Array.isArray(res.data.data) ? res.data.data.join(' ') : String(res.data.data));
+      return;
     }
+    // Error envelope is {errors, field_errors, message} — NOT {data}. `data` is
+    // only present on 2xx (see core.helpers.renderResponse).
+    const d = res?.data || {};
+    const reasons = d.errors || d.data;
+    setErr(Array.isArray(reasons) ? reasons.join(' ')
+      : reasons ? String(reasons)
+      : d.message || 'Could not place order. Please try again.');
   };
 
   if (!items.length) {
@@ -129,13 +166,13 @@ export default function FoodCheckout() {
             <TextField select label="Union" value={zone} fullWidth
               onChange={(e) => { setZone(e.target.value); setVillage(''); }}>
               <MenuItem value=""><em>Select union</em></MenuItem>
-              {(zones || []).map((z) => <MenuItem key={z.id} value={String(z.id)}>{z.name}</MenuItem>)}
+              {zoneOptions.map((z) => <MenuItem key={z.id} value={String(z.id)}>{z.name}</MenuItem>)}
             </TextField>
             <TextField select label="Village" value={village} fullWidth
-              disabled={!(zones || []).find((z) => String(z.id) === String(zone))?.villages?.length}
+              disabled={!zoneOptions.find((z) => String(z.id) === String(zone))?.villages?.length}
               onChange={(e) => setVillage(e.target.value)}>
               <MenuItem value=""><em>Optional</em></MenuItem>
-              {((zones || []).find((z) => String(z.id) === String(zone))?.villages || [])
+              {(zoneOptions.find((z) => String(z.id) === String(zone))?.villages || [])
                 .map((v) => <MenuItem key={v.id} value={String(v.id)}>{v.name}</MenuItem>)}
             </TextField>
           </Stack>

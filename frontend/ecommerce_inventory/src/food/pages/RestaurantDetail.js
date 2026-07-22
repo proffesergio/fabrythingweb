@@ -147,7 +147,9 @@ export default function RestaurantDetail() {
 
       {(data.categories || []).map((cat) => (
         <Box key={cat.id} sx={{ mb: 4.5 }}>
-          <Typography variant="h5" sx={{ mb: 0.5 }}>{cat.name}</Typography>
+          {/* display_name, not name — the serializer localizes it (Bangla with an
+              English fallback); `name` is always the English column. */}
+          <Typography variant="h5" sx={{ mb: 0.5 }}>{cat.display_name || cat.name}</Typography>
           <Box sx={{ width: 44, height: 3, borderRadius: 2, bgcolor: 'primary.main', mb: 2 }} />
           <Grid container spacing={2.5}>
             {cat.items.map((item) => (

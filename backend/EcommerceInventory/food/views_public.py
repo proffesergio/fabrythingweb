@@ -1,4 +1,5 @@
-from django.db.models import Prefetch, Count, Q, F, Exists, OuterRef, FloatField, Value
+from django.db.models import (Prefetch, Count, Q, F, Exists, OuterRef, FloatField, Value,
+                              BooleanField, ExpressionWrapper)
 from django.db.models.functions import ACos, Cos, Sin, Radians, Least, Greatest, Cast
 from rest_framework.permissions import AllowAny
 from rest_framework.views import APIView
@@ -56,8 +57,13 @@ class PublicRestaurantListView(ListAPIView):
         # `all=true` (the Browse page) keeps every restaurant in the list and only
         # uses `zone` to mark which ones deliver to you, rather than filtering.
         browse_all = p.get("all") == "true"
+        # A restaurant with no RestaurantZone rows is unconfigured, not restricted,
+        # and delivers everywhere — see food.services.served_zones. It must stay in
+        # the zone-filtered list, or checkout would accept an order for a
+        # restaurant the customer was never shown.
+        unzoned = ~Exists(RestaurantZone.objects.filter(restaurant=OuterRef("pk")))
         if zone and not browse_all:
-            qs = qs.filter(zones__id=zone).distinct()
+            qs = qs.filter(Q(zones__id=zone) | unzoned).distinct()
 
         if p.get("search"):
             qs = qs.filter(name__icontains=p["search"])
@@ -80,8 +86,9 @@ class PublicRestaurantListView(ListAPIView):
             qs = qs.order_by("name")
 
         if zone:
-            qs = qs.annotate(delivers_to_zone=Exists(
-                RestaurantZone.objects.filter(restaurant=OuterRef("pk"), zone_id=zone)))
+            in_zone = Exists(RestaurantZone.objects.filter(restaurant=OuterRef("pk"), zone_id=zone))
+            qs = qs.annotate(delivers_to_zone=ExpressionWrapper(
+                in_zone | unzoned, output_field=BooleanField()))
 
         # Distance is annotated in SQL rather than sorted in Python: this must stay
         # a real QuerySet, because CommonListAPIMixin.common_list_decorator calls
@@ -115,7 +122,10 @@ def _detail_prefetch():
     )
     items = Prefetch("items", queryset=FoodItem.objects.prefetch_related(opt_groups))
     cats = Prefetch("categories", queryset=FoodCategory.objects.prefetch_related(items))
-    return cats
+    # `zones` feeds served_zone_ids; prefetching keeps the detail endpoint's query
+    # count flat instead of adding one per request.
+    zones = Prefetch("zones", queryset=DeliveryZone.objects.filter(is_active=True))
+    return cats, zones
 
 
 class PublicRestaurantDetailView(APIView):
@@ -124,7 +134,7 @@ class PublicRestaurantDetailView(APIView):
     def get(self, request, slug):
         restaurant = (
             Restaurant.objects.filter(status=Restaurant.Status.ACTIVE, slug=slug)
-            .prefetch_related(_detail_prefetch())
+            .prefetch_related(*_detail_prefetch())
             .first()
         )
         if not restaurant:

@@ -19,8 +19,24 @@ POINTS_PER_BDT = Decimal("50")   # 1 point per ৳50 spent
 ONLINE_METHODS = {"BKASH", "NAGAD", "QR"}
 
 
-def _resolve_zone(restaurant, zone_id, lat, lng):
+def served_zones(restaurant):
+    """The zones a restaurant delivers to.
+
+    A restaurant with *no* RestaurantZone rows has not been configured yet rather
+    than deliberately restricted, so it is treated as delivering everywhere — a
+    freshly onboarded restaurant is orderable instead of silently rejecting every
+    checkout with "does not deliver to the selected area". Assigning even one zone
+    switches it back to an explicit allow-list. `_delivery_fee` already falls back
+    to `base_delivery_fee` when there is no per-zone row, so the money still works.
+    """
     served = DeliveryZone.objects.filter(is_active=True, zone_restaurants__restaurant=restaurant)
+    if served.exists():
+        return served
+    return DeliveryZone.objects.filter(is_active=True)
+
+
+def _resolve_zone(restaurant, zone_id, lat, lng):
+    served = served_zones(restaurant)
     if zone_id:
         zone = served.filter(id=zone_id).first()
         if not zone:

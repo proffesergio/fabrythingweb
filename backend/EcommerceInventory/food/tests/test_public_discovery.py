@@ -137,6 +137,22 @@ class BrowseAllTests(TestCase):
         res = self.client.get(f"/api/food/restaurants/?zone={self.mine.id}")
         self.assertEqual([r["name"] for r in rows(res)], ["Delivers Here"])
 
+    def test_unzoned_restaurant_stays_in_a_zone_filtered_list(self):
+        """A restaurant with no RestaurantZone rows delivers everywhere
+        (food.services.served_zones), so the discovery list must show it — the
+        list and checkout have to agree on who is orderable."""
+        restaurant("Unconfigured")
+        res = self.client.get(f"/api/food/restaurants/?zone={self.mine.id}")
+        self.assertIn("Unconfigured", [r["name"] for r in rows(res)])
+
+    def test_unzoned_restaurant_is_marked_as_delivering(self):
+        restaurant("Unconfigured")
+        res = self.client.get(f"/api/food/restaurants/?all=true&zone={self.mine.id}")
+        by_name = {r["name"]: r for r in rows(res)}
+        self.assertTrue(by_name["Unconfigured"]["delivers_to_zone"])
+        # An explicit assignment elsewhere is still an allow-list, not a fallback.
+        self.assertFalse(by_name["Delivers Elsewhere"]["delivers_to_zone"])
+
     def test_browse_still_honours_search(self):
         res = self.client.get("/api/food/restaurants/?all=true&search=Elsewhere")
         self.assertEqual([r["name"] for r in rows(res)], ["Delivers Elsewhere"])

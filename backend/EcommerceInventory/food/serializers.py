@@ -67,10 +67,14 @@ class FoodItemSerializer(_LangMixin, serializers.ModelSerializer):
 
 class FoodCategorySerializer(_LangMixin, serializers.ModelSerializer):
     items = serializers.SerializerMethodField()
+    display_name = serializers.SerializerMethodField()
 
     class Meta:
         model = FoodCategory
-        fields = ["id", "name", "name_bn", "display_order", "items"]
+        fields = ["id", "name", "name_bn", "display_name", "display_order", "items"]
+
+    def get_display_name(self, obj):
+        return localized(obj, "name", self.lang)
 
     def get_items(self, obj):
         # obj.items prefetched+filtered in the view; filter available in python to keep it 0-query
@@ -110,10 +114,22 @@ class RestaurantListSerializer(_LangMixin, serializers.ModelSerializer):
 
 class RestaurantDetailSerializer(RestaurantListSerializer):
     categories = serializers.SerializerMethodField()
+    # The zones checkout may offer. Mirrors food.services.served_zones exactly, so
+    # the delivery-area dropdown can never present an area the order endpoint will
+    # then reject — that mismatch was the "Couldn't place order" 400.
+    served_zone_ids = serializers.SerializerMethodField()
 
     class Meta(RestaurantListSerializer.Meta):
         fields = RestaurantListSerializer.Meta.fields + ["description", "description_bn",
-                 "address", "phone", "pickup_lat", "pickup_lng", "categories"]
+                 "address", "phone", "pickup_lat", "pickup_lng", "categories",
+                 "served_zone_ids"]
+
+    def get_served_zone_ids(self, obj):
+        # null means "unconfigured — delivers everywhere", matching
+        # food.services.served_zones. Returning null rather than enumerating every
+        # active zone keeps this endpoint's query count flat: obj.zones is
+        # prefetched by the view, so this costs nothing.
+        return [z.id for z in obj.zones.all() if z.is_active] or None
 
     def get_categories(self, obj):
         cats = [c for c in obj.categories.all() if c.is_active]

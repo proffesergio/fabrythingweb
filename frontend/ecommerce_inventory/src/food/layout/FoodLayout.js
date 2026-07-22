@@ -45,9 +45,13 @@ export default function FoodLayout() {
             {loc.openPicker && (
               <Button
                 onClick={loc.openPicker}
+                // flexShrink:0 is load-bearing: without it the toolbar's flex row
+                // squeezed this button down to a bare circle on narrow screens,
+                // hiding the area name entirely. minWidth keeps the label legible.
                 sx={{ px: 1.25, py: 0.6, borderRadius: 999, bgcolor: 'background.paper',
-                      border: 1, borderColor: 'divider',
-                      color: 'text.primary', textTransform: 'none', maxWidth: { xs: 150, sm: 220 } }}
+                      border: 1, borderColor: 'divider', flexShrink: 0,
+                      color: 'text.primary', textTransform: 'none',
+                      minWidth: { xs: 118, sm: 150 }, maxWidth: { xs: 160, sm: 220 } }}
               >
                 <PlaceRoundedIcon sx={{ fontSize: 18, color: 'primary.main', mr: 0.5 }} />
                 <Box sx={{ textAlign: 'left', minWidth: 0, lineHeight: 1.1 }}>
@@ -71,14 +75,15 @@ export default function FoodLayout() {
             <Button
               size="small" color="inherit" startIcon={<RestaurantMenuRoundedIcon />}
               component={Link} to="/food/restaurants"
+              // Icon-only on xs. The area button now refuses to shrink, so the
+              // slack has to come from somewhere — this label is the cheapest to
+              // drop, since the icon still reads as "restaurants".
               sx={{ color: pathname === '/food/restaurants' ? 'primary.main' : 'text.secondary',
-                    fontWeight: 700 }}
+                    fontWeight: 700, minWidth: 0,
+                    '& .MuiButton-startIcon': { mr: { xs: 0, sm: 1 }, ml: { xs: 0, sm: -0.5 } } }}
             >
               <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>
                 {loc.lang === 'bn' ? 'রেস্তোরাঁ দেখুন' : 'Browse Restaurants'}
-              </Box>
-              <Box component="span" sx={{ display: { xs: 'inline', sm: 'none' } }}>
-                {loc.lang === 'bn' ? 'রেস্তোরাঁ' : 'Browse'}
               </Box>
             </Button>
 

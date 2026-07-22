@@ -247,6 +247,31 @@ the dashboard, deploy once, then **remove the variable** — same opt-in pattern
   calls `.filter()`/`.order_by()` on it. `PublicRestaurantListView` therefore
   annotates distance with SQL math functions (`_haversine_expr`) instead of
   sorting in Python.
+- **A form offering options the service layer rejects.** Checkout listed all 13
+  zones from `food/zones/` while `place_food_cod_order` only accepted the
+  restaurant's own — every order for a restaurant nobody had assigned zones to
+  died on a 400 whose message never reached the screen, because `callApi`
+  returns `null` on non-2xx *and* the handler read `res.data.data` (the error
+  envelope key is `errors`). Any dropdown feeding a validated endpoint must be
+  sourced from the same rule the endpoint enforces.
+
+### Delivery-zone serviceability
+
+`food.services.served_zones(restaurant)` is the **single definition** of where a
+restaurant delivers. **No `RestaurantZone` rows means "unconfigured", not
+"delivers nowhere"** — it falls back to every active zone, so a freshly
+onboarded restaurant is orderable instead of 400-ing every checkout. Assigning
+even one zone flips it back to an explicit allow-list.
+
+Three places must agree with it, and tests pin all three:
+- `_resolve_zone` (checkout validation),
+- `PublicRestaurantListView` — the zone filter and the `delivers_to_zone`
+  annotation both special-case the unzoned restaurant,
+- `RestaurantDetailSerializer.served_zone_ids` — **`null` means "every zone"**,
+  which is also what the checkout client treats as "still loading". Returning
+  null rather than enumerating keeps the detail endpoint at 5 queries
+  (`test_detail_is_query_bounded`); `zones` is prefetched in `_detail_prefetch`
+  for exactly that reason, so that helper returns a *tuple* of prefetches.
 
 ### Customer discovery (homepage rows + Browse page)
 
@@ -313,6 +338,15 @@ Components must use palette slots (`divider`, `background.paper`, `primary.main`
 or an `sx` theme callback — importing `FOOD` directly pins them to light mode.
 The few remaining direct `FOOD.*` imports (`RestaurantCard`, `RestaurantDetail`,
 `FoodOrderTrack`) are semantic accents that read correctly on both canvases.
+
+**`FoodGalaxy` is the food pages' actual background.** It is `position: fixed;
+inset: 0` behind every `/food/*` route, so *its* base colour — not
+`palette.background.default` — is what the customer sees. It hardcoded the light
+canvas, which in dark mode put warm off-white text on a near-white sheet: the
+menu category headings vanished while text inside Cards stayed readable, because
+Cards paint their own `background.paper`. It now reads `foodTokens(mode)`. The
+symptom to recognise: **text disappears only where it sits directly on the page
+background**, never inside a card.
 
 ## Commands
 
