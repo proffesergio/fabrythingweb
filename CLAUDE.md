@@ -133,31 +133,33 @@ Root mounts (`config/urls.py`): `api/auth/`, `api/getForm/<model>/`,
 `api/uploads/`, `api/store/`, `api/food/`.
 
 `api/food/` (`food/urls.py`) — public `restaurants/`, `restaurants/<slug>/`,
-`zones/`; customer `orders/`, `orders/<order_code>/`; vendor `vendor/restaurant/`,
+`zones/`, `delivery-quote/`, `partner/apply/`; customer `orders/`, `orders/<order_code>/`; vendor `vendor/restaurant/`,
 `vendor/orders/…` + router `vendor/{categories,items,coupons}`; admin
 `admin/dashboard/`, `admin/orders/…`, `admin/orders/<pk>/assign/`,
 `admin/payments/`, `admin/settlements/{,summary/,bulk/,<pk>/leg/}`,
-`admin/zone-tree/`, `admin/menu/copy/` + router
+`admin/zone-tree/`, `admin/menu/copy/`, `admin/rider-cash/{,<pk>/deposit/}`,
+`admin/partner/{applications/,<pk>/decision/}` + router
 `admin/{restaurants,zones,villages,categories,items,option-groups,options,coupons,riders}`;
-rider `rider/{me,availability,heartbeat,orders,earnings,orders/<pk>/status}`; plus
+rider `rider/{me,availability,heartbeat,orders,earnings,offer,orders/<pk>/status}`; plus
 `coupons/validate/`, `notifications/`, `loyalty/`.
 
 ## food/ module
 
-20 models in `food/models.py`: `DeliveryZone`, `Village`, `Restaurant`,
+24 models in `food/models.py`: `DeliveryZone`, `DeliveryPricing`, `Village`, `Restaurant`,
 `RestaurantHours`, `RestaurantZone`, `FoodCategory`, `FoodItem`,
 `FoodItemOptionGroup`, `FoodItemOption`, `Coupon`, `FoodOrder`, `FoodOrderItem`,
 `PaymentTransaction`, `OrderSettlement`, `Rider`, `RiderEarning`, `Notification`,
-`LoyaltyAccount`, `LoyaltyLedger` (all inherit `TimeStamped`).
+`LoyaltyAccount`, `LoyaltyLedger`, `RiderCashDeposit`, `DeliveryOffer` (all inherit `TimeStamped`).
 
 Views are split by audience, not by model:
-`views_public` · `views_vendor` · `views_admin` · `views_admin_menu` ·
+`views_public` · `views_vendor` · `views_partner` · `views_admin` · `views_admin_menu` ·
 `views_admin_dashboard` · `views_orders` · `views_settlement` (settlements +
 zone/village admin) · `views_food_ext` (coupons, riders, dispatch,
 notifications, loyalty, payments). Serializers mirror the same split
 (`serializers_admin_menu.py`, `serializers_orders.py`, `serializers_write.py`, …).
-Business logic in `services.py` / `services_admin.py` / `services_settlement.py`;
-geography in `geo.py`.
+Business logic in `services.py` / `services_admin.py` / `services_settlement.py` /
+`services_partner.py` / `services_cash.py` / `services_dispatch.py`; money rates
+in `pricing.py`; geography in `geo.py`.
 
 `FoodOrder` has a forward-only state machine (`ALLOWED_TRANSITIONS`):
 PLACED → CONFIRMED → PREPARING → OUT_FOR_DELIVERY → DELIVERED, CANCELLED
@@ -167,6 +169,63 @@ reachable from any non-terminal state. Money is snapshotted at creation.
 vendor and admin views all route through it. Reaching DELIVERED calls
 `services_settlement.settle_order()` there, so the ledger can't be bypassed by
 adding another endpoint.
+
+### Pricing (`food/pricing.py`) — the two money rules
+
+**All money rates live in `food/pricing.py` and the `DeliveryPricing` singleton
+row** (`DeliveryPricing.get_solo()`, admin-tunable without a deploy). Nothing
+reads them at settlement time — every figure is snapshotted onto the order at
+checkout, so a rate change never moves existing books.
+
+1. **Commission is `max(min_commission_amount, food_net × commission_percentage%)`**,
+   capped at `food_net`. A flat 12% loses money on a ৳150 rural basket; the ৳25
+   floor carries it. The cap exists because a ৳25 floor on a ৳20 order would
+   otherwise make `restaurant_payout` negative.
+2. **Delivery is priced by distance** from the restaurant's `pickup_lat/lng` to
+   the customer's pin → village centre → zone centre (in that order;
+   `distance_source` records which was used). `fee = clamp(base + per_km ×
+   max(0, distance − free_km))`, rounded **up** to the nearest ৳5.
+
+`FoodOrder.distance_km` and `FoodOrder.rider_base_pay` are the snapshots;
+`OrderSettlement.commission_floor` snapshots the floor alongside the rate.
+
+**The platform can never lose money on a delivery.** `_apply_margin_backstop`
+caps rider pay at `fee − platform_min_margin`. This is structural — a
+misconfigured rate in the admin panel caps the *rider*, it cannot create a loss.
+`max_delivery_km` (12 km) refuses the long orders where that cap would be unfair
+to the rider rather than letting it bite. `per_km_fee` must stay **above**
+`rider_per_km` or longer deliveries earn less; a test pins it.
+
+`RestaurantZone.delivery_fee` is still honoured as an explicit per-zone override
+(a promo rate) and outranks the formula. **The zone decides *whether* we
+deliver; the pin decides *what it costs*** — so checkout sends both, and
+`GET api/food/delivery-quote/` prices with the same function the order endpoint
+uses, so the quote can never disagree with the charge.
+
+### Partner self-signup
+
+`POST api/food/partner/apply/` (public) creates `Users(role='Restaurant')` +
+`Restaurant(status=PENDING)` in one `transaction.atomic` — the orphan-login trap
+again. PENDING is the whole approval gate: `PublicRestaurantListView` already
+filters to ACTIVE, so an unapproved restaurant is invisible for free, while the
+owner can sign in and build a menu. Re-applying **updates** the first
+application rather than minting a second login (a typo would otherwise strand
+the applicant on the unique-username constraint). Admin approves at
+`/admin/manage/food/partners`, which is where commission terms are set.
+
+### Rider cash (`food/services_cash.py`)
+
+On COD the platform's money is physically in a rider's pocket between delivery
+and deposit. **`cash_in_hand` is derived (collections − deposits), never
+stored** — a balance column would drift from the ledger on any missed write.
+`RiderCashDeposit` records money coming back and settles the `rider_cash` legs
+it fully covers, oldest first (a partly-covered leg is left PENDING).
+
+The real protection is the ceiling: `pick_rider_for` skips riders over
+`DeliveryPricing.rider_cash_ceiling` **for COD orders only** — they keep getting
+prepaid work. If every rider is over the line the order falls through to the
+admin queue, because an unassigned order is a visible problem and an unbounded
+cash position is not.
 
 ### Settlement ledger (the Payments tab)
 
@@ -201,10 +260,40 @@ fills a *blank* `name_bn` and leaves existing rows alone unless
 
 Rider presence: `Rider.current_lat/current_lng/last_seen_at` are set by a
 heartbeat the rider dashboard posts ~every 20s while Online. `Rider.is_online`
-(property) mirrors the dispatch filter in `services_dispatch.available_riders()`
+(property) mirrors the dispatch filter in `services_dispatch.dispatchable_riders()`
 — `is_available` is the rider's own switch, `is_online` is the heartbeat. Both
-must hold to be dispatchable. Orders still reach a rider only via manual admin
-assignment in `ManageFoodOrders`.
+must hold to be dispatchable.
+
+### Dispatch: the offer/accept cycle (`services_dispatch.py`)
+
+A CONFIRMED order is **offered** to the nearest eligible rider, not silently
+assigned. `offer_order(order)` is the single engine and is idempotent — already
+assigned → no-op; live offer out → returns it (never double-offers); else offers
+the next untried rider; no rider left → None, and the order waits in the admin
+queue. `maybe_auto_assign_rider` is an alias for it, called on CONFIRMED.
+
+`DeliveryOffer` (state OFFERED/ACCEPTED/REJECTED/EXPIRED, 60s TTL) is the record.
+**Invariant, enforced in code not schema: at most one OFFERED offer per order.**
+A rider gets **one shot per order** — a decline/expire excludes them from the
+re-offer, so the cascade always moves to someone new rather than looping.
+
+- Rider side: `GET/POST api/food/rider/offer/` (accept/decline). Accept locks
+  the order and re-checks `rider_id`, so a rider can never grab an order an admin
+  just gave away — that returns 409.
+- Admin override: `assign_rider` (behind `admin/orders/<pk>/assign/`) sets the
+  rider directly and **closes any live offer**, or a second rider could accept.
+- **No job runner, so expiry is lazy.** `sweep_offers()` expires timed-out
+  offers and cascades every stuck order; it runs on *every* `rider/offer/` GET
+  (so online riders keep the whole cycle moving) and via the
+  `sweep_delivery_offers` management command for a cron backstop — needed for
+  when the offered rider closed their tab and stopped polling.
+
+**Rider pay is the distance snapshot, everywhere.** `FoodOrder.rider_base_pay`
+(set at checkout by `pricing.delivery_quote`) is what the offer card shows, what
+`RiderEarning` books on DELIVERED, and what `services_settlement._base_pay_for`
+settles — all three read the same field, so a rider's dashboard total can't drift
+from the ledger. Orders placed before distance pricing (snapshot 0) fall back to
+the flat `RIDER_BASE_PAY`/`DEFAULT_RIDER_BASE_PAY`.
 
 Riders have **no self-serve signup or password reset**. An admin creates the
 login alongside the rider and can set a password via
@@ -366,6 +455,7 @@ python manage.py seed_bancharampur          # create-only; --force-update to ove
 python manage.py backfill_settlements       # settlements for pre-ledger delivered orders
 python manage.py prune_orphan_logins        # dry run; --apply to actually delete
 python manage.py release_login <user|email> # dry run; --apply frees the name for reuse
+python manage.py sweep_delivery_offers       # expire timed-out offers + re-offer (cron backstop)
 
 # frontend (from frontend/ecommerce_inventory)
 npm start        # CRA dev server

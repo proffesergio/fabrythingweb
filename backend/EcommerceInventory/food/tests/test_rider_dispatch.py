@@ -7,8 +7,9 @@ from django.contrib.auth import get_user_model
 from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from food.models import Restaurant, Rider, FoodOrder
-from food.services_dispatch import dispatchable_riders, pick_rider_for, maybe_auto_assign_rider
+from food.models import Restaurant, Rider, FoodOrder, DeliveryOffer
+from food.services_dispatch import (dispatchable_riders, pick_rider_for, maybe_auto_assign_rider,
+                                    offer_order)
 
 User = get_user_model()
 
@@ -83,37 +84,46 @@ class AutoAssignTests(TestCase):
             status=status, rider=rider,
         )
 
-    def test_assigns_on_confirmed(self):
+    def test_offers_on_confirmed_rather_than_assigning(self):
+        """A confirmed order is *offered*, not silently handed over — the rider
+        is not attached until they accept."""
         rider = make_rider("r1", lat=BANCHARAMPUR[0], lng=BANCHARAMPUR[1], seen_minutes_ago=1)
         order = self._order()
-        self.assertEqual(maybe_auto_assign_rider(order), rider)
+        offer = maybe_auto_assign_rider(order)
+        self.assertEqual(offer.rider, rider)
+        self.assertEqual(offer.state, DeliveryOffer.State.OFFERED)
         order.refresh_from_db()
-        self.assertEqual(order.rider, rider)
+        self.assertIsNone(order.rider)   # not yet — the rider must accept
 
-    def test_does_not_reassign_an_order_that_already_has_a_rider(self):
+    def test_does_not_re_offer_an_order_that_already_has_a_rider(self):
         first = make_rider("r1", lat=BANCHARAMPUR[0], lng=BANCHARAMPUR[1], seen_minutes_ago=1)
         make_rider("r2", lat=BANCHARAMPUR[0], lng=BANCHARAMPUR[1], seen_minutes_ago=1)
         order = self._order(rider=first)
         self.assertIsNone(maybe_auto_assign_rider(order))
-        order.refresh_from_db()
-        self.assertEqual(order.rider, first)
 
-    def test_ignores_orders_not_in_confirmed(self):
+    def test_does_not_double_offer_a_live_offer(self):
+        make_rider("r1", lat=BANCHARAMPUR[0], lng=BANCHARAMPUR[1], seen_minutes_ago=1)
+        order = self._order()
+        first = offer_order(order)
+        again = offer_order(order)
+        self.assertEqual(first.id, again.id)
+        self.assertEqual(order.delivery_offers.count(), 1)
+
+    def test_ignores_orders_not_yet_confirmed(self):
         make_rider("r1", lat=BANCHARAMPUR[0], lng=BANCHARAMPUR[1], seen_minutes_ago=1)
         order = self._order(status=FoodOrder.Status.PLACED)
         self.assertIsNone(maybe_auto_assign_rider(order))
-        order.refresh_from_db()
-        self.assertIsNone(order.rider)
+        self.assertEqual(order.delivery_offers.count(), 0)
 
-    def test_notifies_the_assigned_rider(self):
+    def test_notifies_the_offered_rider(self):
         rider = make_rider("r1", lat=BANCHARAMPUR[0], lng=BANCHARAMPUR[1], seen_minutes_ago=1)
         order = self._order()
         maybe_auto_assign_rider(order)
         self.assertTrue(rider.user.food_notifications.filter(order_code=order.order_code).exists())
 
 
-class ConfirmAssignsRiderTests(TestCase):
-    def test_admin_confirming_an_order_auto_assigns(self):
+class ConfirmOffersRiderTests(TestCase):
+    def test_admin_confirming_an_order_offers_it(self):
         admin = User.objects.create(username="adm", email="adm@x.com", role="Admin")
         restaurant = Restaurant.objects.create(
             name="R", slug="r", status=Restaurant.Status.ACTIVE,
@@ -131,4 +141,6 @@ class ConfirmAssignsRiderTests(TestCase):
                            {"status": "CONFIRMED"}, format="json")
         self.assertEqual(res.status_code, 200, res.content)
         order.refresh_from_db()
-        self.assertEqual(order.rider, rider)
+        self.assertIsNone(order.rider)
+        self.assertTrue(order.delivery_offers.filter(
+            rider=rider, state=DeliveryOffer.State.OFFERED).exists())

@@ -58,6 +58,13 @@ export default function FoodCheckout() {
   // covers both "still loading" and the server's own null for an unconfigured
   // restaurant, which delivers everywhere (food.services.served_zones).
   const [servedIds, setServedIds] = useState(null);
+  // The server's live delivery quote for the current destination. null while we
+  // have not asked yet. Quoting through the same endpoint the order is priced
+  // by is the whole point — a fee shown here can never differ from the fee
+  // charged, and an address beyond range is refused *before* the customer fills
+  // in their details rather than by an opaque 400 afterwards.
+  const [quote, setQuote] = useState(null);
+  const [quoting, setQuoting] = useState(false);
 
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
 
@@ -101,8 +108,33 @@ export default function FoodCheckout() {
     else { setApplied(null); toast.error(d?.message || 'Invalid coupon'); }
   };
 
+  // Re-quote whenever the destination moves. The pin wins over the village,
+  // which wins over the zone — same precedence the server applies, so the
+  // number on screen is the number it will charge.
+  useEffect(() => {
+    if (!restaurant?.slug || (!zone && !village && !coords)) { setQuote(null); return undefined; }
+    let cancelled = false;
+    setQuoting(true);
+    (async () => {
+      const params = { restaurant: restaurant.slug };
+      if (zone) params.zone = zone;
+      if (village) params.village = village;
+      if (coords) { params.lat = coords.lat; params.lng = coords.lng; }
+      const res = await callApi({ url: 'food/delivery-quote/', method: 'GET', params, silent: true });
+      if (cancelled) return;
+      setQuote(res?.data?.data || null);
+      setQuoting(false);
+    })();
+    return () => { cancelled = true; };
+  }, [restaurant?.slug, zone, village, coords?.lat, coords?.lng]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const pointsOff = redeem ? Math.min(points, Math.max(0, subtotal - (applied?.discount || 0))) : 0;
-  const estTotal = Math.max(0, subtotal - (applied?.discount || 0) - pointsOff);
+  const foodTotal = Math.max(0, subtotal - (applied?.discount || 0) - pointsOff);
+  const deliveryFee = quote?.deliverable ? Number(quote.fee) : 0;
+  const grandTotal = foodTotal + deliveryFee + Number(tip || 0);
+  // Undeliverable is known before submit, so the button says so rather than
+  // letting the customer discover it after filling the whole form.
+  const blocked = quote != null && quote.deliverable === false;
 
   const submit = async () => {
     setErr('');
@@ -117,6 +149,11 @@ export default function FoodCheckout() {
     if (zone) body.zone_id = zone;
     else if (coords) { body.lat = coords.lat; body.lng = coords.lng; }
     if (village) body.village_id = village;
+    // Send the pin even when a zone was chosen. The zone decides *whether* we
+    // deliver; the pin decides *what it costs*. Omitting it here while the quote
+    // above included it would price the order off the zone centre and charge a
+    // different fee than the one on screen.
+    if (coords) { body.delivery_lat = coords.lat; body.delivery_lng = coords.lng; }
     if (coords?.lat) { body.delivery_lat = coords.lat; body.delivery_lng = coords.lng; }
     // rawError, because callApi returns null on any non-2xx — without it the
     // server's actual reason ("This restaurant does not deliver to the selected
@@ -246,12 +283,42 @@ export default function FoodCheckout() {
             <Typography color="success.main">Loyalty points</Typography><Typography color="success.main">−৳{pointsOff}</Typography>
           </Stack>
         )}
+        <Stack direction="row" justifyContent="space-between" sx={{ mb: 0.5 }}>
+          <Typography color="text.secondary">
+            Delivery
+            {quote?.distance_km && (
+              <Typography component="span" variant="caption" color="text.secondary">
+                {' '}· {quote.distance_km} km
+              </Typography>
+            )}
+          </Typography>
+          <Typography sx={{ fontWeight: 700 }}>
+            {quoting ? '…' : quote?.deliverable ? `৳${quote.fee}` : '—'}
+          </Typography>
+        </Stack>
+        {Number(tip) > 0 && (
+          <Stack direction="row" justifyContent="space-between" sx={{ mb: 0.5 }}>
+            <Typography color="text.secondary">Tip</Typography>
+            <Typography sx={{ fontWeight: 700 }}>৳{tip}</Typography>
+          </Stack>
+        )}
         <Divider sx={{ my: 1 }} />
         <Stack direction="row" justifyContent="space-between">
-          <Typography sx={{ fontWeight: 800 }}>Est. total (before delivery)</Typography>
-          <Typography sx={{ fontWeight: 800 }}>৳{estTotal}</Typography>
+          <Typography sx={{ fontWeight: 800 }}>Total</Typography>
+          <Typography sx={{ fontWeight: 800 }}>৳{grandTotal}</Typography>
         </Stack>
-        <Typography variant="caption" color="text.secondary">Delivery fee is added and the final total is confirmed by the restaurant.</Typography>
+        {blocked ? (
+          <Alert severity="warning" sx={{ mt: 1.5, borderRadius: 2 }}>{quote.reason}</Alert>
+        ) : (
+          <Typography variant="caption" color="text.secondary">
+            {quote?.priced_by === 'distance'
+              ? 'Delivery is priced by distance from the restaurant.'
+              : 'Delivery fee is confirmed when the restaurant accepts your order.'}
+            {/* A zone-centre distance can be a couple of km out inside a large
+                union, and the customer pays for that imprecision — so ask. */}
+            {quote?.distance_source === 'zone' && ' Drop a pin for an exact fee.'}
+          </Typography>
+        )}
       </Card>
 
       <Box sx={{ position: 'fixed', left: 0, right: 0, bottom: 0, p: 2, zIndex: 1100,
@@ -265,7 +332,7 @@ export default function FoodCheckout() {
             whileHover={{ scale: 1.015 }}
             whileTap={{ scale: 0.985 }}
             transition={{ type: 'spring', stiffness: 420, damping: 26 }}
-            fullWidth variant="contained" size="large" disabled={loading} onClick={submit}
+            fullWidth variant="contained" size="large" disabled={loading || blocked} onClick={submit}
             sx={{
               py: 1.6, borderRadius: 999, position: 'relative', overflow: 'hidden',
               // No hardcoded boxShadow here: it used to sit at a bigger blur than
@@ -284,7 +351,9 @@ export default function FoodCheckout() {
               '@media (prefers-reduced-motion: reduce)': { '&::after': { animation: 'none' } },
             }}
           >
-            {loading ? 'Placing order…' : `Place order · ${METHODS.find((m) => m.key === method)?.label}`}
+            {loading ? 'Placing order…'
+              : blocked ? 'Address outside delivery range'
+              : `Place order · ৳${grandTotal} · ${METHODS.find((m) => m.key === method)?.label}`}
           </Button>
         </Box>
       </Box>

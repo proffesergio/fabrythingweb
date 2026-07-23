@@ -10,6 +10,7 @@ import useApi from "../hooks/APIHandler";
 import RiderHeader from "./RiderHeader";
 import EarningsPanel from "./EarningsPanel";
 import DeliveryCard from "./DeliveryCard";
+import DeliveryOfferCard from "./DeliveryOfferCard";
 import useRiderHeartbeat from "./useRiderHeartbeat";
 import BrandLogo from "../components/BrandLogo";
 
@@ -19,6 +20,8 @@ export default function RiderDashboard() {
     const [me, setMe] = useState(null);
     const [orders, setOrders] = useState([]);
     const [earnings, setEarnings] = useState(null);
+    const [offer, setOffer] = useState(null);
+    const [responding, setResponding] = useState(false);
     const [loading, setLoading] = useState(true);
 
     const online = !!me?.is_available;
@@ -36,6 +39,39 @@ export default function RiderDashboard() {
         setLoading(false);
     }, []); // eslint-disable-line react-hooks/exhaustive-deps
     useEffect(() => { load(); }, [load]);
+
+    // Poll for an incoming offer while online. This poll is also what drives the
+    // server-side sweep (RiderOfferView sweeps on every GET), so a rider being
+    // online keeps the whole cascade moving for everyone. Fast (every 5s)
+    // because a 60s offer the rider never sees is a missed delivery.
+    const pollOffer = useCallback(async () => {
+        const res = await callApi({ url: "food/rider/offer/", method: "GET", silent: true });
+        setOffer(res?.status === 200 ? res.data.data.offer : null);
+    }, []); // eslint-disable-line react-hooks/exhaustive-deps
+    useEffect(() => {
+        if (!online) { setOffer(null); return undefined; }
+        pollOffer();
+        const t = setInterval(pollOffer, 5000);
+        return () => clearInterval(t);
+    }, [online, pollOffer]);
+
+    const acceptOffer = async () => {
+        setResponding(true);
+        const res = await callApi({ url: "food/rider/offer/", method: "POST",
+            body: { action: "accept" }, silent: true, rawError: true });
+        setResponding(false);
+        if (res?.status === 200) { toast.success("Delivery accepted 🛵"); setOffer(null); load(); }
+        else if (res?.status === 409) { toast.info("That offer just expired — watching for the next one."); setOffer(null); }
+        else { toast.error("Could not accept — try again."); }
+    };
+    const declineOffer = async () => {
+        setResponding(true);
+        await callApi({ url: "food/rider/offer/", method: "POST",
+            body: { action: "decline" }, silent: true });
+        setResponding(false);
+        setOffer(null);
+        pollOffer();
+    };
 
     const toggle = async (v) => {
         const res = await callApi({ url: "food/rider/availability/", method: "POST", body: { is_available: v } });
@@ -74,6 +110,11 @@ export default function RiderDashboard() {
             <Container maxWidth="sm" sx={{ py: 3 }}>
                 <RiderHeader me={me} online={online} onToggle={toggle} locationError={locationError} />
                 <EarningsPanel earnings={earnings} />
+
+                {online && offer && (
+                    <DeliveryOfferCard offer={offer} onAccept={acceptOffer} onDecline={declineOffer}
+                        busy={responding} />
+                )}
 
                 <Typography variant="h6" sx={{ mb: 1 }}>Your deliveries</Typography>
                 {orders.length === 0 && (

@@ -9,6 +9,7 @@ from django.db import transaction
 from django.utils import timezone
 
 from food.models import FoodOrder, OrderSettlement
+from food.pricing import commission_for
 
 CENTS = Decimal("0.01")
 
@@ -22,27 +23,48 @@ def _q(value):
     return Decimal(value).quantize(CENTS)
 
 
+def _base_pay_for(order, override=None):
+    """What we owe the rider for the distance, in priority order.
+
+    The order's own `rider_base_pay` is the number quoted and shown at checkout,
+    snapshotted with the distance it was derived from — it is the honest answer
+    and it wins. An explicit override (a caller correcting a settlement) beats
+    it; the flat default is only for orders placed before distance pricing, whose
+    snapshot is 0.
+    """
+    if not order.rider:
+        # Nobody delivered it (self-pickup, or admin closed it out) — no rider leg.
+        return Decimal("0.00")
+    if override is not None:
+        return Decimal(override)
+    quoted = Decimal(order.rider_base_pay or 0)
+    return quoted if quoted > 0 else DEFAULT_RIDER_BASE_PAY
+
+
 def compute_breakdown(order, rider_base_pay=None):
     """Pure money math for one order. No DB writes — safe to call for previews.
 
     The coupon discount is borne by the restaurant: it comes off `food_net`
     before commission, so the platform takes its cut of the discounted price,
     not the menu price.
+
+    Commission is `max(floor, rate%)`, capped at food_net — see
+    food.pricing.commission_for. Both the rate and the floor are returned so the
+    settlement row can snapshot them.
     """
-    base_pay = Decimal(rider_base_pay if rider_base_pay is not None else DEFAULT_RIDER_BASE_PAY)
-    if not order.rider:
-        # Nobody delivered it (self-pickup, or admin closed it out) — no rider leg.
-        base_pay = Decimal("0.00")
+    base_pay = _base_pay_for(order, rider_base_pay)
 
     rate = order.restaurant.commission_percentage
+    floor = order.restaurant.min_commission_amount
     food_net = _q(max(order.subtotal - order.discount, Decimal("0.00")))
-    commission = _q(food_net * rate / Decimal("100"))
+    commission = commission_for(order.restaurant, food_net, floor=floor, rate=rate)
     restaurant_payout = _q(food_net - commission)
     rider_payout = _q(base_pay + order.tip)
     platform_revenue = _q(commission + order.delivery_fee - base_pay)
 
     return {
         "commission_rate": _q(rate),
+        "commission_floor": _q(floor),
         "food_net": food_net,
         "delivery_fee": _q(order.delivery_fee),
         "tip": _q(order.tip),

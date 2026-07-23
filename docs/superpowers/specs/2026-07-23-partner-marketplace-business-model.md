@@ -1,7 +1,9 @@
 # Partner Marketplace — Business Model & "Become a Partner"
 
 **Date:** 2026-07-23
-**Status:** Decided (owner-approved), not yet implemented.
+**Status:** All four decisions **implemented** 2026-07-23 (plus distance-based
+delivery, decided after this doc was written). The offer/accept/decline/expire
+cycle shipped in the same release — see "What shipped" below.
 **Depends on:** the shipped settlement ledger (`food/services_settlement.py`,
 `OrderSettlement`), rider presence/heartbeat, `services_dispatch.available_riders()`.
 
@@ -139,6 +141,57 @@ order → CONFIRMED
    Required before order volume makes float risk real.
 4. **Auto-dispatch** — offers, rider accept/reject, admin fallback. Highest
    complexity; do it once volume actually justifies removing the manual step.
+
+## What shipped (2026-07-23)
+
+| Piece | Where |
+| ----- | ----- |
+| Commission `max(floor, %)` | `food/pricing.py::commission_for`, `Restaurant.min_commission_amount` |
+| Distance-based delivery fee | `food/pricing.py::delivery_quote`, `DeliveryPricing` config row |
+| Never-a-loss guarantee | `food/pricing.py::_apply_margin_backstop` |
+| Quote before checkout | `GET api/food/delivery-quote/`, wired into `FoodCheckout.js` |
+| Become a Partner | `food/services_partner.py`, `/food/partner`, `/admin/manage/food/partners` |
+| Rider cash + ceiling | `food/services_cash.py`, `RiderCashDeposit`, `GET/POST admin/rider-cash/` |
+
+**Delivery fee is now distance-based** (decided after the four questions above).
+`RestaurantZone.delivery_fee` is retained as an explicit per-zone override — a
+promo rate — and still outranks the formula. The zone decides *whether* we
+deliver; the pin decides *what it costs*.
+
+Two properties are load-bearing and pinned by tests:
+
+- `per_km_fee` (৳12) **must stay above** `rider_per_km` (৳8), or a longer
+  delivery earns less than a short one. `test_a_longer_delivery_earns_MORE_not_less`.
+- The margin backstop is **structural, not a consequence of good rates**: an
+  owner who sets rider pay above the fee in the admin panel caps the *rider*,
+  they cannot create a loss. `test_a_misconfigured_rate_costs_the_platform_nothing`.
+
+`max_delivery_km` (12 km) exists because of the interaction between the two: at
+the fee cap the backstop would start clawing back the rider's pay, so those
+orders are refused rather than underpaid.
+
+### Decision 4 — the offer/accept cycle (shipped)
+
+| Piece | Where |
+| ----- | ----- |
+| Offer model | `DeliveryOffer` (OFFERED/ACCEPTED/REJECTED/EXPIRED, 60s TTL) |
+| Engine | `services_dispatch.offer_order` (idempotent, one live offer per order) |
+| Rider accept/decline | `GET/POST api/food/rider/offer/`, `DeliveryOfferCard.js` with countdown |
+| Admin override | `assign_rider` closes any live offer |
+| Expiry without a job runner | `sweep_offers()` on every rider poll + `sweep_delivery_offers` cron command |
+| Cash-aware | riders over the COD ceiling are skipped for cash offers only |
+
+A CONFIRMED order is offered to the nearest eligible rider, who has 60s to accept
+or decline. Decline/expire cascades to the next untried rider; when the pool is
+exhausted the order falls to the admin queue. Each rider gets one shot per order,
+so the cascade always advances. The whole path — browse → quote → order → offer →
+accept → deliver → settle → cash deposit — is pinned by
+`food/tests/test_end_to_end_journey.py`.
+
+**Deliberately deferred (v2):** a rider who declined is excluded from that
+order's re-offer permanently, even if everyone else also declines and they are
+the last rider standing. For a village-scale operation the admin queue is the
+right fallback; revisit if manual assignment becomes frequent.
 
 ## Open questions (not yet decided)
 

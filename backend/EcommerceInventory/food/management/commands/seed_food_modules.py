@@ -46,6 +46,20 @@ MODULES = [
         'display_order': 4,
         'parent': 'Food',
     },
+    {
+        'module_name': 'Partner Applications',
+        'module_icon': 'HowToReg',
+        'module_url': '/manage/food/partners',
+        'display_order': 5,
+        'parent': 'Food',
+    },
+    {
+        'module_name': 'Rider Cash',
+        'module_icon': 'Payments',
+        'module_url': '/manage/food/rider-cash',
+        'display_order': 7,
+        'parent': 'Food',
+    },
 ]
 
 # The exact module_names we manage — anything else gets deactivated

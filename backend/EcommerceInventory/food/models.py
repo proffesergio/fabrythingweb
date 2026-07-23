@@ -30,12 +30,77 @@ class DeliveryZone(TimeStamped):
         return self.name
 
 
+class DeliveryPricing(TimeStamped):
+    """The knobs for distance-based delivery pricing. Exactly one row.
+
+    These are rates, not money owed, so they live in the database rather than in
+    settings: the owner tunes fuel-sensitive numbers from the admin panel
+    without a deploy. Nothing reads this at *settlement* time — every figure is
+    snapshotted onto the order when it is placed (food/pricing.py), so changing
+    a rate here never moves an existing order's books.
+
+    The distance-based rule, per order:
+
+        billable_km = max(0, distance_km - free_km)
+        fee         = clamp(base_fee + per_km_fee * billable_km, min_fee, max_fee)
+        rider_pay   = rider_base_pay + rider_per_km * billable_km
+
+    `per_km_fee > rider_per_km` is what makes a longer delivery *more* profitable
+    rather than less. `platform_min_margin` is the backstop that holds even if
+    someone misconfigures that — see pricing.delivery_quote.
+    """
+
+    base_fee = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal("30.00"))
+    free_km = models.DecimalField(max_digits=5, decimal_places=2, default=Decimal("2.00"))
+    per_km_fee = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal("12.00"))
+    min_fee = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal("30.00"))
+    max_fee = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal("150.00"))
+
+    rider_base_pay = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal("25.00"))
+    rider_per_km = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal("8.00"))
+
+    # The platform must never pay a rider more than it collected for delivery.
+    # This is the hard floor on (delivery_fee - rider_base_pay).
+    platform_min_margin = models.DecimalField(max_digits=10, decimal_places=2,
+                                              default=Decimal("5.00"))
+
+    # Cash country: quote round numbers. 5 means every fee is a multiple of ৳5.
+    round_to_nearest = models.PositiveIntegerField(default=5)
+
+    # Beyond this, the order is refused rather than quoted. Without it, a very
+    # long delivery hits max_fee, the margin backstop then claws back the
+    # rider's pay, and the rider silently eats the distance.
+    max_delivery_km = models.DecimalField(max_digits=5, decimal_places=2, default=Decimal("12.00"))
+
+    # A rider holding more than this much undeposited COD cash stops being
+    # offered new cash orders. See services_cash.py.
+    rider_cash_ceiling = models.DecimalField(max_digits=10, decimal_places=2,
+                                             default=Decimal("3000.00"))
+
+    class Meta:
+        verbose_name_plural = "Delivery pricing"
+
+    @classmethod
+    def get_solo(cls):
+        """The single config row, created with defaults on first use."""
+        obj = cls.objects.order_by("id").first()
+        return obj or cls.objects.create()
+
+    def __str__(self):
+        return f"Delivery pricing (base ৳{self.base_fee} + ৳{self.per_km_fee}/km)"
+
+
 class Village(TimeStamped):
     """A village inside a DeliveryZone (union). Delivery is restricted to these;
     the fee is inherited from the parent zone/union via RestaurantZone."""
     zone = models.ForeignKey(DeliveryZone, on_delete=models.CASCADE, related_name="villages")
     name = models.CharField(max_length=120)
     name_bn = models.CharField(max_length=120, blank=True, default="")
+    # Optional, and worth filling in: distance-based delivery pricing falls back
+    # to the parent zone's centre when a village has no centre of its own and the
+    # customer dropped no pin, which can be several km off inside a large union.
+    center_lat = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
+    center_lng = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
     is_active = models.BooleanField(default=True)
 
     class Meta:
@@ -69,7 +134,14 @@ class Restaurant(TimeStamped):
     address = models.CharField(max_length=255, blank=True, default="")
     pickup_lat = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
     pickup_lng = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
-    commission_percentage = models.DecimalField(max_digits=5, decimal_places=2, default=Decimal("15.00"))
+    commission_percentage = models.DecimalField(max_digits=5, decimal_places=2, default=Decimal("12.00"))
+    # A floor under the percentage. On a ৳150 rural order, 12% is ৳18 — less than
+    # a rider costs, so a pure percentage loses money on exactly the orders this
+    # platform gets most of. Commission is max(this, percentage), so small orders
+    # pay their way and large ones still scale. Per-restaurant, so a partner can
+    # be negotiated individually. See food/pricing.py.
+    min_commission_amount = models.DecimalField(max_digits=10, decimal_places=2,
+                                                default=Decimal("25.00"))
     base_delivery_fee = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal("0.00"))
     avg_prep_minutes = models.PositiveIntegerField(default=30)
     min_order_amount = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal("0.00"))
@@ -313,6 +385,14 @@ class FoodOrder(TimeStamped):
     discount = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal("0.00"))
     coupon_code = models.CharField(max_length=32, blank=True, default="")
     delivery_fee = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal("0.00"))
+    # How far the rider actually has to go, and what we promised to pay them for
+    # it — both snapshotted at checkout alongside the fee they paid. Settlement
+    # reads rider_base_pay from here rather than recomputing, so a rate change
+    # tomorrow cannot alter what a rider is owed for a delivery made today.
+    # Null distance means we never knew it (no pin, no village/zone centre); the
+    # fee then fell back to the flat per-zone rate.
+    distance_km = models.DecimalField(max_digits=6, decimal_places=2, null=True, blank=True)
+    rider_base_pay = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal("0.00"))
     tip = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal("0.00"))
     total = models.DecimalField(max_digits=10, decimal_places=2)
     eta_minutes = models.PositiveIntegerField(default=45)
@@ -433,6 +513,50 @@ class Rider(TimeStamped):
         return f"{self.name} ({self.rider_code})"
 
 
+class DeliveryOffer(TimeStamped):
+    """One order offered to one rider, with a deadline to answer.
+
+    Replaces silent auto-assignment: a CONFIRMED order is *offered* to the
+    nearest eligible rider, who accepts or declines, rather than being handed a
+    delivery they never agreed to. An offer that is declined or times out
+    cascades to the next rider; when the pool is exhausted the order falls to the
+    admin queue (the existing manual-assign screen).
+
+    Invariant enforced in services_dispatch.offer_order, not by the schema
+    (SQLite makes a partial unique index awkward): **at most one OFFERED offer
+    per order at a time.** Everything else keys off that — accept can assume it
+    is the only live offer, and the cascade only creates a new one once the
+    previous is resolved.
+    """
+
+    class State(models.TextChoices):
+        OFFERED = "OFFERED", "Offered"
+        ACCEPTED = "ACCEPTED", "Accepted"
+        REJECTED = "REJECTED", "Rejected"
+        EXPIRED = "EXPIRED", "Expired"
+
+    order = models.ForeignKey(FoodOrder, on_delete=models.CASCADE, related_name="delivery_offers")
+    rider = models.ForeignKey("Rider", on_delete=models.CASCADE, related_name="delivery_offers")
+    state = models.CharField(max_length=8, choices=State.choices, default=State.OFFERED)
+    offered_at = models.DateTimeField(default=timezone.now)
+    expires_at = models.DateTimeField()
+    responded_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-offered_at"]
+        indexes = [models.Index(fields=["state"]), models.Index(fields=["rider", "state"])]
+
+    @property
+    def is_live(self):
+        return self.state == self.State.OFFERED and self.expires_at > timezone.now()
+
+    def seconds_left(self):
+        return max(0, int((self.expires_at - timezone.now()).total_seconds()))
+
+    def __str__(self):
+        return f"{self.order.order_code} → {self.rider.name} ({self.state})"
+
+
 class RiderEarning(TimeStamped):
     rider = models.ForeignKey(Rider, on_delete=models.CASCADE, related_name="earnings")
     order = models.ForeignKey(FoodOrder, null=True, on_delete=models.SET_NULL, related_name="rider_earnings")
@@ -466,6 +590,33 @@ class LoyaltyLedger(TimeStamped):
 
 
 # ── Phase E: Settlement ledger ───────────────────────────────────────────────
+class RiderCashDeposit(TimeStamped):
+    """Cash a rider handed back to the platform.
+
+    On a COD order the rider collects the customer's money, so between delivery
+    and deposit the platform's cash is physically in a rider's pocket. This is
+    the record of it coming back.
+
+    Deliberately NOT a balance column on Rider: the amount outstanding is
+    derived from the settlement legs still PENDING (see services_cash.
+    cash_in_hand), so it can never drift out of step with the ledger the way a
+    stored counter would.
+    """
+
+    rider = models.ForeignKey("Rider", on_delete=models.PROTECT, related_name="cash_deposits")
+    amount = models.DecimalField(max_digits=10, decimal_places=2)
+    received_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True,
+                                    on_delete=models.SET_NULL, related_name="cash_receipts")
+    received_at = models.DateTimeField(default=timezone.now)
+    note = models.CharField(max_length=255, blank=True, default="")
+
+    class Meta:
+        ordering = ["-received_at"]
+
+    def __str__(self):
+        return f"{self.rider.name} deposited ৳{self.amount}"
+
+
 class OrderSettlement(TimeStamped):
     """The money breakdown for one delivered order, and who has been paid.
 
@@ -500,6 +651,10 @@ class OrderSettlement(TimeStamped):
 
     # Snapshotted inputs — never re-read from Restaurant/settings after creation.
     commission_rate = models.DecimalField(max_digits=5, decimal_places=2, default=Decimal("0.00"))
+    # The floor that applied when this order settled. Snapshotted for exactly the
+    # same reason as the rate: raising the floor next month must not rewrite this
+    # month's books.
+    commission_floor = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal("0.00"))
     food_net = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal("0.00"))
     delivery_fee = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal("0.00"))
     tip = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal("0.00"))

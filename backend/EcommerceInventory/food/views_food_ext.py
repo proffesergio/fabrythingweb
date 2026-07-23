@@ -15,7 +15,9 @@ from rest_framework_simplejwt.authentication import JWTAuthentication
 
 from core.helpers import renderResponse, CustomPageNumberPagination, CommonListAPIMixin
 from food.models import (Restaurant, Coupon, Rider, RiderEarning, FoodOrder, Notification,
-                         LoyaltyAccount, PaymentTransaction)
+                         LoyaltyAccount, PaymentTransaction, DeliveryOffer)
+from food.services_dispatch import (accept_offer, decline_offer, assign_rider,
+                                    live_offer_for_rider)
 from food.permissions import IsRestaurantOwner, IsPlatformAdmin, IsRider
 from food.serializers_ext import CouponSerializer, RiderSerializer, NotificationSerializer, PaymentSerializer
 from food.serializers_orders import FoodOrderSerializer
@@ -140,9 +142,10 @@ class AdminAssignRiderView(APIView):
         rider = Rider.objects.filter(pk=request.data.get("rider_id")).first()
         if not rider:
             return renderResponse(data={}, message="Rider not found", status=400)
-        order.rider = rider
-        order.save(update_fields=["rider", "updated_at"])
-        notify(order.customer, f"Order {order.order_code}", f"{rider.name} will deliver your order 🛵", order.order_code)
+        # Routes through the dispatch service so any live offer is closed —
+        # otherwise a rider could accept an offer for an order an admin just
+        # handed to someone else.
+        assign_rider(order, rider)
         return renderResponse(data={"rider_id": rider.id, "rider_name": rider.name}, message="Rider assigned")
 
 
@@ -244,6 +247,66 @@ class RiderEarningsView(APIView):
         }, message="Rider earnings")
 
 
+class RiderOfferView(APIView):
+    """The offer/accept cycle from the rider's side.
+
+    GET  → the single offer this rider should be answering (or null), with the
+           seconds left to answer and enough of the order to decide.
+    POST → {"action": "accept"|"decline"}. Accept assigns the order; decline
+           cascades it to the next rider. Both route through services_dispatch,
+           which locks the order so two riders can never take the same one.
+    """
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated, IsRider]
+
+    def get(self, request):
+        offer = live_offer_for_rider(request.user.rider)
+        if not offer:
+            return renderResponse(data={"offer": None}, message="No pending offer")
+        return renderResponse(data={"offer": self._serialize(offer)}, message="Pending offer")
+
+    def post(self, request):
+        offer = (DeliveryOffer.objects
+                 .filter(rider=request.user.rider, state=DeliveryOffer.State.OFFERED)
+                 .select_related("order").first())
+        if not offer:
+            return renderResponse(data={}, message="No offer to respond to", status=404)
+
+        action = (request.data.get("action") or "").lower()
+        if action == "accept":
+            order, ok = accept_offer(offer)
+            if not ok:
+                # Expired or snatched by an admin between poll and tap.
+                return renderResponse(data={"accepted": False},
+                                      message="That offer is no longer available", status=409)
+            return renderResponse(data={"accepted": True, "order_id": order.id},
+                                  message="Delivery accepted")
+        if action == "decline":
+            decline_offer(offer)
+            return renderResponse(data={"declined": True}, message="Offer declined")
+        return renderResponse(data={}, message="action must be 'accept' or 'decline'", status=400)
+
+    def _serialize(self, offer):
+        o = offer.order
+        return {
+            "offer_id": offer.id,
+            "seconds_left": offer.seconds_left(),
+            "order_code": o.order_code,
+            "restaurant_name": o.restaurant.name,
+            "restaurant_lat": str(o.restaurant.pickup_lat) if o.restaurant.pickup_lat is not None else None,
+            "restaurant_lng": str(o.restaurant.pickup_lng) if o.restaurant.pickup_lng is not None else None,
+            "delivery_address": o.delivery_address,
+            "delivery_lat": str(o.delivery_lat) if o.delivery_lat is not None else None,
+            "delivery_lng": str(o.delivery_lng) if o.delivery_lng is not None else None,
+            "distance_km": str(o.distance_km) if o.distance_km is not None else None,
+            "payment_method": o.payment_method,
+            "total": str(o.total),
+            # What the rider will be paid for this specific delivery — the
+            # distance-priced snapshot, not a flat guess.
+            "rider_pay": str((o.rider_base_pay or Decimal("0.00")) + o.tip),
+        }
+
+
 class RiderOrderStatusView(APIView):
     authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated, IsRider]
@@ -260,8 +323,13 @@ class RiderOrderStatusView(APIView):
             return renderResponse(data=str(exc.detail), message="Invalid transition", status=400)
         if order.status == FoodOrder.Status.DELIVERED:
             rider = request.user.rider
+            # Pay the distance-priced snapshot taken at checkout, falling back to
+            # the flat rate only for orders placed before distance pricing (whose
+            # snapshot is 0). This must match services_settlement._base_pay_for,
+            # or the rider's dashboard total drifts from the settlement ledger.
+            base_pay = order.rider_base_pay if order.rider_base_pay else RIDER_BASE_PAY
             RiderEarning.objects.get_or_create(rider=rider, order=order,
-                                               defaults={"base_pay": RIDER_BASE_PAY, "tip": order.tip})
+                                               defaults={"base_pay": base_pay, "tip": order.tip})
             rider.total_deliveries += 1
             rider.save(update_fields=["total_deliveries", "updated_at"])
             notify(order.customer, f"Order {order.order_code}", "Delivered — enjoy your meal! 🍽️", order.order_code)

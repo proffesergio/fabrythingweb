@@ -13,6 +13,7 @@ from rest_framework.exceptions import ValidationError
 from food.models import (Restaurant, FoodItem, FoodItemOption, DeliveryZone, RestaurantZone,
                          Village, FoodOrder, FoodOrderItem, Coupon, PaymentTransaction,
                          Notification, LoyaltyAccount, LoyaltyLedger)
+from food.pricing import delivery_quote, flat_fee_for
 
 DELIVERY_BUFFER_MINUTES = 20
 POINTS_PER_BDT = Decimal("50")   # 1 point per ৳50 spent
@@ -51,10 +52,9 @@ def _resolve_zone(restaurant, zone_id, lat, lng):
 
 
 def _delivery_fee(restaurant, zone):
-    rz = RestaurantZone.objects.filter(restaurant=restaurant, zone=zone).first()
-    if rz and rz.delivery_fee is not None:
-        return Decimal(rz.delivery_fee)
-    return Decimal(restaurant.base_delivery_fee)
+    """Flat per-zone fee. Retained for callers that have no destination to price
+    against; live checkout goes through food.pricing.delivery_quote instead."""
+    return flat_fee_for(restaurant, zone)
 
 
 def notify(user, title, body="", order_code=""):
@@ -155,7 +155,14 @@ def place_food_cod_order(*, customer, restaurant_slug, items, contact_name, cont
             LoyaltyLedger.objects.create(account=acct, delta=-cap, reason="Redeemed at checkout")
 
     discount = min(discount, subtotal).quantize(Decimal("0.01"))
-    delivery_fee = _delivery_fee(restaurant, zone)
+    # Priced by distance from the restaurant's pickup pin to the customer's pin
+    # (falling back to village, then zone centre). Raises if the address is
+    # beyond range. The rider's pay is quoted here too and snapshotted onto the
+    # order, so settlement never has to recompute it. See food/pricing.py.
+    quote = delivery_quote(restaurant, zone=zone, village=village,
+                           lat=delivery_lat if delivery_lat is not None else lat,
+                           lng=delivery_lng if delivery_lng is not None else lng)
+    delivery_fee = quote["fee"]
     tip_amount = Decimal(str(tip or "0.00"))
     total = (subtotal - discount + delivery_fee + tip_amount).quantize(Decimal("0.01"))
 
@@ -168,7 +175,8 @@ def place_food_cod_order(*, customer, restaurant_slug, items, contact_name, cont
         guest_name=contact_name, guest_phone=contact_phone, delivery_address=delivery_address,
         restaurant=restaurant, zone=zone, village=village,
         delivery_lat=delivery_lat, delivery_lng=delivery_lng, subtotal=subtotal, discount=discount,
-        coupon_code=coupon.code if coupon else "", delivery_fee=delivery_fee, tip=tip_amount,
+        coupon_code=coupon.code if coupon else "", delivery_fee=delivery_fee,
+        distance_km=quote["distance_km"], rider_base_pay=quote["rider_base_pay"], tip=tip_amount,
         total=total, notes=notes or "", payment_method=method,
         payment_status="COLLECTED" if method in ONLINE_METHODS else "PENDING",
         eta_minutes=restaurant.avg_prep_minutes + DELIVERY_BUFFER_MINUTES,

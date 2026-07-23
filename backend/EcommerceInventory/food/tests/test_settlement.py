@@ -170,3 +170,92 @@ class BackfillTests(TestCase):
         make_order(rider=rider, status=FoodOrder.Status.DELIVERED)
         self.assertEqual(backfill_settlements(), 1)
         self.assertEqual(backfill_settlements(), 0)
+
+
+class CommissionFloorTests(TestCase):
+    """max(floor, %) at settlement time, snapshotted so it never moves."""
+
+    def setUp(self):
+        self.rider = Rider.objects.create(name="Karim")
+        self.r = Restaurant.objects.create(
+            name="Floor Co", slug="floor-co",
+            commission_percentage=Decimal("12.00"), min_commission_amount=Decimal("25.00"))
+
+    def _order(self, subtotal, **kw):
+        return make_order(restaurant=self.r, rider=self.rider, subtotal=Decimal(subtotal),
+                          delivery_fee=Decimal("50.00"), tip=Decimal("0.00"),
+                          total=Decimal(subtotal) + Decimal("50.00"), **kw)
+
+    def test_the_floor_applies_to_a_small_order(self):
+        b = compute_breakdown(self._order("150.00"))
+        self.assertEqual(b["commission_amount"], Decimal("25.00"))   # not 18.00
+
+    def test_the_percentage_applies_to_a_large_order(self):
+        b = compute_breakdown(self._order("600.00"))
+        self.assertEqual(b["commission_amount"], Decimal("72.00"))
+
+    def test_the_books_still_balance_when_the_floor_binds(self):
+        """The invariant must not depend on how commission was derived."""
+        order = self._order("150.00")
+        b = compute_breakdown(order)
+        self.assertEqual(
+            b["restaurant_payout"] + b["rider_payout"] + b["platform_revenue"], order.total)
+
+    def test_a_tiny_order_never_produces_a_negative_restaurant_payout(self):
+        b = compute_breakdown(self._order("20.00"))
+        self.assertEqual(b["commission_amount"], Decimal("20.00"))
+        self.assertEqual(b["restaurant_payout"], Decimal("0.00"))
+        self.assertGreaterEqual(b["restaurant_payout"], Decimal("0.00"))
+
+    def test_the_floor_is_snapshotted_onto_the_settlement(self):
+        order = self._order("150.00")
+        s = settle_order(order)
+        self.assertEqual(s.commission_floor, Decimal("25.00"))
+
+    def test_raising_the_floor_later_does_not_move_past_books(self):
+        order = self._order("150.00")
+        s = settle_order(order)
+        self.r.min_commission_amount = Decimal("90.00")
+        self.r.save()
+        s.refresh_from_db()
+        self.assertEqual(s.commission_amount, Decimal("25.00"))
+        self.assertEqual(s.commission_floor, Decimal("25.00"))
+
+
+class RiderBasePaySnapshotTests(TestCase):
+    """Settlement pays the rider what checkout quoted for the distance."""
+
+    def setUp(self):
+        self.rider = Rider.objects.create(name="Karim")
+
+    def test_the_orders_quoted_pay_wins_over_the_flat_default(self):
+        order = make_order(rider=self.rider, rider_base_pay=Decimal("73.00"),
+                           distance_km=Decimal("6.00"))
+        b = compute_breakdown(order)
+        self.assertEqual(b["rider_base_pay"], Decimal("73.00"))
+        self.assertEqual(b["rider_payout"], Decimal("93.00"))   # + the 20 tip
+
+    def test_a_pre_distance_order_still_gets_the_flat_default(self):
+        """Orders placed before distance pricing have a 0 snapshot; they must
+        not silently pay their rider nothing."""
+        order = make_order(rider=self.rider, rider_base_pay=Decimal("0.00"))
+        self.assertEqual(compute_breakdown(order)["rider_base_pay"], Decimal("40.00"))
+
+    def test_an_explicit_override_still_wins(self):
+        order = make_order(rider=self.rider, rider_base_pay=Decimal("73.00"))
+        self.assertEqual(
+            compute_breakdown(order, rider_base_pay=Decimal("10.00"))["rider_base_pay"],
+            Decimal("10.00"))
+
+    def test_an_unassigned_order_pays_no_one_however_it_was_quoted(self):
+        order = make_order(rider=None, rider_base_pay=Decimal("73.00"))
+        self.assertEqual(compute_breakdown(order)["rider_base_pay"], Decimal("0.00"))
+
+    def test_the_books_balance_with_a_distance_priced_delivery(self):
+        order = make_order(rider=self.rider, rider_base_pay=Decimal("57.00"),
+                           delivery_fee=Decimal("80.00"), subtotal=Decimal("500.00"),
+                           tip=Decimal("20.00"), total=Decimal("600.00"))
+        b = compute_breakdown(order)
+        self.assertEqual(
+            b["restaurant_payout"] + b["rider_payout"] + b["platform_revenue"], order.total)
+        self.assertGreater(b["platform_revenue"], Decimal("0"))

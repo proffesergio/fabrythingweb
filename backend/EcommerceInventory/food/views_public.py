@@ -5,9 +5,12 @@ from rest_framework.permissions import AllowAny
 from rest_framework.views import APIView
 from rest_framework.generics import ListAPIView
 from core.helpers import renderResponse, CustomPageNumberPagination, CommonListAPIMixin
+from rest_framework.exceptions import ValidationError
 from food.models import (Restaurant, FoodCategory, FoodItem, FoodItemOptionGroup,
-                         DeliveryZone, FoodOrder, RestaurantZone)
+                         DeliveryZone, FoodOrder, RestaurantZone, Village)
 from food.serializers import RestaurantListSerializer, RestaurantDetailSerializer, DeliveryZoneSerializer
+from food.pricing import delivery_quote
+from food.services import served_zones, DELIVERY_BUFFER_MINUTES
 
 EARTH_RADIUS_KM = 6371.0
 
@@ -160,3 +163,57 @@ class PublicZoneListView(ListAPIView):
         # res.data.data access works (every other food endpoint uses renderResponse).
         serializer = self.get_serializer(self.get_queryset(), many=True)
         return renderResponse(data=serializer.data, message="Zones")
+
+
+class DeliveryQuoteView(APIView):
+    """What this delivery will cost, before the customer commits to it.
+
+    Checkout calls this whenever the destination changes. It is the *same*
+    function the order endpoint prices with (food.pricing.delivery_quote), so
+    the number shown can never disagree with the number charged — the class of
+    bug that made a zone dropdown offer areas the order endpoint then rejected.
+
+    Out-of-range is a 200 with `deliverable: false` and a reason, not a 400: the
+    customer is asking a question, not placing an order, and the UI needs to
+    explain the refusal rather than swallow it.
+    """
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        p = request.GET
+        restaurant = Restaurant.objects.filter(slug=p.get("restaurant"),
+                                               status=Restaurant.Status.ACTIVE).first()
+        if not restaurant:
+            return renderResponse(data={}, message="Restaurant not available", status=404)
+
+        zone, village = None, None
+        if p.get("village"):
+            village = Village.objects.filter(id=p["village"], is_active=True).select_related("zone").first()
+            zone = village.zone if village else None
+        if p.get("zone"):
+            zone = DeliveryZone.objects.filter(id=p["zone"], is_active=True).first() or zone
+        if zone and not served_zones(restaurant).filter(id=zone.id).exists():
+            return renderResponse(
+                data={"deliverable": False,
+                      "reason": "This restaurant does not deliver to the selected area."},
+                message="Delivery quote")
+
+        lat, lng = _float(p.get("lat")), _float(p.get("lng"))
+        try:
+            quote = delivery_quote(restaurant, zone=zone, village=village, lat=lat, lng=lng)
+        except ValidationError as exc:
+            return renderResponse(
+                data={"deliverable": False, "reason": exc.detail[0] if isinstance(exc.detail, list)
+                      else str(exc.detail)},
+                message="Delivery quote")
+
+        return renderResponse(data={
+            "deliverable": True,
+            "fee": str(quote["fee"]),
+            "distance_km": str(quote["distance_km"]) if quote["distance_km"] is not None else None,
+            # How we located the customer: a "zone"-sourced distance can be a
+            # couple of km out, and the UI nudges for a pin when it sees that.
+            "distance_source": quote["distance_source"],
+            "priced_by": quote["priced_by"],
+            "eta_minutes": restaurant.avg_prep_minutes + DELIVERY_BUFFER_MINUTES,
+        }, message="Delivery quote")

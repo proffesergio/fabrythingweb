@@ -136,6 +136,33 @@ export default function FoodLayout() {
         <Outlet />
       </Container>
 
+      {/* Partner recruitment. A footer strip rather than a header button: it is
+          for shop owners, who are a rounding error next to the customers the
+          header serves — but it has to be findable without being told. */}
+      {!pathname.startsWith('/food/partner') && (
+        <Container maxWidth="lg" sx={{ position: 'relative', zIndex: 1, pb: 3 }}>
+          <Box sx={{ p: 2.5, borderRadius: 4, border: 1, borderColor: 'divider',
+                     bgcolor: 'background.paper', display: 'flex', gap: 2,
+                     flexDirection: { xs: 'column', sm: 'row' },
+                     alignItems: { xs: 'stretch', sm: 'center' }, justifyContent: 'space-between' }}>
+            <Box>
+              <Typography sx={{ fontWeight: 800 }}>
+                {loc.lang === 'bn' ? 'রেস্তোরাঁর মালিক?' : 'Own a restaurant?'}
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                {loc.lang === 'bn'
+                  ? 'ফেব্রিথিং ফুডে যুক্ত হয়ে আপনার এলাকা থেকে অর্ডার নিন।'
+                  : 'Partner with Fabrything Food and take orders from your area.'}
+              </Typography>
+            </Box>
+            <Button component={Link} to="/food/partner" variant="outlined"
+              sx={{ borderRadius: 999, fontWeight: 800, flexShrink: 0 }}>
+              {loc.lang === 'bn' ? 'পার্টনার হোন' : 'Become a Partner'}
+            </Button>
+          </Box>
+        </Container>
+      )}
+
       <LocationPicker />
       <FoodBottomNav />
 

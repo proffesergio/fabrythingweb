@@ -1,7 +1,7 @@
 import React, { useEffect } from "react";
 import {
-    Box, Button, Card, CardContent, Chip, FormControlLabel, Grid, LinearProgress,
-    Stack, Switch, TextField, Typography,
+    Alert, AlertTitle, Box, Button, Card, CardContent, Chip, FormControlLabel, Grid,
+    LinearProgress, Stack, Switch, TextField, Typography,
 } from "@mui/material";
 import { Controller, useForm } from "react-hook-form";
 import { toast } from "react-toastify";
@@ -87,6 +87,24 @@ const VendorRestaurant = () => {
         <Box component="div" sx={{ width: "100%" }}>
             <Typography variant="h5" gutterBottom>Restaurant Profile</Typography>
             {loading && <LinearProgress sx={{ mb: 2 }} />}
+
+            {/* A self-signed-up partner can do everything except be seen. Saying
+                so plainly is the difference between "building my menu while I
+                wait" and "the site is broken, nobody can find me". */}
+            {readOnlyInfo.status === "PENDING" && (
+                <Alert severity="info" sx={{ mb: 2 }}>
+                    <AlertTitle>Awaiting approval</AlertTitle>
+                    Your application is with our team. You can set up your profile, menu and
+                    opening hours now — customers will see your restaurant as soon as it is
+                    approved.
+                </Alert>
+            )}
+            {readOnlyInfo.status === "REJECTED" && (
+                <Alert severity="warning" sx={{ mb: 2 }}>
+                    <AlertTitle>Application not approved</AlertTitle>
+                    Please get in touch with the Fabrything team if you think this is a mistake.
+                </Alert>
+            )}
 
             <Card sx={{ mb: 2 }}>
                 <CardContent>

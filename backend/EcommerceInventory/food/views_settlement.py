@@ -9,12 +9,13 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework_simplejwt.authentication import JWTAuthentication
 
 from core.helpers import renderResponse, CustomPageNumberPagination, CommonListAPIMixin
-from food.models import OrderSettlement, Village, DeliveryZone
+from food.models import OrderSettlement, Village, DeliveryZone, Rider, DeliveryPricing
 from food.permissions import IsPlatformAdmin
 from food.serializers_settlement import (
     SettlementSerializer, VillageAdminSerializer, ZoneWithVillagesSerializer,
 )
 from food.services_settlement import settle_leg
+from food.services_cash import record_deposit, rider_cash_summary
 from food.views_vendor import EnvelopeModelViewSetMixin
 
 
@@ -166,3 +167,41 @@ class AdminVillageViewSet(EnvelopeModelViewSetMixin, ModelViewSet):
         if self.request.GET.get("zone"):
             qs = qs.filter(zone_id=self.request.GET["zone"])
         return qs
+
+
+class AdminRiderCashView(APIView):
+    """GET  api/food/admin/rider-cash/            — who is holding how much
+    POST api/food/admin/rider-cash/<pk>/deposit/ — record cash handed back
+
+    The list is the operational answer to "who owes us money right now", and it
+    is derived from the settlement ledger on every read rather than from a
+    stored balance, so it cannot drift (see services_cash).
+    """
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsPlatformAdmin]
+
+    def get(self, request):
+        cfg = DeliveryPricing.get_solo()
+        rows = [rider_cash_summary(r) for r in Rider.objects.all().order_by("name")]
+        rows.sort(key=lambda r: Decimal(r["cash_in_hand"]), reverse=True)
+        return renderResponse(data={
+            "riders": rows,
+            "ceiling": str(cfg.rider_cash_ceiling),
+            "total_outstanding": str(sum((Decimal(r["cash_in_hand"]) for r in rows), Decimal("0.00"))),
+        }, message="Rider cash")
+
+
+class AdminRiderDepositView(APIView):
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsPlatformAdmin]
+
+    def post(self, request, pk):
+        rider = Rider.objects.filter(pk=pk).first()
+        if not rider:
+            return renderResponse(data={}, message="Rider not found", status=404)
+        try:
+            record_deposit(rider, request.data.get("amount"),
+                           received_by=request.user, note=request.data.get("note", ""))
+        except (ValueError, ArithmeticError, TypeError) as exc:
+            return renderResponse(data=[str(exc)], message="Could not record deposit", status=400)
+        return renderResponse(data=rider_cash_summary(rider), message="Deposit recorded")

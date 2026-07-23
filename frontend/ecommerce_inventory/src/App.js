@@ -32,6 +32,8 @@ import ManageCustomers from './pages/customers/ManageCustomers';
 import ManageCoupons from './pages/food/ManageCoupons';
 import ManageRiders from './pages/food/ManageRiders';
 import FoodPayments from './pages/food/FoodPayments';
+import PartnerApplications from './pages/food/PartnerApplications';
+import RiderCash from './pages/food/RiderCash';
 import RiderDashboard from './rider/RiderDashboard';
 import RiderLogin from './rider/RiderLogin';
 
@@ -65,6 +67,7 @@ import BrowseRestaurants from './food/pages/BrowseRestaurants';
 import FoodCheckout from './food/pages/FoodCheckout';
 import FoodOrderTrack from './food/pages/FoodOrderTrack';
 import FoodMyOrders from './food/pages/FoodMyOrders';
+import BecomePartner from './food/pages/BecomePartner';
 
 // Wraps the storefront with a dark-mode-aware theme.
 // Lives inside the router so it re-renders cleanly on toggle.
@@ -158,6 +161,8 @@ function App() {
           {path:"checkout",element:<FoodCheckout/>},
           {path:"order/:code",element:<FoodOrderTrack/>},
           {path:"orders",element:<ProtectedRoute element={<FoodMyOrders/>}/>},
+          // Public by design — the approval gate is the PENDING status, not auth.
+          {path:"partner",element:<BecomePartner/>},
         ]
       },
 
@@ -213,6 +218,8 @@ function App() {
           {path:"manage/food/coupons",element:<ProtectedRoute element={<ManageCoupons/>}/>},
           {path:"manage/food/riders",element:<ProtectedRoute element={<ManageRiders/>}/>},
           {path:"manage/food/payments",element:<ProtectedRoute element={<FoodPayments/>}/>},
+          {path:"manage/food/partners",element:<ProtectedRoute element={<PartnerApplications/>}/>},
+          {path:"manage/food/rider-cash",element:<ProtectedRoute element={<RiderCash/>}/>},
           {path:"*",element:<Error404Page/>},
         ]},
     ]

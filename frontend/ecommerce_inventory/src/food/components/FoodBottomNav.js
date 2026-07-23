@@ -17,7 +17,9 @@ const TABS = [
   { to: '/food/restaurants', icon: <RestaurantMenuRoundedIcon />, en: 'Restaurants', bn: 'রেস্তোরাঁ',
     match: (p) => p.startsWith('/food/restaurant') },
   { to: '/food/orders', icon: <ReceiptLongRoundedIcon />, en: 'Orders', bn: 'অর্ডার',
-    match: (p) => p.startsWith('/food/order') },
+    // Not /food/order* — that prefix also matches the guest tracking page, and
+    // more importantly this must not light up on /food/partner.
+    match: (p) => p === '/food/orders' || p.startsWith('/food/order/') },
   { to: '/food/cart', icon: 'bag', en: 'Bag', bn: 'ব্যাগ',
     match: (p) => p.startsWith('/food/cart') || p.startsWith('/food/checkout') },
 ];

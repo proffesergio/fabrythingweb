@@ -2,6 +2,7 @@ from django.urls import path
 from rest_framework.routers import DefaultRouter
 from food.views_public import (
     PublicRestaurantListView, PublicRestaurantDetailView, PublicZoneListView,
+    DeliveryQuoteView,
 )
 from food.views_vendor import VendorCategoryViewSet, VendorItemViewSet, VendorRestaurantView
 from food.views_admin import AdminRestaurantViewSet, AdminZoneViewSet
@@ -17,18 +18,35 @@ from food.views_food_ext import (
     VendorCouponViewSet, AdminCouponViewSet, CouponValidateView, AdminRiderViewSet,
     AdminAssignRiderView, RiderMeView, RiderAvailabilityView, RiderOrdersView,
     RiderOrderStatusView, NotificationView, LoyaltyView, AdminPaymentListView,
-    RiderHeartbeatView, RiderEarningsView,
+    RiderHeartbeatView, RiderEarningsView, RiderOfferView,
 )
 from food.views_menu_copy import AdminMenuCopyView
+from food.views_partner import (
+    PartnerApplyView, AdminPartnerApplicationsView, AdminPartnerDecisionView,
+)
 from food.views_settlement import (
     AdminSettlementListView, AdminSettlementSummaryView, AdminSettlementLegView,
     AdminSettlementBulkLegView, AdminZoneTreeView, AdminVillageViewSet,
+    AdminRiderCashView, AdminRiderDepositView,
 )
 
 urlpatterns = [
     path("restaurants/", PublicRestaurantListView.as_view(), name="food_restaurants"),
     path("restaurants/<slug:slug>/", PublicRestaurantDetailView.as_view(), name="food_restaurant_detail"),
     path("zones/", PublicZoneListView.as_view(), name="food_zones"),
+    # Priced by the same function the order endpoint uses, so the quote and the
+    # charge can never disagree.
+    path("delivery-quote/", DeliveryQuoteView.as_view(), name="food_delivery_quote"),
+    # Become a Partner — public application, admin-gated approval.
+    path("partner/apply/", PartnerApplyView.as_view(), name="food_partner_apply"),
+    # Rider cash: who is holding the platform's money, and handing it back.
+    path("admin/rider-cash/", AdminRiderCashView.as_view(), name="food_admin_rider_cash"),
+    path("admin/rider-cash/<int:pk>/deposit/", AdminRiderDepositView.as_view(),
+         name="food_admin_rider_deposit"),
+    path("admin/partner/applications/", AdminPartnerApplicationsView.as_view(),
+         name="food_admin_partner_applications"),
+    path("admin/partner/<int:pk>/decision/", AdminPartnerDecisionView.as_view(),
+         name="food_admin_partner_decision"),
     # Single-object endpoint (no pk in the URL — always the caller's own restaurant),
     # so it's registered explicitly rather than via the router below.
     path("vendor/restaurant/", VendorRestaurantView.as_view(), name="food_vendor_restaurant"),
@@ -58,6 +76,8 @@ urlpatterns = [
     path("rider/orders/", RiderOrdersView.as_view(), name="food_rider_orders"),
     path("rider/earnings/", RiderEarningsView.as_view(), name="food_rider_earnings"),
     path("rider/orders/<int:pk>/status/", RiderOrderStatusView.as_view(), name="food_rider_order_status"),
+    # The offer/accept cycle from the rider's side.
+    path("rider/offer/", RiderOfferView.as_view(), name="food_rider_offer"),
     path("notifications/", NotificationView.as_view(), name="food_notifications"),
     path("loyalty/", LoyaltyView.as_view(), name="food_loyalty"),
 ]
