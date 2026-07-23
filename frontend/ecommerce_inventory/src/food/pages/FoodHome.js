@@ -166,11 +166,18 @@ export default function FoodHome() {
           </Button>
         )}
 
-        <Box sx={{ position: 'relative', minHeight: { xs: 96, md: 76 } }}>
+        {/* Fixed box the tallest headline still fits inside, so swapping copy
+            never resizes the hero. h3 at its default 3rem wrapped to four lines
+            on a 360px screen, which both overflowed this box and made the whole
+            hero jump on every rotation — hence the explicit sizes. */}
+        <Box sx={{ position: 'relative', display: 'flex', alignItems: 'center',
+                   minHeight: { xs: 88, sm: 96, md: 112 } }}>
           <AnimatePresence mode="wait">
             <Typography key={hi} component={motion.div} variant="h3"
               initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -18 }}
-              transition={{ duration: 0.45 }} sx={{ maxWidth: 620, lineHeight: 1.05 }}>
+              transition={{ duration: 0.45 }}
+              sx={{ maxWidth: 620, lineHeight: 1.2,
+                    fontSize: { xs: '1.5rem', sm: '2rem', md: '2.75rem' } }}>
               <Box component="span" sx={{ mr: 1 }}>{headline.emoji}</Box>
               {lang === 'bn' ? headline.bn : headline.en}
             </Typography>

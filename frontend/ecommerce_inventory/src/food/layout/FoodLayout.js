@@ -138,8 +138,11 @@ export default function FoodLayout() {
 
       {/* Partner recruitment. A footer strip rather than a header button: it is
           for shop owners, who are a rounding error next to the customers the
-          header serves — but it has to be findable without being told. */}
-      {!pathname.startsWith('/food/partner') && (
+          header serves — but it has to be findable without being told.
+          Not on the cart/checkout pages: those end in a fixed "Place order" bar
+          that this strip scrolls under, and a shop-owner CTA has no business
+          competing with the customer's primary action anyway. */}
+      {!pathname.startsWith('/food/partner') && !onCartPages && (
         <Container maxWidth="lg" sx={{ position: 'relative', zIndex: 1, pb: 3 }}>
           <Box sx={{ p: 2.5, borderRadius: 4, border: 1, borderColor: 'divider',
                      bgcolor: 'background.paper', display: 'flex', gap: 2,

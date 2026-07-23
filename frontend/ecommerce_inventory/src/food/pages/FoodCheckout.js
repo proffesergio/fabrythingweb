@@ -189,7 +189,7 @@ export default function FoodCheckout() {
   }
 
   return (
-    <Box sx={{ maxWidth: 560, mx: 'auto', pb: 12 }}>
+    <Box sx={{ maxWidth: 560, mx: 'auto', pb: { xs: 14, md: 12 } }}>
       <Typography variant="h4" sx={{ mb: 2.5 }}>Checkout</Typography>
       {err && <Alert severity="error" sx={{ mb: 2, borderRadius: 3 }}>{err}</Alert>}
 
@@ -321,7 +321,10 @@ export default function FoodCheckout() {
         )}
       </Card>
 
-      <Box sx={{ position: 'fixed', left: 0, right: 0, bottom: 0, p: 2, zIndex: 1100,
+      {/* Rides above FoodBottomNav on phones — the tab bar is fixed at z-index
+          1250, so a bar at bottom:0 was covered by it, not just crowded. */}
+      <Box sx={{ position: 'fixed', left: 0, right: 0, p: 2, zIndex: 1100,
+        bottom: { xs: 'calc(60px + env(safe-area-inset-bottom))', md: 0 },
         background: (t) => `linear-gradient(180deg, transparent, ${t.palette.background.default} 40%)` }}>
         <Box sx={{ maxWidth: 560, mx: 'auto' }}>
           <Button

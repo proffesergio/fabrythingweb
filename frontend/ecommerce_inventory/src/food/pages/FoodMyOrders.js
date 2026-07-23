@@ -4,6 +4,7 @@ import { Box, Typography, Card, Stack, Chip, CircularProgress, Button } from '@m
 import ChevronRightRoundedIcon from '@mui/icons-material/ChevronRightRounded';
 import { motion } from 'framer-motion';
 import useApi from '../../hooks/APIHandler';
+import { isSignedIn } from '../../utils/authToken';
 
 const STATUS_COLOR = {
   DELIVERED: 'success', CANCELLED: 'default', OUT_FOR_DELIVERY: 'primary',
@@ -18,13 +19,41 @@ export default function FoodMyOrders() {
   const { callApi, loading } = useApi();
   const navigate = useNavigate();
   const [orders, setOrders] = useState([]);
+  // Read once on mount: isSignedIn() also purges a dead token, so calling it in
+  // render would flip mid-session and unmount the list under the customer.
+  const [signedIn] = useState(() => isSignedIn());
 
   useEffect(() => {
+    if (!signedIn) return;
     (async () => {
       const res = await callApi({ url: 'food/orders/', method: 'GET' });
       setOrders(res?.data?.data || []);
     })();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Signed out: prompt in place rather than redirecting to /auth/login, which is
+  // a standalone page outside FoodLayout — the tab bar disappeared with it.
+  // /auth/signup creates Customer accounts only (storefront store/auth/signup/
+  // hardcodes role='Customer'), which is the right audience for this page.
+  if (!signedIn) {
+    const back = encodeURIComponent('/food/orders');
+    return (
+      <Box sx={{ textAlign: 'center', py: 10 }}>
+        <Box sx={{ fontSize: 60, mb: 1 }}>🔐</Box>
+        <Typography variant="h6">Sign in to see your orders</Typography>
+        <Typography color="text.secondary" sx={{ mb: 3 }}>
+          Your past and ongoing food orders live in your account.
+        </Typography>
+        <Stack direction="row" spacing={1.5} justifyContent="center">
+          <Button variant="contained" component={Link} to={`/auth/login?redirect=${back}`}>Sign in</Button>
+          <Button variant="outlined" component={Link} to={`/auth/signup?redirect=${back}`}>Create account</Button>
+        </Stack>
+        <Typography variant="body2" color="text.secondary" sx={{ mt: 3 }}>
+          Ordered as a guest? Open the tracking link from your order confirmation.
+        </Typography>
+      </Box>
+    );
+  }
 
   if (loading) return <Box sx={{ textAlign: 'center', py: 10 }}><CircularProgress color="primary" /></Box>;
 

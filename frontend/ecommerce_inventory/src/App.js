@@ -160,7 +160,11 @@ function App() {
           {path:"cart",element:<FoodCartPage/>},
           {path:"checkout",element:<FoodCheckout/>},
           {path:"order/:code",element:<FoodOrderTrack/>},
-          {path:"orders",element:<ProtectedRoute element={<FoodMyOrders/>}/>},
+          // Not ProtectedRoute: that navigates away to the standalone /auth/login
+          // page, which drops the food layout — and with it the bottom tab bar,
+          // stranding a signed-out phone user on a bare form. FoodMyOrders renders
+          // its own sign-in prompt inside the layout instead.
+          {path:"orders",element:<FoodMyOrders/>},
           // Public by design — the approval gate is the PENDING status, not auth.
           {path:"partner",element:<BecomePartner/>},
         ]
