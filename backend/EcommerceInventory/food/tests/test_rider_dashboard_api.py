@@ -22,6 +22,10 @@ class RiderHeartbeatTests(TestCase):
         self.rider = Rider.objects.create(user=self.user, name="Rakib")
 
     def test_heartbeat_records_position_and_time(self):
+        # Heartbeat only persists coordinates once the rider has opted in to
+        # sharing (Task 4: location-privacy, default is NOT shared).
+        self.rider.is_sharing_location = True
+        self.rider.save(update_fields=["is_sharing_location"])
         auth(self.client, self.user)
         res = self.client.post("/api/food/rider/heartbeat/",
                                {"lat": 23.7104, "lng": 90.9280}, format="json")

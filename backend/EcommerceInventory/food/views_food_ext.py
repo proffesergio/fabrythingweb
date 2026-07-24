@@ -188,7 +188,7 @@ class RiderHeartbeatView(APIView):
         fields = ["last_seen_at", "updated_at"]
         rider.last_seen_at = timezone.now()
         lat, lng = request.data.get("lat"), request.data.get("lng")
-        if lat is not None and lng is not None:
+        if rider.is_sharing_location and lat is not None and lng is not None:
             try:
                 rider.current_lat = Decimal(str(lat))
                 rider.current_lng = Decimal(str(lng))

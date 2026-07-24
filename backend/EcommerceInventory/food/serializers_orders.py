@@ -45,12 +45,18 @@ class FoodOrderSerializer(serializers.ModelSerializer):
             return None
         return obj.rider
 
-    def get_rider_lat(self, obj):
+    def _sharing_rider(self, obj):
+        # Position is withheld unless the rider has actively opted in, on top
+        # of the existing order-status gate (see _live_rider).
         rider = self._live_rider(obj)
+        return rider if rider and rider.is_sharing_location else None
+
+    def get_rider_lat(self, obj):
+        rider = self._sharing_rider(obj)
         return str(rider.current_lat) if rider and rider.current_lat is not None else None
 
     def get_rider_lng(self, obj):
-        rider = self._live_rider(obj)
+        rider = self._sharing_rider(obj)
         return str(rider.current_lng) if rider and rider.current_lng is not None else None
 
     def get_rider_last_seen_at(self, obj):

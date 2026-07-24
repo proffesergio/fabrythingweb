@@ -20,6 +20,7 @@ from food.views_food_ext import (
     RiderOrderStatusView, NotificationView, LoyaltyView, AdminPaymentListView,
     RiderHeartbeatView, RiderEarningsView, RiderOfferView,
 )
+from food.views_rider_privacy import RiderPrivacyView
 from food.views_menu_copy import AdminMenuCopyView
 from food.views_partner import (
     PartnerApplyView, AdminPartnerApplicationsView, AdminPartnerDecisionView,
@@ -74,6 +75,7 @@ urlpatterns = [
     path("rider/me/", RiderMeView.as_view(), name="food_rider_me"),
     path("rider/availability/", RiderAvailabilityView.as_view(), name="food_rider_availability"),
     path("rider/heartbeat/", RiderHeartbeatView.as_view(), name="food_rider_heartbeat"),
+    path("rider/privacy/", RiderPrivacyView.as_view(), name="food_rider_privacy"),
     path("rider/orders/", RiderOrdersView.as_view(), name="food_rider_orders"),
     path("rider/earnings/", RiderEarningsView.as_view(), name="food_rider_earnings"),
     path("rider/orders/<int:pk>/status/", RiderOrderStatusView.as_view(), name="food_rider_order_status"),

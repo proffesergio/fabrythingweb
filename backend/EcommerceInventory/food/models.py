@@ -499,6 +499,8 @@ class Rider(TimeStamped):
     current_lat = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
     current_lng = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
     last_seen_at = models.DateTimeField(null=True, blank=True)
+    is_sharing_location = models.BooleanField(default=False)
+    nav_display_enabled = models.BooleanField(default=True)
 
     @property
     def is_online(self):
