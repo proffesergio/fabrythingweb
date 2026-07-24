@@ -29,6 +29,7 @@ from food.views_settlement import (
     AdminSettlementBulkLegView, AdminZoneTreeView, AdminVillageViewSet,
     AdminRiderCashView, AdminRiderDepositView,
 )
+from food.views_devices import DeviceRegisterView, DeviceUnregisterView
 
 urlpatterns = [
     path("restaurants/", PublicRestaurantListView.as_view(), name="food_restaurants"),
@@ -80,6 +81,8 @@ urlpatterns = [
     path("rider/offer/", RiderOfferView.as_view(), name="food_rider_offer"),
     path("notifications/", NotificationView.as_view(), name="food_notifications"),
     path("loyalty/", LoyaltyView.as_view(), name="food_loyalty"),
+    path("devices/register/", DeviceRegisterView.as_view(), name="food_device_register"),
+    path("devices/unregister/", DeviceUnregisterView.as_view(), name="food_device_unregister"),
 ]
 
 router = DefaultRouter()
