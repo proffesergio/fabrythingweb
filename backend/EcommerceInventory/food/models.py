@@ -708,3 +708,28 @@ class OrderSettlement(TimeStamped):
 
     def __str__(self):
         return f"Settlement {self.order.order_code}"
+
+
+class DeviceToken(TimeStamped):
+    class App(models.TextChoices):
+        CUSTOMER = "customer", "Customer"
+        RIDER = "rider", "Rider"
+        RESTAURANT = "restaurant", "Restaurant"
+
+    class Platform(models.TextChoices):
+        IOS = "ios", "iOS"
+        ANDROID = "android", "Android"
+
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
+                             related_name="device_tokens")
+    expo_token = models.CharField(max_length=255, unique=True)
+    app = models.CharField(max_length=12, choices=App.choices)
+    platform = models.CharField(max_length=8, choices=Platform.choices)
+    enabled = models.BooleanField(default=True)
+    last_seen_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        indexes = [models.Index(fields=["user", "enabled"])]
+
+    def __str__(self):
+        return f"{self.app}:{self.expo_token[-8:]}"
