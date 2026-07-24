@@ -60,6 +60,12 @@ def _delivery_fee(restaurant, zone):
 def notify(user, title, body="", order_code=""):
     if user and getattr(user, "is_authenticated", False):
         Notification.objects.create(user=user, title=title, body=body, order_code=order_code)
+        from food.services_push import send_expo_push
+        tokens = list(
+            user.device_tokens.filter(enabled=True).values_list("expo_token", flat=True)
+        )
+        if tokens:
+            send_expo_push(tokens, title, body, {"order_code": order_code})
 
 
 def _award_points(user, order):
