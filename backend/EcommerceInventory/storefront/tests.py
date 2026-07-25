@@ -36,3 +36,32 @@ class AdminCustomerListTests(TestCase):
         self.assertEqual(res.status_code, 200)
         self.assertTrue(all("karim" in r["username"].lower() or "karim" in (r["email"] or "").lower()
                             for r in res.json()["data"]["data"]))
+
+
+class TokenRefreshTests(TestCase):
+    def setUp(self):
+        self.client = APIClient()
+        self.user = User.objects.create(username="refreshuser", email="refresh@x.com", role="Customer")
+
+    def test_refresh_with_valid_token_returns_new_access_and_refresh(self):
+        refresh = str(RefreshToken.for_user(self.user))
+        res = self.client.post("/api/store/auth/refresh/", {"refresh": refresh}, format="json")
+        self.assertEqual(res.status_code, 200, res.content)
+        body = res.json()
+        self.assertIn("access", body)
+        self.assertIn("refresh", body)
+        self.assertEqual(body["message"], "Token refreshed")
+
+        # Custom claims must be reissued on the new access token, same as login.
+        from rest_framework_simplejwt.tokens import AccessToken
+        access = AccessToken(body["access"])
+        self.assertEqual(access["username"], self.user.username)
+        self.assertEqual(access["role"], self.user.role)
+
+    def test_refresh_with_invalid_token_returns_401(self):
+        res = self.client.post("/api/store/auth/refresh/", {"refresh": "not-a-real-token"}, format="json")
+        self.assertEqual(res.status_code, 401)
+
+    def test_refresh_with_missing_token_returns_400(self):
+        res = self.client.post("/api/store/auth/refresh/", {}, format="json")
+        self.assertEqual(res.status_code, 400)

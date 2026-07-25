@@ -1,5 +1,6 @@
 from datetime import timedelta
 
+from django.contrib.auth import get_user_model
 from django.db import transaction
 from django.db.models import Avg, Count, FloatField, IntegerField, OuterRef, Q, Subquery, Sum
 from django.db.models.functions import Coalesce
@@ -320,6 +321,35 @@ class CustomerLoginView(APIView):
             return renderResponse(data='Invalid credentials', message='Invalid credentials', status=400)
 
         return Response({**issue_tokens(user), 'message': 'Login successful'})
+
+
+class CustomerTokenRefreshView(APIView):
+    """Exchanges a valid refresh token for a fresh access/refresh pair.
+
+    Reuses issue_tokens() rather than DRF SimpleJWT's stock TokenRefreshView so the
+    new access token carries the same custom claims (username, role) as login —
+    a stock refresh would silently drop them, and the mobile client depends on them.
+    """
+    permission_classes = [AllowAny]
+    throttle_scope = 'auth'
+
+    def post(self, request):
+        from rest_framework_simplejwt.exceptions import TokenError
+
+        refresh_str = request.data.get('refresh')
+        if not refresh_str:
+            return renderResponse(data='refresh token is required', message='Validation error', status=400)
+        try:
+            token = RefreshToken(refresh_str)          # validates signature + expiry
+            user_id = token['user_id']
+        except (TokenError, KeyError):
+            return renderResponse(data='Invalid or expired refresh token', message='Invalid token', status=401)
+        UserModel = get_user_model()
+        try:
+            user = UserModel.objects.get(id=user_id)
+        except UserModel.DoesNotExist:
+            return renderResponse(data='User not found', message='Invalid token', status=401)
+        return Response({**issue_tokens(user), 'message': 'Token refreshed'})
 
 
 # ─── Customer account ─────────────────────────────────────────────────────────

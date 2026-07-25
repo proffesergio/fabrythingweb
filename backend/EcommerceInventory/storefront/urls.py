@@ -10,6 +10,7 @@ from .views import (
     # Customer Auth
     CustomerLoginView,
     CustomerSignupView,
+    CustomerTokenRefreshView,
     # Customer Account
     CustomerProfileView,
     ShippingAddressDetailView,
@@ -43,6 +44,7 @@ urlpatterns = [
     # Customer Auth
     path('auth/signup/', CustomerSignupView.as_view(), name='store_signup'),
     path('auth/login/', CustomerLoginView.as_view(), name='store_login'),
+    path('auth/refresh/', CustomerTokenRefreshView.as_view(), name='store_token_refresh'),
 
     # Customer Account (auth required)
     path('profile/', CustomerProfileView.as_view(), name='store_profile'),

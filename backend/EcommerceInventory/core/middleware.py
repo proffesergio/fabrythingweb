@@ -9,7 +9,8 @@ from django.db.models import Q
 # These are the endpoints a visitor reaches *before* they have a token:
 #   - the whole storefront (it enforces its own auth via DRF permission_classes)
 #   - the public food-delivery read API (restaurants/zones; AllowAny via DRF)
-#   - login / signup (you cannot present a token before you have logged in)
+#   - login / signup / refresh (you cannot present a valid access token before you
+#     have logged in, or once it has expired — that's the whole point of refresh)
 #   - the deploy health check (it must answer even when the DB is unreachable,
 #     which is precisely when you most need it)
 PUBLIC_API_PREFIXES = (
@@ -17,6 +18,7 @@ PUBLIC_API_PREFIXES = (
     '/api/food/',
     '/api/auth/login',
     '/api/auth/signup',
+    '/api/auth/refresh',
     '/api/health/',
 )
 
