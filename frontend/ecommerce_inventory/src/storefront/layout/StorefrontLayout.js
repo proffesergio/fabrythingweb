@@ -377,7 +377,24 @@ export default function StorefrontLayout({ toggleDarkMode, darkMode }) {
                                         Bangladesh's destination for authentic branded fashion, footwear, watches, home appliances & beauty — with Cash on Delivery nationwide.
                                     </Typography>
                                     <Box sx={{ display: 'flex', gap: 1 }}>
-                                        <IconButton size="small" sx={{ color: 'rgba(255,255,255,0.7)', '&:hover': { color: '#A5B4FC' } }}><Facebook /></IconButton>
+                                        <IconButton
+                                            component="a"
+                                            href="https://www.facebook.com/fabrything"
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            aria-label="Facebook"
+                                            size="small"
+                                            sx={{ color: 'rgba(255,255,255,0.7)', '&:hover': { color: '#A5B4FC' } }}
+                                        ><Facebook /></IconButton>
+                                        <IconButton
+                                            component="a"
+                                            href="https://m.me/fabrything"
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            aria-label="Messenger"
+                                            size="small"
+                                            sx={{ color: 'rgba(255,255,255,0.7)', '&:hover': { color: '#34D399' } }}
+                                        ><Email /></IconButton>
                                         <IconButton size="small" sx={{ color: 'rgba(255,255,255,0.7)', '&:hover': { color: '#E879F9' } }}><Instagram /></IconButton>
                                     </Box>
                                 </Grid>

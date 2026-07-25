@@ -158,10 +158,16 @@ export default function FoodLayout() {
                   : 'Partner with Fabrything Food and take orders from your area.'}
               </Typography>
             </Box>
-            <Button component={Link} to="/food/partner" variant="outlined"
-              sx={{ borderRadius: 999, fontWeight: 800, flexShrink: 0 }}>
-              {loc.lang === 'bn' ? 'পার্টনার হোন' : 'Become a Partner'}
-            </Button>
+            <Box sx={{ display: 'flex', alignItems: 'center', flexShrink: 0 }}>
+              <Button component={Link} to="/food/partner" variant="outlined"
+                sx={{ borderRadius: 999, fontWeight: 800, flexShrink: 0 }}>
+                {loc.lang === 'bn' ? 'পার্টনার হোন' : 'Become a Partner'}
+              </Button>
+              <Button component="a" href="https://www.facebook.com/fabrything" target="_blank"
+                      rel="noopener noreferrer" size="small" sx={{ ml: 1 }}>
+                Facebook
+              </Button>
+            </Box>
           </Box>
         </Container>
       )}
