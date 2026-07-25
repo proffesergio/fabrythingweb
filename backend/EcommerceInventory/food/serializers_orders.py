@@ -63,5 +63,5 @@ class FoodOrderSerializer(serializers.ModelSerializer):
         return str(rider.current_lng) if rider and rider.current_lng is not None else None
 
     def get_rider_last_seen_at(self, obj):
-        rider = self._live_rider(obj)
+        rider = self._sharing_rider(obj)
         return rider.last_seen_at if rider and rider.last_seen_at else None

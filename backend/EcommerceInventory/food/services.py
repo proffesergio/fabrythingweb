@@ -60,12 +60,23 @@ def _delivery_fee(restaurant, zone):
 def notify(user, title, body="", order_code=""):
     if user and getattr(user, "is_authenticated", False):
         Notification.objects.create(user=user, title=title, body=body, order_code=order_code)
-        from food.services_push import send_expo_push
         tokens = list(
             user.device_tokens.filter(enabled=True).values_list("expo_token", flat=True)
         )
         if tokens:
-            send_expo_push(tokens, title, body, {"order_code": order_code})
+            # Deferred to after commit: notify() is called from inside
+            # @transaction.atomic blocks that hold select_for_update() row
+            # locks (place_food_cod_order, offer_order/accept_offer/assign_rider).
+            # send_expo_push does a blocking urllib POST (10s timeout) — running
+            # it while a lock is held would pin a DB connection/row lock for the
+            # duration of a slow or hung Expo response. on_commit runs it only
+            # after the transaction commits (or immediately if there is none),
+            # so the Notification row still lands atomically with the business
+            # change but the HTTP call never happens under an open lock.
+            from food.services_push import send_expo_push
+            transaction.on_commit(
+                lambda: send_expo_push(tokens, title, body, {"order_code": order_code})
+            )
 
 
 def _award_points(user, order):

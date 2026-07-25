@@ -139,10 +139,14 @@ class RiderVisibilityTests(OrderFixtureMixin, TestCase):
     def test_live_pin_withheld_when_rider_not_sharing(self):
         """Location sharing defaults ON, but a rider who opts out mid-delivery
         must not leak coordinates to the customer — even though the platform
-        still keeps tracking their position internally for dispatch."""
+        still keeps tracking their position internally for dispatch. The
+        last-seen timestamp is withheld too: exposing "last seen" without a
+        pin still leaks whether/when the rider was moving, which is exactly
+        what opting out is meant to withhold."""
         Rider.objects.filter(pk=self.rider.pk).update(is_sharing_location=False)
         self._advance_to("OUT_FOR_DELIVERY")
         d = self._track()
         self.assertIsNone(d["rider_lat"])
         self.assertIsNone(d["rider_lng"])
+        self.assertIsNone(d["rider_last_seen_at"])
         self.assertEqual(d["rider_name"], "Karim")
