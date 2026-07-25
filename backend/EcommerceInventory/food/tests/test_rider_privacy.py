@@ -34,6 +34,16 @@ class RiderPrivacyTests(TestCase):
         self.assertTrue(self.rider.is_sharing_location)
         self.assertFalse(self.rider.nav_display_enabled)
 
+    def test_privacy_toggle_stringy_false_coerced(self):
+        # bool("false") is True in Python; a client sending the string "false"
+        # must still turn the flag off, not silently enable it.
+        auth(self.client, self.u)
+        res = self.client.post("/api/food/rider/privacy/",
+                               {"is_sharing_location": "false"}, format="json")
+        self.assertEqual(res.status_code, 200)
+        self.rider.refresh_from_db()
+        self.assertFalse(self.rider.is_sharing_location)
+
     def test_heartbeat_always_stores_coords_even_when_not_sharing(self):
         # The platform always tracks online riders regardless of the
         # customer-facing sharing flag, because dispatch (services_dispatch.py)

@@ -4,6 +4,20 @@ from rest_framework_simplejwt.authentication import JWTAuthentication
 from core.helpers import renderResponse
 from food.permissions import IsRider
 
+_FALSY_STRINGS = {"false", "0", "", "no"}
+
+
+def _coerce_bool(value):
+    """bool("false") is True in Python, so a stringy "false" from a client
+    would silently flip a flag on. Real booleans pass through unchanged;
+    strings are matched case-insensitively against a falsy set; anything
+    else (including other truthy strings/numbers) is treated as truthy."""
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, str):
+        return value.strip().lower() not in _FALSY_STRINGS
+    return bool(value)
+
 
 class RiderPrivacyView(APIView):
     """Rider's own consent switches: whether their live position is shared to
@@ -22,10 +36,10 @@ class RiderPrivacyView(APIView):
         rider = request.user.rider
         fields = []
         if "is_sharing_location" in request.data:
-            rider.is_sharing_location = bool(request.data["is_sharing_location"])
+            rider.is_sharing_location = _coerce_bool(request.data["is_sharing_location"])
             fields.append("is_sharing_location")
         if "nav_display_enabled" in request.data:
-            rider.nav_display_enabled = bool(request.data["nav_display_enabled"])
+            rider.nav_display_enabled = _coerce_bool(request.data["nav_display_enabled"])
             fields.append("nav_display_enabled")
         if fields:
             rider.save(update_fields=fields + ["updated_at"])
