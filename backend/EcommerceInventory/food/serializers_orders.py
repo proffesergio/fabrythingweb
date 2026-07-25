@@ -46,8 +46,11 @@ class FoodOrderSerializer(serializers.ModelSerializer):
         return obj.rider
 
     def _sharing_rider(self, obj):
-        # Position is withheld unless the rider has actively opted in, on top
-        # of the existing order-status gate (see _live_rider).
+        # is_sharing_location defaults on (customers see their rider during
+        # an active delivery); the rider can opt out for privacy, which
+        # withholds only this customer-facing pin — it never affects whether
+        # the platform itself still tracks the rider (see RiderHeartbeatView).
+        # This is on top of the existing order-status gate (see _live_rider).
         rider = self._live_rider(obj)
         return rider if rider and rider.is_sharing_location else None
 

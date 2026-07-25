@@ -8,8 +8,13 @@ from food.permissions import IsRider
 class RiderPrivacyView(APIView):
     """Rider's own consent switches: whether their live position is shared to
     the customer-facing track endpoint, and whether nav display is enabled on
-    their own dashboard. Both are opt-in — see Rider.is_sharing_location /
-    Rider.nav_display_enabled defaults."""
+    their own dashboard. is_sharing_location defaults on (customers see the
+    rider during an active delivery); nav_display_enabled also defaults on.
+
+    Note: is_sharing_location gates only the customer-facing view — it never
+    clears current_lat/current_lng. The platform always tracks online riders'
+    position (via the heartbeat) regardless of this flag, because dispatch
+    needs a known position to assign orders."""
     authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated, IsRider]
 
@@ -19,10 +24,6 @@ class RiderPrivacyView(APIView):
         if "is_sharing_location" in request.data:
             rider.is_sharing_location = bool(request.data["is_sharing_location"])
             fields.append("is_sharing_location")
-            if not rider.is_sharing_location:
-                rider.current_lat = None
-                rider.current_lng = None
-                fields += ["current_lat", "current_lng"]
         if "nav_display_enabled" in request.data:
             rider.nav_display_enabled = bool(request.data["nav_display_enabled"])
             fields.append("nav_display_enabled")

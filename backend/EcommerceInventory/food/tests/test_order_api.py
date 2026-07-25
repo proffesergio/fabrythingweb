@@ -81,8 +81,9 @@ class RiderVisibilityTests(OrderFixtureMixin, TestCase):
             name="Karim", phone="01712345678", is_available=True,
             current_lat=Decimal("23.770000"), current_lng=Decimal("90.780000"),
             last_seen_at=timezone.now(),
-            # Sharing on by default in this fixture: these tests pin the
-            # order-status gate specifically; consent gating is covered by
+            # is_sharing_location defaults True now, but set it explicitly so
+            # these tests keep pinning the order-status gate specifically;
+            # the opt-out gate is covered by
             # test_live_pin_withheld_when_rider_not_sharing below.
             is_sharing_location=True)
         code = self.client.post("/api/food/orders/", self._payload(), format="json").json()["data"]["order_code"]
@@ -136,8 +137,9 @@ class RiderVisibilityTests(OrderFixtureMixin, TestCase):
         self.assertEqual(d["rider_name"], "Karim")
 
     def test_live_pin_withheld_when_rider_not_sharing(self):
-        """Location defaults to NOT shared: even mid-delivery, a rider who has
-        not opted in to sharing must not leak coordinates to the customer."""
+        """Location sharing defaults ON, but a rider who opts out mid-delivery
+        must not leak coordinates to the customer — even though the platform
+        still keeps tracking their position internally for dispatch."""
         Rider.objects.filter(pk=self.rider.pk).update(is_sharing_location=False)
         self._advance_to("OUT_FOR_DELIVERY")
         d = self._track()

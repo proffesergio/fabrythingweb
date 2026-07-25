@@ -179,6 +179,12 @@ class RiderHeartbeatView(APIView):
     Coordinates are optional: a browser that denies geolocation should still be
     able to keep the rider marked present. Only the current position is stored —
     no location history is kept.
+
+    Storage here is NOT gated on is_sharing_location: the platform always
+    tracks online riders' position so dispatch (services_dispatch.py, which
+    filters on current_lat/lng being known) keeps working. is_sharing_location
+    only gates whether the customer-facing track endpoint exposes this
+    position — see food/serializers_orders.py.
     """
     authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated, IsRider]
@@ -188,7 +194,7 @@ class RiderHeartbeatView(APIView):
         fields = ["last_seen_at", "updated_at"]
         rider.last_seen_at = timezone.now()
         lat, lng = request.data.get("lat"), request.data.get("lng")
-        if rider.is_sharing_location and lat is not None and lng is not None:
+        if lat is not None and lng is not None:
             try:
                 rider.current_lat = Decimal(str(lat))
                 rider.current_lng = Decimal(str(lng))
