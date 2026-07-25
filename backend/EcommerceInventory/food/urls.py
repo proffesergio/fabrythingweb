@@ -31,8 +31,11 @@ from food.views_settlement import (
     AdminRiderCashView, AdminRiderDepositView,
 )
 from food.views_devices import DeviceRegisterView, DeviceUnregisterView
+from food.views_mobile_config import MobileConfigView
 
 urlpatterns = [
+    # Mobile apps fetch this on launch for version-gate/feature-flags/support links.
+    path("mobile/config/", MobileConfigView.as_view(), name="food_mobile_config"),
     path("restaurants/", PublicRestaurantListView.as_view(), name="food_restaurants"),
     path("restaurants/<slug:slug>/", PublicRestaurantDetailView.as_view(), name="food_restaurant_detail"),
     path("zones/", PublicZoneListView.as_view(), name="food_zones"),
