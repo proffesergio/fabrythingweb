@@ -15,7 +15,8 @@ the code wins — fix this file in the same commit.
 Do not open a file to confirm something already written here, do not read a
 module "for context" before you have a specific question, and do not spawn a
 subagent for work that is a grep and two reads. `graphify-out/` and the
-code-review-graph MCP are stale (see the note at the end) — prefer grep.
+code-review-graph MCP are **broken, not merely stale** — both hardcode a repo
+path that no longer exists (see the note at the end). Use grep.
 
 ## Stack & layout
 
@@ -41,6 +42,38 @@ frontend/ecommerce_inventory/src/
   utils/       config.js (API base), ProtectedRoute, VendorRoute, Helper
   layout/      shell + MUI theme
 ```
+
+### Sibling repo: the mobile apps
+
+`../fabrythingapps` (separate git repo, `github.com/proffesergio/fabrythingapps`)
+holds three Expo/React Native apps — Customer, Rider, Restaurant — that consume
+this API. **This repo is the contract.** A mobile task needing a new endpoint,
+field or business rule is a change *here*, not there.
+
+What that means when you edit this repo:
+
+- **`food/` response shapes have a second consumer that you cannot see from
+  here.** Before renaming a field or changing an envelope in `views_public`,
+  `views_rider*` or `store/auth/`, grep `../fabrythingapps/packages/core/src/`
+  — the apps hard-code these shapes and nothing in this repo's tests will catch
+  the break.
+- Endpoints that exist *only* for mobile: `food/devices/{register,unregister}/`
+  (Expo push tokens), `food/mobile/config/` (version gate + support links,
+  public), `food/rider/privacy/` (share-location consent),
+  `store/auth/refresh/` (JWT refresh — the real path; the `api/auth/refresh`
+  whitelist entry is inert).
+- **The login response is FLAT** `{access, refresh, message}`, and the apps
+  depend on that: `role` and `username` are read as **JWT claims** decoded
+  client-side, not from a user object. Adding a nested `user` field is fine;
+  moving `role` out of the claims is a breaking change for all three apps.
+- `packages/core/src/theme/tokens.ts` over there mirrors `src/food/theme.js`
+  here. Palette changes should be made in both or they drift.
+
+**Status as of 2026-07-27.** `main` is in sync with `origin/main`; the mobile
+enablers (SP0) are merged and **live in production** — verified with
+`curl https://fabrythingweb.onrender.com/api/food/mobile/config/`, which
+returns real JSON. Any doc still describing `feature/mobile-enablers` as
+unmerged is out of date; that branch is gone.
 
 ## Diagnosing a production 500 — do this FIRST
 
@@ -475,38 +508,36 @@ Specs and design docs live in `docs/superpowers/specs/`.
 <!-- code-review-graph MCP tools -->
 ## MCP Tools: code-review-graph
 
-> **Status (2026-07-22).** Works on the **Linux** checkout at
-> `/home/billsbro/Music/fabrythingweb` (the path `.mcp.json` hardcodes), where
-> `list_graph_stats_tool` returns 714 nodes / 6704 edges over 133 files. It is
-> **unavailable on the Windows clone** (`C:\Users\bhnbi\Music\SaaS\fabrythingweb`)
-> because of that hardcoded path plus a missing `code_review_graph` in
-> `backend/EcommerceInventory/.venv`.
+> **Status (2026-07-27): BROKEN — do not reach for these tools first.**
+> The repo moved into `Music/fabrything/`, but `.mcp.json` still hardcodes
+> `command` and `cwd` under `/home/billsbro/Music/fabrythingweb`, which **no
+> longer exists**, so the server cannot start at all. `graphify-out/` is dead
+> the same way (`.graphify_root` points at the old path) *and* was last built
+> 2026-07-16 — everything from `52ca617` onward (riders, coupons, settlements,
+> Bancharampur zones, all of SP0) is missing from it.
 >
-> Two caveats even where it works: the graph was **last built 2026-07-16**, so
-> everything from `52ca617` onward (riders, coupons, settlements, Bancharampur
-> zones) is missing — run `build_or_update_graph_tool` before trusting it.
-> And `embeddings_count` is 0, so `semantic_search_nodes` does nothing until
-> `sentence-transformers` is installed. Structural queries (`query_graph`,
-> `get_impact_radius`) work regardless.
+> **Use Grep. Follow the exploration budget at the top of this file.** The
+> project map above is maintained by hand and is current; that is the
+> intended entry point.
 >
-> **Read the project map above first either way** — it is maintained by hand and
-> is current.
+> To revive the graph (optional, not required for any task): repoint both
+> paths in `.mcp.json` to `/home/billsbro/Music/fabrything/fabrythingweb`
+> (the `.venv` does exist there), restart the session, then run
+> `build_or_update_graph_tool` — the stored graph is ~3 weeks of commits
+> behind. `embeddings_count` is 0, so `semantic_search_nodes` stays a no-op
+> until `sentence-transformers` is installed; structural queries
+> (`query_graph`, `get_impact_radius`) work without it.
 
-**IMPORTANT: This project has a knowledge graph. ALWAYS use the
-code-review-graph MCP tools BEFORE using Grep/Glob/Read to explore
-the codebase.** The graph is faster, cheaper (fewer tokens), and gives
-you structural context (callers, dependents, test coverage) that file
-scanning cannot.
+The tool reference below applies **only after** the paths above are fixed and
+the graph is rebuilt. Until then it is documentation of a disabled feature.
 
-### When to use graph tools FIRST
+### What each tool would answer (once working)
 
-- **Exploring code**: `semantic_search_nodes` or `query_graph` instead of Grep
+- **Exploring code**: `semantic_search_nodes` or `query_graph`
 - **Understanding impact**: `get_impact_radius` instead of manually tracing imports
 - **Code review**: `detect_changes` + `get_review_context` instead of reading entire files
 - **Finding relationships**: `query_graph` with callers_of/callees_of/imports_of/tests_for
 - **Architecture questions**: `get_architecture_overview` + `list_communities`
-
-Fall back to Grep/Glob/Read **only** when the graph doesn't cover what you need.
 
 ### Key Tools
 
@@ -523,7 +554,8 @@ Fall back to Grep/Glob/Read **only** when the graph doesn't cover what you need.
 
 ### Workflow
 
-1. The graph auto-updates on file changes (via hooks).
+1. Rebuild first — the "auto-updates via hooks" claim has not held; the stored
+   graph is weeks stale.
 2. Use `detect_changes` for code review.
 3. Use `get_affected_flows` to understand impact.
 4. Use `query_graph` pattern="tests_for" to check coverage.
