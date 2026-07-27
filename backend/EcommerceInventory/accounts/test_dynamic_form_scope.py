@@ -60,6 +60,14 @@ class DynamicFormScopeTests(TestCase):
         self.assertEqual(self.seeded_cat.domain_user_id_id, self.seeder.id,
                          "update must not re-own the row to the editor")
 
+    def test_non_root_staff_cannot_edit_foreign_domain_row(self):
+        foreign = Categories.objects.create(
+            name="Foreign", slug="foreign-cat", description="",
+            domain_user_id=self.admin, added_by_user_id=self.admin)
+        auth(self.client, self.staff)
+        res = self.client.get(f"/api/getForm/category/{foreign.id}/")
+        self.assertEqual(res.status_code, 404)
+
     def test_own_domain_row_still_editable(self):
         mine = Categories.objects.create(
             name="Mine", slug="mine-cat", description="",
