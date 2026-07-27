@@ -42,14 +42,17 @@ the same way and would fail identically.
 
 ### Fix
 
-Platform-global rows (NULL `domain_user_id`) become editable by platform
-staff: for users with role `Admin` / `Super Admin`, the target filter in
-both `get` and `post` becomes _my domain OR NULL domain_
-(`Q(domain_user_id=request.user.domain_user_id) | Q(domain_user_id__isnull=True)`).
-Non-admin roles keep the strict domain filter — no cross-tenant widening.
+The dynamic form's edit filter now uses the same platform-scope rule as the
+list views: Super Admins and domain-root users (where `user.role == 'Super Admin'
+or user.domain_user_id_id == user.id`) can edit any row; everyone else filters
+strictly to their own domain. This widens visibility from seeded rows (owned by
+the first Super Admin via `seed_bd_store`) to all platform staff, matching
+what the category/product list endpoints already show.
 
-This also sets the ownership convention SP2 relies on: **seeded catalog rows
-are platform-owned and carry NULL `domain_user_id`.**
+Ownership is preserved on update — the `post` endpoint no longer overwrites
+`domain_user_id` and `added_by_user_id` when editing, so seeded rows retain
+their creator even when edited by a different admin. New rows are still
+assigned to the editing user's domain.
 
 ### Tests (write first, watch them fail)
 
