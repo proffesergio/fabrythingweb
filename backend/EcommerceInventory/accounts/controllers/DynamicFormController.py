@@ -65,7 +65,7 @@ class DynamicFormController(APIView):
         if id:
             qs = model_class.objects.filter(id=id)
             if not isPlatformScope(request.user):
-                qs = qs.filter(domain_user_id_id=request.user.domain_user_id_id)
+                qs = qs.filter(domain_user_id=request.user.domain_user_id)
             model_instace = qs.first()
             if model_instace is None:
                 return renderResponse(data='Model Item Not Found',message='Model Item Not Found',status=404)
@@ -103,7 +103,7 @@ class DynamicFormController(APIView):
         if id:
             qs = model_class.objects.filter(id=id)
             if not isPlatformScope(request.user):
-                qs = qs.filter(domain_user_id_id=request.user.domain_user_id_id)
+                qs = qs.filter(domain_user_id=request.user.domain_user_id)
             model_instance = qs.first()
             if model_instance is None:
                 return renderResponse(data='Model Item Not Found',message='Model Item Not Found',status=404)
