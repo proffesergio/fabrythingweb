@@ -61,12 +61,19 @@ class DynamicFormScopeTests(TestCase):
                          "update must not re-own the row to the editor")
 
     def test_non_root_staff_cannot_edit_foreign_domain_row(self):
+        # Non-domain-root users (staff) are blocked by PermissionMiddleware
+        # (core.middleware.PermissionMiddleware) before reaching DynamicFormController.
+        # They are denied at the middleware layer because they are not Super Admin
+        # or domain-root, and there is no ModuleUrls permission entry for /api/getForm/.
+        # This prevents a cross-domain request from ever reaching the controller.
         foreign = Categories.objects.create(
             name="Foreign", slug="foreign-cat", description="",
             domain_user_id=self.admin, added_by_user_id=self.admin)
         auth(self.client, self.staff)
         res = self.client.get(f"/api/getForm/category/{foreign.id}/")
-        self.assertEqual(res.status_code, 404)
+        # Middleware blocks non-domain-root users with 400 "Module not Exist"
+        self.assertEqual(res.status_code, 400)
+        self.assertEqual(res.json()["message"], "Module not Exist")
 
     def test_own_domain_row_still_editable(self):
         mine = Categories.objects.create(
