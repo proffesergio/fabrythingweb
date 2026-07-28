@@ -42,14 +42,17 @@ the same way and would fail identically.
 
 ### Fix
 
-Platform-global rows (NULL `domain_user_id`) become editable by platform
-staff: for users with role `Admin` / `Super Admin`, the target filter in
-both `get` and `post` becomes *my domain OR NULL domain*
-(`Q(domain_user_id=request.user.domain_user_id) | Q(domain_user_id__isnull=True)`).
-Non-admin roles keep the strict domain filter — no cross-tenant widening.
+The dynamic form's edit filter now uses the same platform-scope rule as the
+list views: Super Admins and domain-root users (where `user.role == 'Super Admin'
+or user.domain_user_id_id == user.id`) can edit any row; everyone else filters
+strictly to their own domain. This widens visibility from seeded rows (owned by
+the first Super Admin via `seed_bd_store`) to all platform staff, matching
+what the category/product list endpoints already show.
 
-This also sets the ownership convention SP2 relies on: **seeded catalog rows
-are platform-owned and carry NULL `domain_user_id`.**
+Ownership is preserved on update — the `post` endpoint no longer overwrites
+`domain_user_id` and `added_by_user_id` when editing, so seeded rows retain
+their creator even when edited by a different admin. New rows are still
+assigned to the editing user's domain.
 
 ### Tests (write first, watch them fail)
 
@@ -83,12 +86,12 @@ untouched for the admin to reconcile.
 
 ### Data sources and scrape feasibility (checked 2026-07-27)
 
-| Site | Vertical | Tech | Scrapability |
-| --- | --- | --- | --- |
-| fabrilife.com | Fashion | server-rendered HTML | easy; `/product/[id]-[slug]` |
-| dazzle.com.bd | Phones/Gadgets | Next.js | parse `__NEXT_DATA__` JSON; fallback: hand-curated fixture |
-| potakait.com | Computers (partner) | OpenCart, SSR | easy; BDT price plain in HTML |
-| canvasit.com.bd | Computers (partner) | OpenCart, SSR | easy; BDT price plain in HTML |
+| Site            | Vertical            | Tech                 | Scrapability                                               |
+| --------------- | ------------------- | -------------------- | ---------------------------------------------------------- |
+| fabrilife.com   | Fashion             | server-rendered HTML | easy; `/product/[id]-[slug]`                               |
+| dazzle.com.bd   | Phones/Gadgets      | Next.js              | parse `__NEXT_DATA__` JSON; fallback: hand-curated fixture |
+| potakait.com    | Computers (partner) | OpenCart, SSR        | easy; BDT price plain in HTML                              |
+| canvasit.com.bd | Computers (partner) | OpenCart, SSR        | easy; BDT price plain in HTML                              |
 
 Copyright note: dazzle/fabrilife data is competitor content used as seed
 data; the partner stores have given explicit permission. If any source
@@ -107,30 +110,37 @@ tools/scrape/*.py  →  catalog/fixtures/seed/*.json  →  seed_store_catalog
    by both partner stores). Python, `requests` + BeautifulSoup, polite
    rate-limiting (1 req/s), never imported by Django code, never run in prod.
 2. **Fixtures** — `catalog/fixtures/seed/{fabrilife_fashion,dazzle_tech,
-   potakait,canvasit}.json`. One schema for all sources:
+potakait,canvasit}.json`. One schema for all sources:
 
    ```json
    {
      "category_path": ["Computers", "Laptops"],
-     "name": "...", "slug": "...",
-     "price": 84500, "discount_price": 82000,
-     "description": "...", "specifications": {"CPU": "..."},
-     "brand": "Asus", "brand_model": "Vivobook 15",
-     "gender": "MEN", "sizes": ["S","M","L","XL"], "material": "Cotton",
+     "name": "...",
+     "slug": "...",
+     "price": 84500,
+     "discount_price": 82000,
+     "description": "...",
+     "specifications": { "CPU": "..." },
+     "brand": "Asus",
+     "brand_model": "Vivobook 15",
+     "gender": "MEN",
+     "sizes": ["S", "M", "L", "XL"],
+     "material": "Cotton",
      "images": ["https://…"],
-     "source_url": "https://potakait.com/…"   // partner items only
+     "source_url": "https://potakait.com/…" // partner items only
    }
    ```
 
    Fashion entries use `gender`/`sizes`/`material` (→ one `ProductVariant`
    per size); tech entries use `specifications`/`brand`. Volume: ~10
    products per leaf subcategory (~150–250 total).
+
 3. **Seed command** — `seed_store_catalog`, **create-only** (the
    `seed_bancharampur` lesson: re-running a seed must never clobber admin
    edits; `--force-update` is the explicit escape hatch). Idempotency key is
    the product slug. At seed time each image URL is downloaded once and
-   re-uploaded through the existing storage helper (S3 when AWS keys are
-   set, else local `MEDIA_ROOT`); the stored product keeps *our* URL, never
+   re-uploaded through the existing storage helper or in our database by compressing to a affordable size (S3 when AWS keys are
+   set, else local `MEDIA_ROOT`); the stored product keeps _our_ URL, never
    a hotlink.
 
 ### Reseller price sync (partner stores only)

@@ -1,4 +1,4 @@
-from core.helpers import CommonListAPIMixin, CustomPageNumberPagination, createParsedCreatedAtUpdatedAt, renderResponse
+from core.helpers import CommonListAPIMixin, CustomPageNumberPagination, createParsedCreatedAtUpdatedAt, isPlatformScope, renderResponse
 from catalog.models import Categories
 from rest_framework import generics
 from rest_framework import serializers
@@ -42,7 +42,7 @@ class CategoryListView(generics.ListAPIView):
 
     def get_queryset(self):
         # Super Admin sees all categories; others see only their domain's categories
-        if self.request.user.role == 'Super Admin' or self.request.user.domain_user_id_id == self.request.user.id:
+        if isPlatformScope(self.request.user):
             queryset = Categories.objects.filter(parent_id__isnull=True)
         else:
             queryset = Categories.objects.filter(parent_id__isnull=True, domain_user_id=self.request.user.domain_user_id_id)

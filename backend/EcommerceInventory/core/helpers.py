@@ -27,6 +27,12 @@ def getSuperAdminDynamicFormModels():
         'modules':'accounts.Modules',
     }
 
+def isPlatformScope(user):
+    """The widening rule the admin list views already use
+    (ProductListView/CategoryListView): Super Admins and domain-root users
+    operate on the whole platform's rows, everyone else only on their domain."""
+    return user.role == 'Super Admin' or user.domain_user_id_id == user.id
+
 def checkisFileField(field):
     return field in ['image','file','path','video','audio','profile_pic']
 

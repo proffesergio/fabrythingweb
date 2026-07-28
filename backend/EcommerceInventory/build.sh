@@ -41,6 +41,26 @@ python manage.py seed_admin_modules
 python manage.py seed_demo --if-empty      || echo "WARNING: seed_demo failed (non-fatal)"
 python manage.py seed_food_demo --if-empty || echo "WARNING: seed_food_demo failed (non-fatal)"
 
+# Expanded store taxonomy (Fashion/Phones/Computers/Gadgets categories). Create-only
+# and imageless, so it is cheap and safe on every deploy. Deliberately --categories-only:
+# the full `seed_store_catalog` (no flag) downloads ~600 product images, compresses
+# them and stores them via core.storage.save_file. That is minutes of build time and
+# only ever needs to happen once, so it is opt-in below rather than run every deploy.
+python manage.py seed_store_catalog --categories-only || echo "WARNING: seed_store_catalog failed (non-fatal)"
+
+# One-off: seed the real products (Fabrilife fashion + the two partner computer
+# stores) WITH their images. Images are content-addressed rows in the database
+# (core.ImageBlob, served from /api/media/<sha256>/), so unlike local MEDIA_ROOT
+# they survive Render's ephemeral filesystem. Opt-in and self-disarming, same
+# pattern as RELEASE_LOGIN below: set SEED_STORE_PRODUCTS=true in the Render
+# dashboard, deploy once, then REMOVE the variable — otherwise every later deploy
+# pays the download cost again for nothing. The command is create-only, so a
+# repeat run cannot overwrite prices or names an admin has edited.
+if [ "$SEED_STORE_PRODUCTS" = "true" ]; then
+  echo "SEED_STORE_PRODUCTS=true — seeding store products and images (slow, one-off):"
+  python manage.py seed_store_catalog || echo "WARNING: product seeding failed (non-fatal)"
+fi
+
 # Delivery geography: the 13 Bancharampur unions + their villages. Runs on every
 # deploy but is CREATE-ONLY — it adds anything missing and never overwrites a
 # zone/village the admin has edited (see seed_bancharampur --force-update, and

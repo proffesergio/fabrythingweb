@@ -8,8 +8,10 @@ import {
 import Add from "@mui/icons-material/Add";
 import Edit from "@mui/icons-material/Edit";
 import SearchIcon from "@mui/icons-material/Search";
+import SyncIcon from "@mui/icons-material/Sync";
 import RateReviewOutlinedIcon from "@mui/icons-material/RateReviewOutlined";
 import HelpOutlineIcon from "@mui/icons-material/HelpOutline";
+import { toast } from "react-toastify";
 import useApi from "../../hooks/APIHandler";
 import ManageReviews from "./ManageReview";
 import ManageQuestions from "./ManageQuestions";
@@ -27,6 +29,7 @@ const ManageProducts = ({ onProductSelected }) => {
     const [totalPages, setTotalPages] = useState(1);
     const [reviewsFor, setReviewsFor] = useState(null);
     const [questionsFor, setQuestionsFor] = useState(null);
+    const [syncing, setSyncing] = useState(false);
 
     useEffect(() => {
         const t = setTimeout(() => { setPage(1); setDebounced(search); }, 600);
@@ -46,6 +49,21 @@ const ManageProducts = ({ onProductSelected }) => {
 
     useEffect(() => { getProducts(); }, [getProducts]);
 
+    const handleSyncPrices = async () => {
+        setSyncing(true);
+        const res = await callApi({
+            url: "products/admin/sync-prices/", method: "POST", rawError: true, silent: true,
+        });
+        setSyncing(false);
+        if (res?.status === 200) {
+            const n = res.data.data.changes?.length ?? 0;
+            toast.success(`Price sync complete — ${n} product${n === 1 ? "" : "s"} updated.`);
+            getProducts();
+        } else {
+            toast.error(res?.data?.message || "Price sync failed");
+        }
+    };
+
     return (
         <Box sx={{ width: "100%" }}>
             {!onProductSelected && (
@@ -54,9 +72,14 @@ const ManageProducts = ({ onProductSelected }) => {
                         <Typography variant="body2" sx={{ cursor: "pointer" }} onClick={() => navigate("/admin")}>Home</Typography>
                         <Typography variant="body2">Products</Typography>
                     </Breadcrumbs>
-                    <Button variant="contained" startIcon={<Add />} onClick={() => navigate("/admin/form/product")}>
-                        Add Product
-                    </Button>
+                    <Stack direction="row" spacing={1}>
+                        <Button variant="outlined" startIcon={<SyncIcon />} disabled={syncing} onClick={handleSyncPrices}>
+                            {syncing ? "Syncing…" : "Sync prices"}
+                        </Button>
+                        <Button variant="contained" startIcon={<Add />} onClick={() => navigate("/admin/form/product")}>
+                            Add Product
+                        </Button>
+                    </Stack>
                 </Stack>
             )}
 

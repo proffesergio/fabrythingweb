@@ -154,6 +154,30 @@ That is why migrations can be missing even though `build.sh` runs `migrate` unde
   `Restaurant.logo/cover_image`). Upload goes through
   `POST /api/uploads/` (`core/views.FileUploadViewInS3` — S3 when AWS keys are
   set, otherwise local `MEDIA_ROOT`) which returns a URL you then store.
+- **Platform scope is one rule, in one place.** `core.helpers.isPlatformScope(user)`
+  (`user.role == 'Super Admin' or user.domain_user_id_id == user.id`) is what
+  `ProductListView`, `CategoryListView` and `DynamicFormController` all use to decide
+  "may this user act on rows outside their own domain". The category editor 404'd
+  ("Item Not Found") for two years' worth of seeded rows because the list views had
+  this rule and the edit form didn't — the row listed fine and then vanished on edit.
+  Use the helper; don't write a fresh `if role ==`. Note the dynamic form
+  **preserves `domain_user_id`/`added_by_user_id` on update** — editing must never
+  re-own a row to whoever opened the form.
+- **`PermissionMiddleware` runs the view before it decides.** `core/middleware.py:50`
+  calls `get_response(request)` and only then applies the module-permission check,
+  so a non-root user's request *executes* and its response is replaced with 400
+  "Module not Exist" (no `ModuleUrls` row) or 403. Two consequences: a new admin API
+  endpoint works for Super Admins and domain-root users with no seeding, and a
+  view's own authorization is the real defense — test it directly with
+  `APIRequestFactory`/`force_authenticate`, because over HTTP the middleware masks it.
+- **Store catalog seeding + partner price sync** (`catalog/`): `scrape_parsers.py` holds
+  pure HTML→data parsers (no network, no ORM) shared by the offline scrapers in
+  `tools/scrape/` and by `services_price_sync.py` at runtime. Committed fixtures live in
+  `catalog/fixtures/seed/*.json`. Products carrying a `source_url` came from the two
+  **partner** stores (potakait.com, canvasit.com.bd — explicit reseller permission) and
+  are the *only* rows `sync_source_prices` will re-price. `build.sh` deliberately runs
+  `seed_store_catalog --categories-only`: full seeding downloads and re-hosts images,
+  which lands on the ephemeral Render filesystem unless S3 keys are set.
 - **`FoodItem.category_id` is a ForeignKey literally named `category_id`.**
   Not a raw id column. Serializers expose it as a pk int.
 - Admin sidebar modules are DB-driven — a new admin page needs a module row
@@ -489,6 +513,9 @@ python manage.py backfill_settlements       # settlements for pre-ledger deliver
 python manage.py prune_orphan_logins        # dry run; --apply to actually delete
 python manage.py release_login <user|email> # dry run; --apply frees the name for reuse
 python manage.py sweep_delivery_offers       # expire timed-out offers + re-offer (cron backstop)
+python manage.py seed_store_catalog          # store taxonomy + fixture products; create-only
+                                             # --categories-only (what build.sh runs), --fixture <name>, --force-update
+python manage.py sync_source_prices          # re-price partner-sourced products; --dry-run
 
 # frontend (from frontend/ecommerce_inventory)
 npm start        # CRA dev server

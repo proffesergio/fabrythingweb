@@ -1,4 +1,4 @@
-from core.helpers import getDynamicFormFields, getDynamicFormModels, getExludeFields, renderResponse
+from core.helpers import getDynamicFormFields, getDynamicFormModels, getExludeFields, renderResponse, isPlatformScope
 from accounts.models import Users
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -7,6 +7,20 @@ from rest_framework_simplejwt.authentication import JWTAuthentication
 from django.core.serializers import serialize
 import json
 from django.apps import apps
+
+# The category/product editor is the ONLY place the platform-scope widening
+# (core.helpers.isPlatformScope) was ever meant to apply -- seeded categories
+# and products are owned by the first Super Admin, so domain-root users need
+# to reach them across domains to edit them (see core.helpers.isPlatformScope
+# docstring). isPlatformScope is true for ANY domain-root user, not only Super
+# Admins, and every other dynamic-form model ('supplier'/'users' ->
+# accounts.Users, 'warehouse' -> inventory.Warehouse, 'rackShelfFloor' ->
+# inventory.RackAndShelvesAndFloor) has real per-tenant rows. Widening the
+# lookup for those too let one tenant's domain-root Admin fetch AND edit
+# another tenant's Users row via POST /api/getForm/users/<id>/ -- including
+# flipping role to "Super Admin" -- a full cross-tenant privilege escalation.
+# Keep this list to exactly what the widening was designed for.
+PLATFORM_SCOPE_WIDENED_MODELS = {'category', 'product'}
 
 class DynamicFormController(APIView):
     authentication_classes = [JWTAuthentication]
@@ -49,12 +63,6 @@ class DynamicFormController(APIView):
 
         #Filtering the Post Data Fields by Model Fields and Eliminating the Extra Fields
         fieldsdata={key:value for key,value in fields.items() if key in model_fields}
-        #All the Model Fields Data
-        print(model_fields)
-        #All the Post Data Fields
-        print(fields.items())
-        #Santizing the Post Data Fields by model fields data and eliminating the extra fields
-        print(fieldsdata.items())
 
         #Assigning Foreign key instance for ForeignKey Fields in the Post Data by getting the instance of the related model by the ID
         for field in fields_info:
@@ -68,19 +76,23 @@ class DynamicFormController(APIView):
                 fieldsdata.pop(field.name)
 
         #Creating the Model Instance and Saving the Data in the Database
-        fieldsdata['domain_user_id']=request.user.domain_user_id
-        fieldsdata['added_by_user_id']=Users.objects.get(id=request.user.id)
-
         if id:
-            model_instace=model_class.objects.filter(id=id,domain_user_id=request.user.domain_user_id)
-            if not model_instace.exists():
+            qs = model_class.objects.filter(id=id)
+            if modelName not in PLATFORM_SCOPE_WIDENED_MODELS or not isPlatformScope(request.user):
+                qs = qs.filter(domain_user_id_id=request.user.domain_user_id_id)
+            model_instace = qs.first()
+            if model_instace is None:
                 return renderResponse(data='Model Item Not Found',message='Model Item Not Found',status=404)
-            model_instace=model_instace.first()
-            for key,value in fieldsdata.items():
-                setattr(model_instace,key,value)
+            # Editing must never re-own the row: ownership set at creation only.
+            fieldsdata.pop('domain_user_id', None)
+            fieldsdata.pop('added_by_user_id', None)
+            for key, value in fieldsdata.items():
+                setattr(model_instace, key, value)
             model_instace.save()
-        else:          
-            model_instace=model_class.objects.create(**fieldsdata)
+        else:
+            fieldsdata['domain_user_id'] = request.user.domain_user_id
+            fieldsdata['added_by_user_id'] = Users.objects.get(id=request.user.id)
+            model_instace = model_class.objects.create(**fieldsdata)
 
         #Serializing Data
         serialized_data=serialize('json',[model_instace])
@@ -103,10 +115,11 @@ class DynamicFormController(APIView):
             return renderResponse(data='Model Not Found',message='Model Not Found',status=404)
         
         if id:
-            model_instance=model_class.objects.filter(id=id,domain_user_id=request.user.domain_user_id)
-            if model_instance.exists():
-                model_instance=model_instance.first()
-            else:
+            qs = model_class.objects.filter(id=id)
+            if modelName not in PLATFORM_SCOPE_WIDENED_MODELS or not isPlatformScope(request.user):
+                qs = qs.filter(domain_user_id_id=request.user.domain_user_id_id)
+            model_instance = qs.first()
+            if model_instance is None:
                 return renderResponse(data='Model Item Not Found',message='Model Item Not Found',status=404)
         else:
             model_instance = model_class()
