@@ -65,6 +65,15 @@ def sync_source_prices(fetcher=None, dry_run=False, markup_percent=None):
             p.price_synced_at = timezone.now()
             p.save(update_fields=["initial_selling_price", "discount_price",
                                   "source_price", "price_synced_at", "updated_at"])
+            # Checkout charges the VARIANT, not Products (orders/services.py
+            # snapshots unit_price from ProductVariant.effective_price) -- so
+            # a product and its variants must never disagree on price. These
+            # variants were created by our own seeder mirroring the partner
+            # price, so mirroring the new price/discount forward onto them
+            # here is correct. Only active variants: an inactive/retired SKU
+            # is not sellable and re-pricing it is not observable anyway.
+            p.variants.filter(is_active=True).update(
+                price=new_price, discount_price=new_disc)
         rec["updated"] = True
         changes.append(rec)
     return changes

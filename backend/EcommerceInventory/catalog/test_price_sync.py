@@ -5,7 +5,7 @@ from rest_framework.test import APIRequestFactory, force_authenticate
 
 from accounts.models import Users
 from catalog.controllers.ProductController import AdminSyncPricesView
-from catalog.models import Categories, Products
+from catalog.models import Categories, Products, ProductVariant
 from catalog.services_price_sync import sync_source_prices
 
 # NOTE ON FIXTURE DEVIATION: the task brief's own test snippet uses
@@ -43,6 +43,11 @@ class PriceSyncTests(TestCase):
             description="", initial_buying_price=1, initial_selling_price=40000,
             source_url="https://potakait.com/test-gpu",
             domain_user_id=owner, added_by_user_id=owner)
+        # Checkout charges the VARIANT (orders/services.py:72 reads
+        # variant.effective_price), not the Products row -- this is the
+        # variant our own seeder would have created mirroring the old price.
+        self.variant = ProductVariant.objects.create(
+            product=self.p, sku="FS-9001-DEF", price=40000, stock_quantity=25)
 
     def test_updates_price_and_stamps_sync(self):
         changes = sync_source_prices(fetcher=fake_fetcher)
@@ -53,11 +58,28 @@ class PriceSyncTests(TestCase):
         self.assertIsNotNone(self.p.price_synced_at)
         self.assertEqual(len([c for c in changes if c["updated"]]), 1)
 
+    def test_updates_active_variant_price(self):
+        # CRITICAL: checkout snapshots unit_price from variant.effective_price
+        # (orders/services.py:72). If the sync only touches Products fields,
+        # the storefront shows the new price while checkout still charges the
+        # stale seed-time variant price -- shown one price, charged another.
+        sync_source_prices(fetcher=fake_fetcher)
+        self.variant.refresh_from_db()
+        self.assertEqual(self.variant.price, 46000)
+        self.assertEqual(self.variant.discount_price, 44500)
+        self.assertEqual(self.variant.effective_price, 44500)
+
     def test_dry_run_writes_nothing(self):
         sync_source_prices(fetcher=fake_fetcher, dry_run=True)
         self.p.refresh_from_db()
         self.assertEqual(self.p.initial_selling_price, 40000)
         self.assertIsNone(self.p.price_synced_at)
+
+    def test_dry_run_leaves_variant_prices_untouched(self):
+        sync_source_prices(fetcher=fake_fetcher, dry_run=True)
+        self.variant.refresh_from_db()
+        self.assertEqual(self.variant.price, 40000)
+        self.assertIsNone(self.variant.discount_price)
 
     def test_markup_applied(self):
         sync_source_prices(fetcher=fake_fetcher, markup_percent=10)
@@ -80,11 +102,16 @@ class PriceSyncTests(TestCase):
             initial_buying_price=1, initial_selling_price=999,
             source_url="", domain_user_id=self.p.domain_user_id,
             added_by_user_id=self.p.domain_user_id)
+        hand_entered_variant = ProductVariant.objects.create(
+            product=hand_entered, sku="FS-9002-DEF", price=999, stock_quantity=10)
         changes = sync_source_prices(fetcher=fake_fetcher)
         hand_entered.refresh_from_db()
+        hand_entered_variant.refresh_from_db()
         self.assertEqual(hand_entered.initial_selling_price, 999)
         self.assertIsNone(hand_entered.price_synced_at)
         self.assertNotIn("hand-entered-shirt", [c["slug"] for c in changes])
+        self.assertEqual(hand_entered_variant.price, 999)
+        self.assertIsNone(hand_entered_variant.discount_price)
 
 
 class AdminSyncPricesViewTests(TestCase):

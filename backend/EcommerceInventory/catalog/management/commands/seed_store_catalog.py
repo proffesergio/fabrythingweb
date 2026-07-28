@@ -271,8 +271,17 @@ class Command(BaseCommand):
 
                 sizes = e.get("sizes") or [""]
                 for size in sizes:
-                    ProductVariant.objects.get_or_create(
+                    variant, variant_created = ProductVariant.objects.get_or_create(
                         product=product, size=size, color="",
                         defaults={"sku": f"{product.sku}-{size or 'DEF'}",
                                   "price": disc or sell, "stock_quantity": 25})
+                    # get_or_create only applies `defaults` on creation, so a
+                    # forced re-seed never used to touch an existing variant's
+                    # price -- checkout charges the variant (effective_price),
+                    # so the storefront would show the new fixture price while
+                    # checkout kept charging the stale seed-time price. On
+                    # --force-update, refresh it explicitly.
+                    if force and not variant_created:
+                        variant.price = disc or sell
+                        variant.save(update_fields=["price", "updated_at"])
         self.stdout.write(self.style.SUCCESS(f"Products: {created} created."))

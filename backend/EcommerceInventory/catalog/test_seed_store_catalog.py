@@ -123,6 +123,47 @@ class SeedStoreCatalogProductTests(TestCase):
         finally:
             shutil.rmtree(tmpdir)
 
+    def test_force_update_refreshes_existing_variant_price(self):
+        # CRITICAL: ProductVariant.objects.get_or_create(...) only applies
+        # `defaults` on creation, so a forced re-seed used to never update an
+        # existing variant's price -- checkout would keep charging the
+        # seed-time price forever, no matter how many times --force-update
+        # ran with a new fixture price. This must fail against the current
+        # get_or_create-without-update implementation.
+        tmpdir = tempfile.mkdtemp()
+        try:
+            fixture_path = os.path.join(tmpdir, "partner_probe.json")
+            with open(fixture_path, "w", encoding="utf-8") as fh:
+                json.dump([{
+                    "category_path": "men-tshirts",
+                    "name": "Partner Probe Tee Force",
+                    "price": 500.0,
+                    "source_url": "https://partner.example.com/p/3",
+                    "images": ["https://partner.example.com/img.jpg"],
+                }], fh)
+            with patch("catalog.management.commands.seed_store_catalog.FIXTURE_DIR", tmpdir):
+                self._run()
+                p = Products.objects.get(slug="partner-probe-tee-force")
+                variant = p.variants.get()
+                self.assertEqual(variant.price, 500)
+
+                with open(fixture_path, "w", encoding="utf-8") as fh:
+                    json.dump([{
+                        "category_path": "men-tshirts",
+                        "name": "Partner Probe Tee Force",
+                        "price": 750.0,
+                        "source_url": "https://partner.example.com/p/3",
+                        "images": ["https://partner.example.com/img.jpg"],
+                    }], fh)
+                with patch("catalog.management.commands.seed_store_catalog.Command._import_image",
+                           return_value="https://cdn.test/x.jpg"):
+                    call_command("seed_store_catalog", "--force-update")
+            variant.refresh_from_db()
+            self.assertEqual(variant.price, 750,
+                              "--force-update must refresh an existing variant's price")
+        finally:
+            shutil.rmtree(tmpdir)
+
     def test_rerun_preserves_admin_price_edit(self):
         # Same reasoning as test_partner_products_carry_source_url: use a
         # synthetic partner entry so a source_url-carrying product actually
