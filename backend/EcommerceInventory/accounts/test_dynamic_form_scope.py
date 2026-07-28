@@ -12,6 +12,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from accounts.models import Users
 from accounts.controllers.DynamicFormController import DynamicFormController
 from catalog.models import Categories
+from inventory.models import Warehouse
 
 
 def auth(client, user):
@@ -115,3 +116,86 @@ class DynamicFormScopeTests(TestCase):
         self.assertEqual(res.status_code, 200, res.content)
         cat = Categories.objects.get(slug="new-cat")
         self.assertEqual(cat.domain_user_id_id, self.admin.domain_user_id_id)
+
+
+class DynamicFormCrossTenantEscalationTests(TestCase):
+    """CRITICAL regression test: the platform-scope widening added for the
+    category/product editor (isPlatformScope) must NOT apply to every
+    dynamic-form model. isPlatformScope is true for ANY domain-root user, not
+    only Super Admins, and PermissionMiddleware already lets domain-root users
+    bypass the module-permission gate (core/middleware.py:58-59) -- so without
+    a per-model allow-list, one tenant's domain-root Admin can fetch AND edit
+    another tenant's `Users` row (e.g. flip it to role="Super Admin") or
+    `Warehouse` row via /api/getForm/users/<id>/ and /api/getForm/warehouse/<id>/.
+
+    UserController.py and WarehouseController.py still enforce the strict
+    per-domain filter for their own endpoints -- the dynamic form must match
+    that, for every model except category/product.
+    """
+
+    def setUp(self):
+        # Tenant A: a domain-root Admin (isPlatformScope is True for them --
+        # domain_user_id_id == id -- even though they are not Super Admin).
+        self.tenant_a_admin = Users.objects.create_user(
+            username="tenantA-admin", email="tenantA@x.com", password="x",
+            role="Admin", country="Bangladesh")
+        # Tenant B: a different domain-root Admin, with rows of their own.
+        self.tenant_b_admin = Users.objects.create_user(
+            username="tenantB-admin", email="tenantB@x.com", password="x",
+            role="Admin", country="Bangladesh")
+        self.tenant_b_staff = Users.objects.create_user(
+            username="tenantB-staff", email="tenantB-staff@x.com", password="x",
+            role="Staff", country="Bangladesh", domain_user_id=self.tenant_b_admin)
+        self.tenant_b_warehouse = Warehouse.objects.create(
+            name="B Warehouse", address="1 Road", city="Dhaka", state="Dhaka",
+            country="Bangladesh", pincode="1200", phone="0100000000",
+            email="wh@tenantb.com", additional_details={},
+            domain_user_id=self.tenant_b_admin, added_by_user_id=self.tenant_b_admin)
+
+    def _get(self, modelName, obj_id, user):
+        request = APIRequestFactory().get(f"/api/getForm/{modelName}/{obj_id}/")
+        force_authenticate(request, user=user)
+        return DynamicFormController.as_view()(request, modelName=modelName, id=obj_id)
+
+    def _post(self, modelName, obj_id, user, data):
+        request = APIRequestFactory().post(f"/api/getForm/{modelName}/{obj_id}/", data, format="json")
+        force_authenticate(request, user=user)
+        return DynamicFormController.as_view()(request, modelName=modelName, id=obj_id)
+
+    def test_domain_root_admin_cannot_fetch_foreign_tenant_users_row(self):
+        res = self._get("users", self.tenant_b_staff.id, self.tenant_a_admin)
+        self.assertEqual(res.status_code, 404)
+
+    def test_domain_root_admin_cannot_escalate_foreign_tenant_users_role(self):
+        res = self._post("users", self.tenant_b_staff.id, self.tenant_a_admin,
+                          {"role": "Super Admin", "first_name": "x", "last_name": "x",
+                           "email": self.tenant_b_staff.email, "address": "x",
+                           "username": self.tenant_b_staff.username, "password": "x"})
+        self.assertEqual(res.status_code, 404)
+        self.tenant_b_staff.refresh_from_db()
+        self.assertEqual(self.tenant_b_staff.role, "Staff",
+                          "cross-tenant privilege escalation must not succeed")
+
+    def test_domain_root_admin_cannot_fetch_foreign_tenant_warehouse_row(self):
+        res = self._get("warehouse", self.tenant_b_warehouse.id, self.tenant_a_admin)
+        self.assertEqual(res.status_code, 404)
+
+    def test_domain_root_admin_cannot_edit_foreign_tenant_warehouse_row(self):
+        res = self._post("warehouse", self.tenant_b_warehouse.id, self.tenant_a_admin,
+                          {"name": "Hijacked", "address": "x", "city": "x", "state": "x",
+                           "country": "x", "pincode": "x", "phone": "x", "email": "h@x.com",
+                           "additional_details": {}, "status": "ACTIVE", "size": "SMALL",
+                           "capacity": "LOW", "warehouse_type": "OWNED"})
+        self.assertEqual(res.status_code, 404)
+        self.tenant_b_warehouse.refresh_from_db()
+        self.assertEqual(self.tenant_b_warehouse.name, "B Warehouse")
+
+    def test_platform_scope_widening_still_works_for_category(self):
+        """Must NOT regress: category is the model this widening was built
+        for (see DynamicFormScopeTests above) -- a platform-scope user must
+        still be able to reach a foreign-domain category row."""
+        foreign_cat = Categories.objects.create(
+            name="Tenant B Category", slug="tenant-b-cat", description="",
+            domain_user_id=self.tenant_b_admin, added_by_user_id=self.tenant_b_admin)
+        res = self._get("category", foreign_cat.id, self.tenant_a_admin)
+        self.assertEqual(res.status_code, 200)

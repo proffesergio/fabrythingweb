@@ -8,6 +8,20 @@ from django.core.serializers import serialize
 import json
 from django.apps import apps
 
+# The category/product editor is the ONLY place the platform-scope widening
+# (core.helpers.isPlatformScope) was ever meant to apply -- seeded categories
+# and products are owned by the first Super Admin, so domain-root users need
+# to reach them across domains to edit them (see core.helpers.isPlatformScope
+# docstring). isPlatformScope is true for ANY domain-root user, not only Super
+# Admins, and every other dynamic-form model ('supplier'/'users' ->
+# accounts.Users, 'warehouse' -> inventory.Warehouse, 'rackShelfFloor' ->
+# inventory.RackAndShelvesAndFloor) has real per-tenant rows. Widening the
+# lookup for those too let one tenant's domain-root Admin fetch AND edit
+# another tenant's Users row via POST /api/getForm/users/<id>/ -- including
+# flipping role to "Super Admin" -- a full cross-tenant privilege escalation.
+# Keep this list to exactly what the widening was designed for.
+PLATFORM_SCOPE_WIDENED_MODELS = {'category', 'product'}
+
 class DynamicFormController(APIView):
     authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated]
@@ -64,7 +78,7 @@ class DynamicFormController(APIView):
         #Creating the Model Instance and Saving the Data in the Database
         if id:
             qs = model_class.objects.filter(id=id)
-            if not isPlatformScope(request.user):
+            if modelName not in PLATFORM_SCOPE_WIDENED_MODELS or not isPlatformScope(request.user):
                 qs = qs.filter(domain_user_id_id=request.user.domain_user_id_id)
             model_instace = qs.first()
             if model_instace is None:
@@ -102,7 +116,7 @@ class DynamicFormController(APIView):
         
         if id:
             qs = model_class.objects.filter(id=id)
-            if not isPlatformScope(request.user):
+            if modelName not in PLATFORM_SCOPE_WIDENED_MODELS or not isPlatformScope(request.user):
                 qs = qs.filter(domain_user_id_id=request.user.domain_user_id_id)
             model_instance = qs.first()
             if model_instance is None:
