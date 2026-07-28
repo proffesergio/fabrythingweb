@@ -1,9 +1,11 @@
 from accounts.models import Users
-from core.helpers import CommonListAPIMixin, CustomPageNumberPagination, createParsedCreatedAtUpdatedAt, renderResponse
+from core.helpers import CommonListAPIMixin, CustomPageNumberPagination, createParsedCreatedAtUpdatedAt, isPlatformScope, renderResponse
 from catalog.models import ProductQuestions, ProductReviews, Products
+from catalog.services_price_sync import sync_source_prices
 from rest_framework import generics
 from rest_framework import serializers
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.views import APIView
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from django.db.models import Q
 from django.db import models
@@ -136,6 +138,24 @@ class UpdateProductReviewView(generics.UpdateAPIView):
 
     def perform_update(self,serializer):
         serializer.save()
+
+
+class AdminSyncPricesView(APIView):
+    """Re-fetch partner-store (potakait.com / canvasit.com.bd) prices for
+    every product carrying a source_url and mirror them onto our catalog.
+    Platform-scope only (Super Admin or a domain-root user) -- everyone
+    else, including ordinary Staff, is forbidden."""
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        if not isPlatformScope(request.user):
+            return renderResponse(data='Forbidden', message='Forbidden', status=403)
+        changes = sync_source_prices()
+        return renderResponse(
+            data={"changes": [c for c in changes if c["updated"]],
+                  "checked": len(changes)},
+            message='Prices synced')
 
 
 class UpdateProductQuestionsView(generics.UpdateAPIView):
