@@ -6,10 +6,11 @@ edit target by exact domain match — so seeded categories (owned by the first
 Super Admin) listed fine and 404'd on edit ("Model Item Not Found").
 """
 from django.test import TestCase
-from rest_framework.test import APIClient
+from rest_framework.test import APIClient, APIRequestFactory, force_authenticate
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from accounts.models import Users
+from accounts.controllers.DynamicFormController import DynamicFormController
 from catalog.models import Categories
 
 
@@ -60,7 +61,7 @@ class DynamicFormScopeTests(TestCase):
         self.assertEqual(self.seeded_cat.domain_user_id_id, self.seeder.id,
                          "update must not re-own the row to the editor")
 
-    def test_non_root_staff_cannot_edit_foreign_domain_row(self):
+    def test_non_root_staff_blocked_by_permission_middleware(self):
         # Non-domain-root users (staff) are blocked by PermissionMiddleware
         # (core.middleware.PermissionMiddleware) before reaching DynamicFormController.
         # They are denied at the middleware layer because they are not Super Admin
@@ -74,6 +75,29 @@ class DynamicFormScopeTests(TestCase):
         # Middleware blocks non-domain-root users with 400 "Module not Exist"
         self.assertEqual(res.status_code, 400)
         self.assertEqual(res.json()["message"], "Module not Exist")
+
+    def test_controller_denies_cross_tenant_row_for_non_root_user(self):
+        """The middleware gates /api/getForm/ for non-root users, but it runs the
+        view before deciding (core/middleware.py:50) — so the controller's own
+        domain filter is the real last line of defense. Test it directly."""
+        foreign = Categories.objects.create(
+            name="Foreign Direct", slug="foreign-direct", description="",
+            domain_user_id=self.admin, added_by_user_id=self.admin)
+        request = APIRequestFactory().get(f"/api/getForm/category/{foreign.id}/")
+        force_authenticate(request, user=self.staff)
+        res = DynamicFormController.as_view()(request, modelName="category", id=foreign.id)
+        self.assertEqual(res.status_code, 404)
+
+    def test_controller_allows_own_domain_row_for_non_root_user(self):
+        """Same path, but the row is inside the staff user's own domain — proves
+        the 404 above comes from the domain filter, not from blanket denial."""
+        mine = Categories.objects.create(
+            name="Seeder Row", slug="seeder-row", description="",
+            domain_user_id=self.seeder, added_by_user_id=self.seeder)
+        request = APIRequestFactory().get(f"/api/getForm/category/{mine.id}/")
+        force_authenticate(request, user=self.staff)
+        res = DynamicFormController.as_view()(request, modelName="category", id=mine.id)
+        self.assertEqual(res.status_code, 200)
 
     def test_own_domain_row_still_editable(self):
         mine = Categories.objects.create(
