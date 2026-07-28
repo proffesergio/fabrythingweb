@@ -9,7 +9,9 @@ real products scraped from partner/reference sites).
 Create-only by slug (the seed_bancharampur lesson): re-runs never clobber
 admin edits unless --force-update is passed. Legacy top-level
 mens-fashion/womens-fashion (from seed_bd_store) are adopted into the new
-Fashion tree; that re-parent is structural and always applies.
+Fashion tree; that re-parent is a one-time structural migration (identified by
+the row still being top-level) and always applies once. After adoption, the
+row is treated like any other admin-editable category.
 """
 from django.core.management.base import BaseCommand
 from django.db import transaction
@@ -115,9 +117,21 @@ class Command(BaseCommand):
                 order += 10
                 if slug in adopted:
                     cat = adopted[slug]
-                    if cat.parent_id_id != (parent.id if parent else None) or cat.name != name:
+                    # An unadopted legacy category is still top-level (no parent
+                    # yet) — that marks it as pending its one-time migration into
+                    # the new tree, which is always safe to perform. Once it has
+                    # a parent, adoption already happened; any later difference
+                    # (e.g. a renamed "Men" -> "Menswear") is an admin edit, not
+                    # a pending migration, so leave it alone unless --force-update
+                    # explicitly asks to resync it.
+                    if cat.parent_id_id is None:
                         cat.parent_id = parent
                         cat.name = name
+                        cat.save()
+                    elif force:
+                        cat.parent_id = parent
+                        cat.name = name
+                        cat.description = desc
                         cat.save()
                 else:
                     cat, created = Categories.objects.get_or_create(
