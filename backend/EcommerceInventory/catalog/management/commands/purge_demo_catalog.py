@@ -15,6 +15,17 @@ history, so that is refused outright rather than made a flag: any demo
 product with a variant an OrderItem points at is skipped and printed with
 the reason, never deleted.
 
+The same protection applies to a live customer's data that would otherwise
+be cascade-deleted silently: `CartItem.variant` (storefront/models.py) and
+`ProductVariant.product`/`Products` (catalog/models.py) are all
+`on_delete=CASCADE`, and `ProductReviews`/`ProductQuestions` cascade
+directly from `Products` too -- unlike the OrderItem path, nothing stopped
+the bulk `Products...delete()` from silently removing a real customer's cart
+line items, reviews or questions. Any demo product with a live cart item,
+review or question is skipped by default and reported (same treatment as
+the order check) -- pass --force-cart to override deliberately once you've
+seen the report.
+
 After products are removed, categories that are left with no products and no
 children are removed too -- but only categories that came from the demo seed
 (`seed_bd_store.CATEGORIES`). A TAXONOMY category from `seed_store_catalog`
@@ -33,8 +44,9 @@ from django.db import transaction
 
 from catalog.management.commands.seed_bd_store import CATEGORIES as DEMO_CATEGORIES
 from catalog.management.commands.seed_store_catalog import ADOPT_LEGACY, TAXONOMY
-from catalog.models import Categories, Products, ProductVariant
+from catalog.models import Categories, Products, ProductQuestions, ProductReviews, ProductVariant
 from orders.models import OrderItem
+from storefront.models import CartItem
 
 DEMO_IMAGE_MARKER = "loremflickr.com"
 DEMO_SKU_PREFIX = "FT-"
@@ -65,15 +77,34 @@ def _is_demo_image(image):
     )
 
 
+def _format_customer_content(cart_count, review_count, question_count):
+    reasons = []
+    if cart_count:
+        reasons.append(f"{cart_count} live cart item(s)")
+    if review_count:
+        reasons.append(f"{review_count} review(s)")
+    if question_count:
+        reasons.append(f"{question_count} question(s)")
+    return ", ".join(reasons)
+
+
 class Command(BaseCommand):
     help = "Delete the loremflickr demo catalog seeded by seed_bd_store. Dry run by default."
 
     def add_arguments(self, parser):
         parser.add_argument("--apply", action="store_true",
                             help="Actually delete. Without this it only reports.")
+        parser.add_argument("--force-cart", action="store_true",
+                            help="Also delete demo products that are skipped by default "
+                                 "because a live customer's cart item, review or question "
+                                 "still references them (their cart items/reviews/questions "
+                                 "are cascade-deleted). Without this flag those products are "
+                                 "skipped, same as order-referenced ones. Look at the dry-run "
+                                 "report before passing this.")
 
     def handle(self, *args, **options):
         apply = options["apply"]
+        force_cart = options["force_cart"]
 
         demo_products = [p for p in Products.objects.all() if _is_demo_image(p.image)]
         sku_corroborated = sum(1 for p in demo_products if p.sku.startswith(DEMO_SKU_PREFIX))
@@ -83,14 +114,30 @@ class Command(BaseCommand):
             f"the {DEMO_SKU_PREFIX!r} SKU prefix (corroborating, not used to decide)."
         )
 
-        to_delete, skipped = [], []
+        to_delete, skipped, skipped_customer_content, forced_customer_content = [], [], [], []
         for product in demo_products:
             variant_ids = list(ProductVariant.objects.filter(product=product).values_list("id", flat=True))
             order_count = OrderItem.objects.filter(variant_id__in=variant_ids).count() if variant_ids else 0
+            # CartItem.variant / ProductVariant.product / Products are ALL
+            # on_delete=CASCADE (unlike OrderItem.variant, which is
+            # SET_NULL) -- so without this check the bulk delete below would
+            # silently remove a real, logged-in customer's active cart line
+            # items. ProductReviews/ProductQuestions cascade straight from
+            # Products and are customer-authored content too, so they get
+            # the same treatment.
+            cart_count = CartItem.objects.filter(variant_id__in=variant_ids).count() if variant_ids else 0
+            review_count = ProductReviews.objects.filter(product_id=product).count()
+            question_count = ProductQuestions.objects.filter(product_id=product).count()
+            customer_content_count = cart_count + review_count + question_count
+
             if order_count:
                 skipped.append((product, order_count))
+            elif customer_content_count and not force_cart:
+                skipped_customer_content.append((product, cart_count, review_count, question_count))
             else:
                 to_delete.append(product)
+                if customer_content_count:
+                    forced_customer_content.append((product, cart_count, review_count, question_count))
 
         if skipped:
             self.stdout.write(self.style.WARNING(
@@ -101,9 +148,29 @@ class Command(BaseCommand):
                     f"  #{product.id:<5} {product.sku:<12} {product.name!r:<40} "
                     f"-- referenced by {order_count} order item(s)")
 
+        if skipped_customer_content:
+            self.stdout.write(self.style.WARNING(
+                f"\nSkipping {len(skipped_customer_content)} demo product(s) tied to live "
+                f"customer data (deleting them would silently destroy a real customer's cart "
+                f"item(s)/review(s)/question(s) -- pass --force-cart to override once you've "
+                f"reviewed this list):"))
+            for product, cart_count, review_count, question_count in skipped_customer_content:
+                self.stdout.write(
+                    f"  #{product.id:<5} {product.sku:<12} {product.name!r:<40} "
+                    f"-- {_format_customer_content(cart_count, review_count, question_count)}")
+
         self.stdout.write(f"\n{'Would delete' if not apply else 'Deleting'} {len(to_delete)} demo product(s):")
         for product in to_delete:
             self.stdout.write(f"  #{product.id:<5} {product.sku:<12} {product.name}")
+
+        if forced_customer_content:
+            self.stdout.write(self.style.WARNING(
+                f"\n--force-cart passed: {len(forced_customer_content)} of the product(s) "
+                f"above are still tied to live customer data and WILL take it down with them:"))
+            for product, cart_count, review_count, question_count in forced_customer_content:
+                self.stdout.write(
+                    f"  #{product.id:<5} {product.sku:<12} {product.name!r:<40} "
+                    f"-- removes {_format_customer_content(cart_count, review_count, question_count)}")
 
         emptied_categories = []
         if to_delete:

@@ -122,6 +122,13 @@ def absolutize_media_url(value, request):
     """
     if not value:
         return value
+    if not isinstance(value, str):
+        # A legacy row can carry a stray non-string entry (e.g. a dict or
+        # int) in the `image` JSONField. That is malformed data, not a
+        # missing-request bug -- degrade gracefully by leaving it untouched
+        # instead of crashing the whole response on `.startswith()`. Matches
+        # the same guard in purge_demo_catalog._is_demo_image.
+        return value
     if value.startswith('http://') or value.startswith('https://'):
         return value
     if request is None:
