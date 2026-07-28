@@ -64,7 +64,7 @@ class ProductListView(generics.ListAPIView):
 
     def get_queryset(self):
         # Super Admin sees all products; others see only their domain's products
-        if self.request.user.role == 'Super Admin' or self.request.user.domain_user_id_id == self.request.user.id:
+        if isPlatformScope(self.request.user):
             queryset = Products.objects.all()
         else:
             queryset = Products.objects.filter(domain_user_id=self.request.user.domain_user_id_id)
