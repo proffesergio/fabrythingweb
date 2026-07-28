@@ -1,5 +1,53 @@
 # Store expansion — runbook for the owner
 
+---
+
+## ⚡ NEXT: deploy the P0 fixes (branch `fix/storefront-p0`)
+
+Four live bugs are fixed on this branch. **472 backend tests green**, reviewed,
+and the review caught a data-loss bug that is now fixed too.
+
+**What was actually wrong:**
+
+| Your report | Real cause |
+| --- | --- |
+| Products have no pictures | Image URLs were stored relative (`/api/media/...`). On fabrything.com (Vercel) that resolves to the *frontend*, not the API on Render — so every image 404'd. Now absolute. |
+| "No Products Found" on menu/category clicks | The category filter only descended **one** level, but the tree is three deep (Fashion → Men → T-shirts). Fashion showed 16 of its 64 products. Now walks the whole subtree. |
+| (not yet noticed) | An unknown category slug applied **no filter at all** and returned the entire 252-product catalog. Now returns empty. |
+| Fake products still showing | `purge_demo_catalog` command added to delete them. |
+
+### Step 1 — merge and deploy
+
+```bash
+cd /c/Users/bhnbi/Music/SaaS/fabrything/fabrythingweb
+git checkout main
+git merge --no-ff fix/storefront-p0 -m "Fix storefront P0s: images, category depth, unknown slug, demo purge"
+git push origin main
+curl https://fabrythingweb.onrender.com/api/health/     # expect 200
+```
+
+Images and category browsing should work immediately after this deploy. Check a
+product page and click "Computers" in the menu.
+
+### Step 2 — remove the fake products (two deploys, deliberately)
+
+There is no shell on Render's free plan, so this is env-var driven:
+
+1. **Take a Neon branch/snapshot first** — the delete is irreversible.
+2. Set **`PURGE_DEMO_CATALOG=report`** in the Render dashboard → deploy → open the
+   build log and **read the dry-run list**. It names every product it would
+   delete, and any live customer **cart items, reviews or questions** that would
+   go with them. Products that appear in a real order are always skipped.
+3. If the list looks right, set **`PURGE_DEMO_CATALOG=apply`** → deploy.
+4. **Remove the variable.**
+
+After this, Shoes / Watches / Eyewear / Wallets & Bags / Home Appliances /
+Skincare disappear from the menu (your choice — no real products for them yet).
+Fashion, Phones, Computers and Gadgets stay, even though Phones and Gadgets are
+still empty until we add stock for them.
+
+---
+
 Branch: `feature/store-expansion`. Everything below is safe to run repeatedly.
 
 Run all commands from `backend/EcommerceInventory`. On Windows PowerShell the
