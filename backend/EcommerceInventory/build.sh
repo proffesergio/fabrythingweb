@@ -41,6 +41,16 @@ python manage.py seed_admin_modules
 python manage.py seed_demo --if-empty      || echo "WARNING: seed_demo failed (non-fatal)"
 python manage.py seed_food_demo --if-empty || echo "WARNING: seed_food_demo failed (non-fatal)"
 
+# Expanded store taxonomy (Fashion/Phones/Computers/Gadgets categories). Create-only
+# and imageless, so it is cheap and safe on every deploy. Deliberately --categories-only:
+# the full `seed_store_catalog` (no flag) also downloads and re-hosts every product
+# image via core.storage.save_file, which falls back to local MEDIA_ROOT when AWS S3
+# keys aren't configured. Render's filesystem is EPHEMERAL, so that would write
+# images that vanish on the next release (dead product image URLs) and add minutes
+# to every build. Product seeding with images is a one-off, run manually/offline —
+# do NOT drop this flag to "finish the job" on a deploy.
+python manage.py seed_store_catalog --categories-only || echo "WARNING: seed_store_catalog failed (non-fatal)"
+
 # Delivery geography: the 13 Bancharampur unions + their villages. Runs on every
 # deploy but is CREATE-ONLY — it adds anything missing and never overwrites a
 # zone/village the admin has edited (see seed_bancharampur --force-update, and
