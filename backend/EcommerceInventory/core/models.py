@@ -56,3 +56,25 @@ class StoreConfiguration(models.Model):
         if self.free_shipping_threshold is not None and subtotal >= self.free_shipping_threshold:
             return Decimal("0.00")
         return self.fixed_shipping_rate
+
+
+class ImageBlob(models.Model):
+    """A content-addressed image, stored in the database instead of on disk.
+
+    Render's filesystem is ephemeral and wiped on every deploy, and no S3
+    keys are configured, so ``core.storage.save_file`` falls back to writing
+    the bytes here rather than under ``MEDIA_ROOT``. ``sha256`` is the
+    content address: the same bytes stored twice (e.g. re-running the
+    catalog seeder) must resolve to the same row via ``get_or_create``,
+    never a duplicate, and the hash also doubles as the public serving URL
+    and the ETag (see ``core.views`` media-serving view).
+    """
+
+    sha256 = models.CharField(max_length=64, unique=True, db_index=True)
+    content_type = models.CharField(max_length=100)
+    data = models.BinaryField()
+    byte_size = models.PositiveIntegerField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.sha256} ({self.content_type}, {self.byte_size} bytes)"

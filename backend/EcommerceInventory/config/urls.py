@@ -17,7 +17,7 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import include, path, re_path
 
-from core.views import index,FileUploadViewInS3,HealthView
+from core.views import index,FileUploadViewInS3,HealthView,serve_media_blob
 from django.conf import settings
 from accounts.controllers.DynamicFormController import DynamicFormController
 from accounts.controllers.SuperAdminDynamicFormController import SuperAdminDynamicFormController
@@ -40,6 +40,9 @@ urlpatterns = [
     # See core.views.HealthView — a lagging schema is otherwise a blank 500.
     path('api/health/',HealthView.as_view(),name='health'),
     path('api/uploads/',FileUploadViewInS3.as_view(),name='fileupload'),
+    # DB-backed image bytes for save_file's no-S3 fallback (core/storage.py).
+    # Public: see PUBLIC_API_PREFIXES in core/middleware.py.
+    path('api/media/<str:sha256>/',serve_media_blob,name='media-blob'),
     path('api/store/',include('storefront.urls')),
     path('api/food/',include('food.urls')),
 ]

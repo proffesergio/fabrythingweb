@@ -1,11 +1,16 @@
-"""Single implementation of the S3-or-local file storage used by
+"""Single implementation of the S3-or-database file storage used by
 ``FileUploadViewInS3`` (interactive uploads) and ``seed_store_catalog``
-(image re-hosting). S3 when AWS keys are configured, else local
-``MEDIA_ROOT``/``MEDIA_URL`` — exact branching that used to live inline in
-the view, extracted so anything that needs to store a file (not just an
-HTTP upload request) can call it directly.
+(image re-hosting). S3 when AWS keys are configured; otherwise the bytes are
+stored as a content-addressed row in the database (``core.models.ImageBlob``)
+and served back by ``core.views.serve_media_blob`` at ``/api/media/<sha256>/``.
+
+There deliberately is no local-disk fallback. Render's filesystem is
+ephemeral and wiped on every deploy, so a local write silently disappears on
+the next release — that used to be the fallback and was a live latent bug
+(every admin upload and the whole product-image seed vanished on deploy).
+The DB fallback is what actually survives.
 """
-import os
+import hashlib
 
 from django.conf import settings
 
@@ -13,8 +18,6 @@ AWS_ACCESS_KEY_ID = settings.AWS_ACCESS_KEY_ID
 AWS_ACESS_KEY_SECRET = settings.AWS_ACESS_KEY_SECRET
 AWS_S3_REGION_NAME = settings.AWS_S3_REGION_NAME
 AWS_STORAGE_BUCKET_NAME = settings.AWS_STORAGE_BUCKET_NAME
-MEDIA_ROOT = settings.MEDIA_ROOT
-MEDIA_URL = settings.MEDIA_URL
 
 
 def use_s3():
@@ -27,12 +30,13 @@ def use_s3():
 
 
 def save_file(filename: str, content: bytes, content_type: str) -> str:
-    """Persist ``content`` under ``filename`` (already unique) and return its
-    public URL — S3 when AWS keys are configured, else ``MEDIA_ROOT/uploads/``.
+    """Persist ``content`` (``filename`` only matters for the S3 key — the
+    database fallback is addressed by content hash, not name) and return its
+    public URL — S3 when AWS keys are configured, else the DB-backed
+    ``/api/media/<sha256>/`` serving URL.
     """
-    file_path = "uploads/" + filename
-
     if use_s3():
+        file_path = "uploads/" + filename
         from boto3.session import Session
 
         s3_client = Session(
@@ -48,8 +52,25 @@ def save_file(filename: str, content: bytes, content_type: str) -> str:
         )
         return f"https://{AWS_STORAGE_BUCKET_NAME}.s3.amazonaws.com/{file_path}"
 
-    upload_dir = os.path.join(MEDIA_ROOT, "uploads")
-    os.makedirs(upload_dir, exist_ok=True)
-    with open(os.path.join(upload_dir, filename), "wb") as destination:
-        destination.write(content)
-    return f"{MEDIA_URL}uploads/{filename}"
+    return _save_to_database(content, content_type)
+
+
+def _save_to_database(content: bytes, content_type: str) -> str:
+    """Content-addressed fallback: hash the bytes, reuse the row if that hash
+    already exists (dedup — re-running the seeder must not duplicate blobs),
+    and return the serving URL. Imported lazily so this module can still be
+    imported before the app registry is ready (mirrors the existing lazy
+    ``boto3`` import above).
+    """
+    from core.models import ImageBlob
+
+    digest = hashlib.sha256(content).hexdigest()
+    ImageBlob.objects.get_or_create(
+        sha256=digest,
+        defaults={
+            "content_type": content_type,
+            "data": content,
+            "byte_size": len(content),
+        },
+    )
+    return f"/api/media/{digest}/"

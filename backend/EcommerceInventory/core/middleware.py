@@ -13,12 +13,18 @@ from django.db.models import Q
 #     logged in) — refresh is handled under /api/store/, already public above
 #   - the deploy health check (it must answer even when the DB is unreachable,
 #     which is precisely when you most need it)
+#   - served images (core.views.serve_media_blob): this is <img src="..."/>
+#     content — a product card's image tag never carries a bearer token, so
+#     gating it behind a JWT would just make every image on the storefront
+#     403. The URL is content-addressed (the sha256 of the bytes), so there
+#     is nothing sensitive to protect by requiring auth here.
 PUBLIC_API_PREFIXES = (
     '/api/store/',
     '/api/food/',
     '/api/auth/login',
     '/api/auth/signup',
     '/api/health/',
+    '/api/media/',
 )
 
 
