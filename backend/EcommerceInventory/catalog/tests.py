@@ -45,6 +45,17 @@ class AdminProductListTests(TestCase):
         self.assertGreaterEqual(len(res.json()["data"]["data"]), 1)
 
 
+class ProductSourceFieldsTests(TestCase):
+    def test_source_fields_default_empty(self):
+        cat = Categories.objects.create(name="Laptops", slug="laptops-t", description="")
+        p = Products.objects.create(
+            name="X", slug="x-src", sku="FT-9001", category_id=cat,
+            description="", initial_buying_price=1, initial_selling_price=2)
+        self.assertEqual(p.source_url, "")
+        self.assertIsNone(p.source_price)
+        self.assertIsNone(p.price_synced_at)
+
+
 class SeedIfEmptyGuardTests(TestCase):
     def test_seed_food_demo_if_empty_skips_when_restaurants_exist(self):
         from django.core.management import call_command
