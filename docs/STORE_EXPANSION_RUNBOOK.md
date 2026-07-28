@@ -67,8 +67,29 @@ slugs from `seed_store_catalog.TAXONOMY`.
 ```
 
 `--categories-only` creates just the Fashion / Phones / Computers / Gadgets
-tree. Product seeding from the fixtures lands in the next task (it downloads
-and compresses every product image, so it is slow on first run).
+tree — that is also exactly what runs on every deploy.
+
+To seed the actual products (downloads every product image, compresses it to
+max 800×800 JPEG, and re-hosts it on our storage — slow on first run):
+
+```bash
+./.venv/Scripts/python.exe manage.py seed_store_catalog
+```
+
+### ⚠️ Read this before seeding products on the live server
+
+Image upload goes to **S3 when AWS keys are set, otherwise to the local
+`MEDIA_ROOT`** — and Render's filesystem is **ephemeral**, wiped on every
+deploy. So if S3 is not configured on Render, product images seeded there will
+disappear at the next release and every product will show a broken image.
+
+That is why the deploy only seeds *categories*. Before you seed products in
+production, confirm these four env vars are set in the Render dashboard:
+`AWS_ACCESS_KEY_ID`, `AWS_ACESS_KEY_SECRET` (note the spelling — the codebase
+has this typo), `AWS_S3_REGION_NAME`, `AWS_STORAGE_BUCKET_NAME`.
+
+**Tell me whether S3 is configured** and I'll either wire product seeding into
+the deploy or set up a storage approach that survives restarts.
 
 Safety: `seed_store_catalog` is **create-only**. Re-running it never
 overwrites a category you renamed in the admin panel. `--force-update` is the
