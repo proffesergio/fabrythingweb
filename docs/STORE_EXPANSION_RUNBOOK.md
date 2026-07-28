@@ -159,6 +159,26 @@ than guessing.
 | Category taxonomy | Fashion / Phones / Computers / Gadgets, create-only seeder, adopts your existing Men's/Women's Fashion into the tree |
 | Scrapers + parsers | Partner OpenCart stores + Fabrilife, with real captured-HTML tests |
 | Fabrilife fashion fixture | 64 real products with real prices, sizes and images |
+| Product seeding | Fixtures → products + sellable variants, images downloaded, compressed to 800×800 JPEG and re-hosted |
+| Partner price sync | `sync_source_prices` command + admin "Sync prices" button; only ever touches products with a `source_url` |
+| Deploy wiring | `build.sh` seeds categories on every deploy (safe/idempotent); product seeding stays manual — see the S3 warning above |
 
-Still to come: dazzle.com.bd tech fixture, product seeding with image
-compression, partner price sync + admin "Sync prices" button, deploy wiring.
+Backend suite: **432 tests green**.
+
+Still to come: the dazzle.com.bd tech fixture (step 1 above covers the two
+partner stores, which matter more).
+
+### Two serious bugs the final review caught — both fixed on this branch
+
+Worth knowing about, because both were invisible from the outside:
+
+1. **Privilege escalation.** My original fix for your category-editor 404 was
+   too broad: it widened access for *every* model the dynamic form handles —
+   including Users and Warehouse — not just categories and products. That
+   would have let an admin of one tenant edit another tenant's user accounts
+   and promote them to Super Admin. Now restricted to categories and products
+   only, with tests covering the other models.
+2. **Price sync updated the wrong table.** Checkout charges from the product
+   *variant*, but the sync only wrote the product row. Your storefront would
+   have shown the new partner price while charging customers the old one. The
+   sync now updates variants too, and a test pins it.
