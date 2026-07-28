@@ -2,8 +2,12 @@ from pathlib import Path
 
 from django.test import SimpleTestCase
 
+import json
+
 from catalog.scrape_parsers import (
     parse_bdt_price,
+    parse_fabrilife_listing,
+    parse_fabrilife_product,
     parse_opencart_listing,
     parse_opencart_product,
 )
@@ -135,3 +139,146 @@ class OpenCartListingTests(SimpleTestCase):
         """
         urls = parse_opencart_listing(html, "https://potakait.com/")
         self.assertEqual(urls, ["https://potakait.com/a", "https://potakait.com/b"])
+
+
+class FabrilifeProductTests(SimpleTestCase):
+    """Fixture is a trimmed, real capture of
+    https://fabrilife.com/product/72899-premium-jacquard-panjabi-sabri
+    (fetched 2026-07-28). Assertions pin the exact values on that live page,
+    same rigor as OpenCartProductTests -- selector drift on the real site
+    must fail loudly rather than silently returning empty/garbage data."""
+
+    def setUp(self):
+        self.html = (FIXTURES / "fabrilife_product.html").read_text(encoding="utf-8")
+        self.product = parse_fabrilife_product(self.html)
+
+    def test_extracts_core_fields(self):
+        p = self.product
+        self.assertTrue(p["name"])
+        self.assertIsInstance(p["price"], float)
+        self.assertGreater(p["price"], 0)
+        self.assertIsInstance(p["images"], list)
+        self.assertTrue(p["images"])
+        self.assertTrue(all(u.startswith("http") for u in p["images"]))
+        self.assertIsInstance(p["specifications"], dict)
+        self.assertIn(p["gender"], {"MEN", "WOMEN", "KIDS"})
+        self.assertIsInstance(p["sizes"], list)
+        self.assertTrue(p["sizes"])
+
+    def test_exact_name(self):
+        self.assertEqual(self.product["name"], "Premium Jacquard Panjabi - Sabri")
+
+    def test_discount_price_when_both_old_and_new_present(self):
+        # The captured page shows price-old/regular_price_field=2800 (crossed
+        # out original) and price-now/price_field=2150 (current, what you
+        # pay): price is the higher original, discount_price the lower
+        # current price -- same convention as parse_opencart_product.
+        self.assertEqual(self.product["price"], 2800.0)
+        self.assertEqual(self.product["discount_price"], 2150.0)
+
+    def test_brand(self):
+        self.assertEqual(self.product["brand"], "Fabrilife")
+
+    def test_gender(self):
+        self.assertEqual(self.product["gender"], "MEN")
+
+    def test_sizes_exact(self):
+        self.assertEqual(self.product["sizes"], ["44", "46"])
+
+    def test_material_from_fabric_type_label(self):
+        self.assertEqual(self.product["material"], "Jacquard Dobby Cotton")
+
+    def test_images_are_absolute_and_deduped(self):
+        self.assertEqual(
+            self.product["images"],
+            [
+                "https://fabrilife.com/products/65f7d75521889-square.jpg",
+                "https://fabrilife.com/products/65f7d75561e23-square.jpg",
+                "https://fabrilife.com/image-gallery/65f7d7555c656-square.jpg",
+            ],
+        )
+
+    def test_specifications_has_known_keys(self):
+        specs = self.product["specifications"]
+        self.assertEqual(specs["Weave"], "Plain weave")
+        self.assertEqual(specs["Durability"], "Durable and long-lasting")
+        self.assertEqual(specs["Type"], "Regular Fit")
+
+    def test_description_mentions_product(self):
+        self.assertIn("Jacquard Dobby Cotton", self.product["description"])
+
+
+class FabrilifeSpecEdgeCaseTests(SimpleTestCase):
+    """Synthetic markup covering shapes the captured fixture alone doesn't
+    exercise: a label heading with no following value (must not leak into
+    specifications as an empty entry), and a material value followed by
+    marketing copy after an en dash (must be trimmed at the dash, mirroring
+    the real "Fabric Type: 95% Cotton + 5% Lylon -- Soft, breathable..."
+    copy seen on fabrilife.com kurti pages)."""
+
+    def _product(self, description_html):
+        html = f"""
+        <html><head><meta property="og:url" content="https://fabrilife.com/product/1-x"></head>
+        <body>
+        <div class="product-title-row"><h4 class="tiny-margin">Test Product</h4></div>
+        <div class="price-area"><div class="price-now">TK <span class="price_field">500</span></div></div>
+        <div class="size-picker-block"><div class="size-selector">M</div></div>
+        <div class="self-product-description">{description_html}</div>
+        <script>var g4a = {{"item_category":"Mens"}};</script>
+        </body></html>
+        """
+        return parse_fabrilife_product(html)
+
+    def test_empty_label_not_stored(self):
+        p = self._product("<p><strong>Product Specification:</strong></p><p><strong>Fabric Type:</strong> Cotton</p>")
+        self.assertNotIn("Product Specification", p["specifications"])
+        self.assertEqual(p["specifications"]["Fabric Type"], "Cotton")
+
+    def test_material_trimmed_at_dash(self):
+        p = self._product(
+            "<p><strong>Fabric Type:</strong> 95% Cotton + 5% Lylon – Soft, breathable, and durable</p>"
+        )
+        self.assertEqual(p["material"], "95% Cotton + 5% Lylon")
+
+    def test_material_empty_when_not_stated(self):
+        p = self._product("<p>Made with fine quality fabric, no explicit label here.</p>")
+        self.assertEqual(p["material"], "")
+
+
+class FabrilifeListingTests(SimpleTestCase):
+    """``html`` here is the raw JSON body of an Algolia ``query`` response
+    against fabrilife.com's own ``products`` index -- see the module-level
+    comment in scrape_parsers.py for why the faceted /shop URL's raw HTML
+    can't be used instead."""
+
+    def test_extracts_product_urls_from_hits(self):
+        body = json.dumps({
+            "hits": [
+                {"id": 72899, "slug": "premium-jacquard-panjabi-sabri", "title": "A"},
+                {"id": 73105, "slug": "womens-premium-kurti-empress-pink", "title": "B"},
+            ]
+        })
+        urls = parse_fabrilife_listing(body, "https://fabrilife.com/")
+        self.assertEqual(
+            urls,
+            [
+                "https://fabrilife.com/product/72899-premium-jacquard-panjabi-sabri",
+                "https://fabrilife.com/product/73105-womens-premium-kurti-empress-pink",
+            ],
+        )
+
+    def test_dedupes_and_skips_hits_missing_id_or_slug(self):
+        body = json.dumps({
+            "hits": [
+                {"id": 1, "slug": "a"},
+                {"id": 1, "slug": "a"},
+                {"id": 2, "slug": ""},
+                {"slug": "no-id"},
+                {"id": 3},
+            ]
+        })
+        urls = parse_fabrilife_listing(body, "https://fabrilife.com/")
+        self.assertEqual(urls, ["https://fabrilife.com/product/1-a"])
+
+    def test_malformed_json_returns_empty_list(self):
+        self.assertEqual(parse_fabrilife_listing("not json", "https://fabrilife.com/"), [])

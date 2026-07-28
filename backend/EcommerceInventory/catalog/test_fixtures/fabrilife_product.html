@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<!-- Trimmed, real capture of
+     https://fabrilife.com/product/72899-premium-jacquard-panjabi-sabri
+     (fetched 2026-07-28). Only the DOM regions catalog.scrape_parsers reads
+     are kept; markup and text are otherwise unedited. -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Jacquard Panjabi - Sabri - Men's Panjabi | Fabrilife</title>
+<meta content="https://fabrilife.com/product/72899-premium-jacquard-panjabi-sabri" property="og:url"/>
+</head>
+<body>
+<div class="wrapper-div"><div class="container-fluid">
+<div class="product-image-container">
+
+<img alt="" class="elZoom product-image tee-ui-front" data-img_url="65f7d75521889-square.jpg" src="/products/65f7d75521889-square.jpg?v=20"/>
+<img alt="" class="elZoom product-image" data-img_url="65f7d75561e23-square.jpg" src="/products/65f7d75561e23-square.jpg?v=20" style="display:none"/>
+<img alt="" class="elZoom product-image" data-img_url="65f7d7555c656-square.jpg" src="/image-gallery/65f7d7555c656-square.jpg?v=20" style="display:none"/>
+<div class="badges">
+<div class="sale">
+<span>Sale</span>
+</div>
+</div>
+<div class="zoom-hint">
+<i class="fa fa-search-plus"></i>
+<span>Click to zoom</span>
+</div>
+
+</div>
+<div class="product-details">
+<div class="product-details-card">
+<div class="product-title-row" style="display: flex; justify-content: space-between; align-items: flex-start; gap: 12px;">
+<h4 class="tiny-margin" style="flex: 1; margin-bottom: 0;">Premium Jacquard Panjabi - Sabri</h4>
+<button class="btn-wishlist-inline" data-product-id="72899" data-wishlist-btn="" title="Add to Wishlist">
+<i class="fa fa-heart-o"></i>
+</button>
+</div>
+<div class="price-area">
+<div class="price-row-main">
+<div class="price-now">
+                                ৳ <span class="price_field">2150</span>
+</div>
+<div class="price-old">
+                                ৳ <span class="regular_price_field">2800</span>
+</div>
+<div class="price-badge-off">
+                                23% Off
+                            </div>
+</div>
+</div>
+<div class="size-picker-block">
+<div class="size-picker-label">Select Size:</div>
+<ul class="size-selectors-container list-inline asdf" style="padding:0;">
+<div class="size-selectors-container list-inline" style="padding: 0px">
+<div class="size-selector list-inline-item" data-productid="72899" data-size="44">44</div>
+<div class="size-selector list-inline-item" data-productid="72899" data-size="46">46</div>
+</div>
+</ul>
+<span class="no-size-selected" style="color:rgb(230, 28, 28); display:none;">Please select a size  <i aria-hidden="true" class="fa fa-arrow-up"></i></span>
+</div>
+<div class="section-divider"></div>
+<div class="self-product-description type-description" style="padding: 0 0 15px 0"><p><strong>Fabric Type:</strong> Jacquard Dobby Cotton</p><p><strong>Type:</strong> Regular Fit</p><p><strong>Weave:</strong> Plain weave</p><p><strong>Texture:</strong> Soft and smooth with a matte finish</p><p><strong>Breathability:</strong> Highly breathable and comfortable</p><p><strong>Durability:</strong> Durable and long-lasting</p><p><strong>Design:</strong> Solid or subtle patterns with a uniform appearance</p></div>
+</div>
+</div>
+</div></div>
+<script>
+// GA4
+        var g4a = {"item_id":72899,"item_name":"Premium Jacquard Panjabi - Sabri","item_brand":"Fabrilife","item_variant":"","price":2150,"quantity":1,"ip":"182.160.98.161","item_category":"Mens","item_category2":"Panjabi"};
+        if (g4a) {
+            g4a.item_list_id = 'product_details';
+            g4a.price = Number(g4a.price).toFixed(2);
+
+            // Google Analytics 4 (GA4) - View Item Event
+            gtag("event", "view_item", {
+                currency: "BDT",
+                value: Number(g4a.price).toFixed(2),
+                items: [g4a]
+            });
+
+            // TikTok Pixel (ttq) - ViewContent Event
+            ttq.track('ViewContent', {
+                "contents": [
+                    {
+                        "content_id": g4a.item_id,
+                        "content_type": "product",
+                    }
+                ],
+                "value": Number(g4a.price).toFixed(2),
+                "currency": "BDT",
+            });
+
+            // Facebook Pixel - ViewContent Event (with event_id for deduplication)
+            const viewContentEventId = generateEventId();
+            fbq('track', 'ViewContent', {
+                content_ids: [g4a.item_id],
+                content_type: 'product',
+                value: Number(g4a.price).toFixed(2),
+                currency: 'BDT'
+            }, { eventID: viewContentEventId });
+
+            // Facebook Conversion API (CAPI) - ViewContent Event
+            var fbData = initializeFacebookData();
+                        const conversionData = {
+                event_name: "ViewContent",
+                event_id: viewContentEventId,
+                event_time: Math.floor(Date.now() / 1000),
+                user_data: {
+                    em:  null ,
+                    ph:  null ,
+                    client_ip_address: "182.160.98.161",
+                    client_user_agent: navigator.userAgent,
+                    fbc: fbData.fbc,
+                    fbp: fbData.fbp,
+                    external_id: fbData.external_id,
+                },
+                custom_data: {
+                    currency: "BDT",
+                    value: Number(g4a.price).toFixed(2),
+                    contents: [
+                        {
+                            id: g4a.item_id,
+                            quantity: 1,
+                            item_price: g4a.price
+                        }
+                    ],
+                    content_type: "product"
+                }
+            };
+
+            // Send to Laravel backend for Facebook CAPI
+            $.ajax({
+                url: '/api/track-event',
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify(conversionData)
+            });
+        }
+
+
+        //marktag
+        var mark_product = {"id":72899,"name":"Premium Jacquard Panjabi - Sabri","price":2150,"category":"Mens \u003E Panjabi"};
+</script>
+</body>
+</html>
