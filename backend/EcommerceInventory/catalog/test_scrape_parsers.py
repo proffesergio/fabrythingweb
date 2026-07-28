@@ -99,6 +99,75 @@ class OpenCartProductTests(SimpleTestCase):
         self.assertIn("Thermalright Peerless Assassin", self.product["description"])
 
 
+class CanvasitProductTests(SimpleTestCase):
+    """Fixture is a trimmed, real capture of
+    https://canvasit.com.bd/apple-macbook-air-m5-13-inch-512gb (fetched
+    2026-07-28). canvasit.com.bd is OpenCart like potakait.com but runs a
+    different theme -- plain ``<h1>`` instead of ``h1.product_title``,
+    ``.price-wrapper .price-group`` instead of ``.special``/``.price``,
+    ``.product-manufacturer`` instead of ``.product-wid-info``, a
+    ``.swiper-slide`` image carousel instead of ``#gallery``, and a two-``td``
+    specification table instead of ``td.name``/``td.value``. Assertions pin
+    the exact values on that live page, same rigor as OpenCartProductTests --
+    selector drift on the real site must fail loudly rather than silently
+    returning empty/garbage data (this is exactly how the original
+    potakait-only selectors silently returned 0 products for every canvasit
+    category)."""
+
+    def setUp(self):
+        self.html = (FIXTURES / "canvasit_product.html").read_text(encoding="utf-8")
+        self.product = parse_opencart_product(self.html)
+
+    def test_extracts_core_fields(self):
+        p = self.product
+        self.assertTrue(p["name"])
+        self.assertIsInstance(p["price"], float)
+        self.assertGreater(p["price"], 0)
+        self.assertIsInstance(p["images"], list)
+        self.assertTrue(p["images"])
+        self.assertTrue(all(u.startswith("http") for u in p["images"]))
+        self.assertIsInstance(p["specifications"], dict)
+
+    def test_exact_name(self):
+        self.assertEqual(self.product["name"], "Apple MacBook Air M5 Chip 13-inch 512GB")
+
+    def test_discount_price_when_both_old_and_new_present(self):
+        # The captured page shows .product-price-new=165,000 (current, what
+        # you pay) and .product-price-old=181,000 (crossed-out original):
+        # price is the higher original, discount_price is the lower current
+        # price -- same convention as OpenCartProductTests (potakait).
+        self.assertEqual(self.product["price"], 181000.0)
+        self.assertEqual(self.product["discount_price"], 165000.0)
+
+    def test_brand(self):
+        self.assertEqual(self.product["brand"], "Apple")
+
+    def test_images_are_absolute_and_deduped(self):
+        self.assertEqual(
+            self.product["images"],
+            [
+                "https://canvasit.com.bd/image/cache/catalog/Laptop/MackBook/"
+                "Apple-MacBook-Air-M5-Chip-13-inch-512GB-2-550x550.jpg",
+                "https://canvasit.com.bd/image/cache/catalog/Laptop/MackBook/"
+                "Apple-MacBook-Air-M5-Chip-13-inch-1TB-(10-core-CPU,-10-core-GPU)-550x550.jpg",
+                "https://canvasit.com.bd/image/cache/catalog/Laptop/MackBook/"
+                "macbook-air-15-m4-sky-blue-01-550x550.jpg",
+            ],
+        )
+
+    def test_specifications_has_known_keys(self):
+        specs = self.product["specifications"]
+        self.assertEqual(specs["Battery capacity"], "53.8 w")
+        self.assertEqual(specs["Fingerprint Sensor"], "Touch ID")
+        # Section header rows (colspan=2, no value cell) must not leak in as
+        # bogus entries.
+        self.assertNotIn("Battery Info:", specs)
+        self.assertNotIn("Basic Information", specs)
+
+    def test_description_mentions_product(self):
+        self.assertIn("Apple MacBook Air M5 Chip 13-inch", self.product["description"])
+
+
 class OpenCartListingTests(SimpleTestCase):
     def test_extracts_product_urls(self):
         html = """
@@ -128,6 +197,45 @@ class OpenCartListingTests(SimpleTestCase):
             [
                 "https://potakait.com/msi-titan-18-hx-gaming-laptop",
                 "https://potakait.com/hp-omnibook-5-laptop",
+            ],
+        )
+
+    def test_extracts_product_urls_canvasit_theme(self):
+        # canvasit.com.bd wraps each card in .product-layout > .product-thumb
+        # (no .product-item at all). Both selectors match the same card, so
+        # the URL must appear exactly once, in document order.
+        html = """
+        <div class="product-layout">
+            <div class="product-thumb">
+                <div class="image">
+                    <a href="/orico-pfb-a23-foldable-laptop-stand" class="product-img">
+                        <img src="/image/1.jpg">
+                    </a>
+                </div>
+                <div class="caption">
+                    <div class="name"><a href="/orico-pfb-a23-foldable-laptop-stand">Orico stand</a></div>
+                </div>
+            </div>
+        </div>
+        <div class="product-layout">
+            <div class="product-thumb">
+                <div class="image">
+                    <a href="/apple-macbook-air-m5" class="product-img">
+                        <img src="/image/2.jpg">
+                    </a>
+                </div>
+                <div class="caption">
+                    <div class="name"><a href="/apple-macbook-air-m5">MacBook Air M5</a></div>
+                </div>
+            </div>
+        </div>
+        """
+        urls = parse_opencart_listing(html, "https://canvasit.com.bd/laptop")
+        self.assertEqual(
+            urls,
+            [
+                "https://canvasit.com.bd/orico-pfb-a23-foldable-laptop-stand",
+                "https://canvasit.com.bd/apple-macbook-air-m5",
             ],
         )
 

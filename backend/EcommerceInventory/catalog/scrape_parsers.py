@@ -19,6 +19,35 @@ assumptions:
   pairs; section header rows (``td.heading-row``, colspan=3) carry no value
   cell and are skipped.
 - Description: the free-text block in ``#description .descriptionContent``.
+
+canvasit.com.bd is the same OpenCart *family* but a different theme (verified
+2026-07-28 against https://canvasit.com.bd/laptop and a live product page)
+with incompatible markup for everything except the outer product link:
+
+- Listing cards: ``.product-layout`` wrapping ``.product-thumb`` (potakait's
+  theme uses ``.product-item`` instead) -- both selectors are tried and
+  deduped, since a ``.product-layout`` and the ``.product-thumb`` it wraps
+  resolve to the same product URL.
+- Title: a plain ``<h1>`` inside ``.title.page-title`` (no ``product_title``
+  class).
+- Current/discount price: ``div.price-wrapper > .price-group`` holding
+  ``.product-price-new`` (current price) and, only when discounted,
+  ``.product-price-old`` (crossed-out original) -- distinct class names from
+  potakait's ``.special``/``.price``, and the presence of ``.price-group`` is
+  what ``_detect_opencart_theme`` keys off of.
+- Brand: ``li.product-manufacturer a``.
+- Images: ``img`` tags inside ``.product-image .swiper-slide`` (the main
+  image carousel); there is no ``#gallery`` on this theme.
+- Specifications: ``.block-attributes table.table-bordered`` rows of two
+  plain ``<td>`` cells; section header rows are a single
+  ``<td colspan="2">`` and are skipped.
+- Description: ``.block-content.block-description`` (the "Description" tab
+  panel; the tab's own ``id`` is a random per-page hash so it can't be
+  selected directly).
+
+The two themes diverge enough in price/specs/description markup that each
+gets its own small extractor (``_extract_*_potakait`` / ``_extract_*_canvasit``)
+rather than one function full of ``or`` fallbacks.
 """
 import json
 import re
@@ -59,7 +88,7 @@ def _dedupe_preserve_order(items):
     return out
 
 
-def _extract_brand(soup):
+def _extract_brand_potakait(soup):
     for row in soup.select(".product-wid-info"):
         label = row.find("p")
         if label and "brand" in label.get_text(strip=True).lower():
@@ -69,7 +98,12 @@ def _extract_brand(soup):
     return ""
 
 
-def _extract_prices(soup):
+def _extract_brand_canvasit(soup):
+    link = soup.select_one(".product-manufacturer a")
+    return link.get_text(strip=True) if link else ""
+
+
+def _extract_prices_potakait(soup):
     wrap = soup.select_one(".price-wrapper")
     if wrap is None:
         return None, None
@@ -86,7 +120,24 @@ def _extract_prices(soup):
     return old_val, None
 
 
-def _extract_images(soup, base_url):
+def _extract_prices_canvasit(soup):
+    group = soup.select_one(".price-wrapper .price-group")
+    if group is None:
+        return None, None
+    new = group.select_one(".product-price-new")
+    old = group.select_one(".product-price-old")
+    new_val = parse_bdt_price(new.get_text()) if new else None
+    old_val = parse_bdt_price(old.get_text()) if old else None
+    if old_val is not None and new_val is not None:
+        # Discounted: .product-price-new is the lower, current price;
+        # .product-price-old is the crossed-out original.
+        return old_val, new_val
+    if new_val is not None:
+        return new_val, None
+    return old_val, None
+
+
+def _extract_images_potakait(soup, base_url):
     gallery = soup.select_one("#gallery")
     if gallery is None:
         return []
@@ -99,7 +150,17 @@ def _extract_images(soup, base_url):
     return _dedupe_preserve_order(urls)
 
 
-def _extract_specifications(soup):
+def _extract_images_canvasit(soup, base_url):
+    urls = []
+    for img in soup.select(".product-image .swiper-slide img"):
+        src = img.get("src")
+        if not src:
+            continue
+        urls.append(_strip_query(urljoin(base_url, src)))
+    return _dedupe_preserve_order(urls)
+
+
+def _extract_specifications_potakait(soup):
     specs = {}
     for row in soup.select("table.data-table tr"):
         name = row.find("td", class_="name")
@@ -109,12 +170,44 @@ def _extract_specifications(soup):
     return specs
 
 
-def _extract_description(soup):
+def _extract_specifications_canvasit(soup):
+    specs = {}
+    for row in soup.select(".block-attributes table.table-bordered tr"):
+        tds = row.find_all("td")
+        # Section header rows are a single <td colspan="2"> and carry no
+        # value cell; regular rows are exactly two plain <td>s.
+        if len(tds) != 2 or tds[0].get("colspan"):
+            continue
+        name = tds[0].get_text(strip=True)
+        if not name:
+            continue
+        specs[name] = tds[1].get_text(separator=" ", strip=True)
+    return specs
+
+
+def _extract_description_potakait(soup):
     node = soup.select_one("#description .descriptionContent") or soup.select_one("#description")
     if node is None:
         return ""
-    text = node.get_text(separator="\n", strip=True)
-    return text
+    return node.get_text(separator="\n", strip=True)
+
+
+def _extract_description_canvasit(soup):
+    node = soup.select_one(".block-content.block-description")
+    if node is None:
+        return ""
+    return node.get_text(separator="\n", strip=True)
+
+
+def _detect_opencart_theme(soup):
+    """potakait.com and canvasit.com.bd are both OpenCart but run different
+    themes with incompatible price/specs/description markup. Detect once up
+    front -- canvasit nests its price in a ``.price-group``, potakait
+    doesn't -- and dispatch to theme-specific extractors below rather than
+    scattering ``or`` fallbacks through every field."""
+    if soup.select_one(".price-wrapper .price-group") is not None:
+        return "canvasit"
+    return "potakait"
 
 
 def parse_opencart_product(html):
@@ -122,36 +215,57 @@ def parse_opencart_product(html):
     name, price, discount_price, description, specifications, brand, images
     (absolute URLs).
 
-    The base URL for resolving image ``src`` attributes is read from the
-    page's own ``<base href>`` tag -- present on every OpenCart page served
-    by this theme -- so callers only need to pass the page HTML."""
+    Handles both partner themes (potakait.com and canvasit.com.bd -- see the
+    module docstring for the markup each uses). The base URL for resolving
+    image ``src`` attributes is read from the page's own ``<base href>`` tag
+    -- present on both themes -- so callers only need to pass the page
+    HTML."""
     soup = BeautifulSoup(html, "html.parser")
 
     base_tag = soup.find("base", href=True)
     base_url = base_tag["href"] if base_tag else ""
 
-    h1 = soup.select_one("h1.product_title") or soup.find("h1")
+    theme = _detect_opencart_theme(soup)
+
+    h1 = soup.select_one("h1.product_title") or soup.select_one(".page-title h1") or soup.find("h1")
     name = h1.get_text(strip=True) if h1 else ""
 
-    price, discount_price = _extract_prices(soup)
+    if theme == "canvasit":
+        price, discount_price = _extract_prices_canvasit(soup)
+        brand = _extract_brand_canvasit(soup)
+        images = _extract_images_canvasit(soup, base_url)
+        specifications = _extract_specifications_canvasit(soup)
+        description = _extract_description_canvasit(soup)
+    else:
+        price, discount_price = _extract_prices_potakait(soup)
+        brand = _extract_brand_potakait(soup)
+        images = _extract_images_potakait(soup, base_url)
+        specifications = _extract_specifications_potakait(soup)
+        description = _extract_description_potakait(soup)
 
     return {
         "name": name,
         "price": price,
         "discount_price": discount_price,
-        "description": _extract_description(soup),
-        "specifications": _extract_specifications(soup),
-        "brand": _extract_brand(soup),
-        "images": _extract_images(soup, base_url),
+        "description": description,
+        "specifications": specifications,
+        "brand": brand,
+        "images": images,
     }
 
 
 def parse_opencart_listing(html, base_url):
     """Parse an OpenCart category listing page into a list of absolute
-    product page URLs (deduped, order preserved)."""
+    product page URLs (deduped, order preserved).
+
+    potakait's theme wraps each card in ``.product-item``; canvasit's wraps
+    it in ``.product-layout`` containing a ``.product-thumb``. All three
+    selectors are tried; a ``.product-layout`` and the ``.product-thumb`` it
+    contains resolve to the same product URL (both find the same first
+    ``<a href>``), so the dedupe below collapses them to one entry."""
     soup = BeautifulSoup(html, "html.parser")
     urls = []
-    for card in soup.select(".product-item"):
+    for card in soup.select(".product-item, .product-thumb, .product-layout"):
         link = card.find("a", href=True)
         if link:
             urls.append(urljoin(base_url, link["href"]))

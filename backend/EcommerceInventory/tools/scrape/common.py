@@ -24,7 +24,20 @@ def polite_get(url, delay=1.0):
 
 
 def write_fixture(path, entries):
+    """Write `entries` to `path` as a JSON fixture.
+
+    Refuses to write an empty list: a run that collected zero products (a
+    bad category path, a site-wide block, a transient network failure) must
+    never silently overwrite a previously-good fixture with `[]`. Prints an
+    error and leaves any existing file at `path` untouched instead. Returns
+    True if the file was written, False if the write was refused -- callers
+    should treat False as a fatal condition (non-zero exit)."""
     p = pathlib.Path(path)
+    if not entries:
+        print(f"ERROR: refusing to write {p} -- zero entries collected. "
+              f"Leaving any existing fixture at that path untouched.")
+        return False
     p.parent.mkdir(parents=True, exist_ok=True)
     p.write_text(json.dumps(entries, ensure_ascii=False, indent=2), encoding="utf-8")
     print(f"wrote {len(entries)} entries -> {p}")
+    return True

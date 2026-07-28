@@ -58,21 +58,48 @@ def _parse_maps(raw_maps):
 
 
 def scrape(base_url, maps, limit):
+    """Scrape every --map listing, collecting whatever products it can.
+
+    A single bad category (404, timeout, selector mismatch on an unexpected
+    page) must never abort the whole run and discard products already
+    collected from other categories -- so each listing fetch/parse and each
+    product fetch/parse gets its own try/except. Failures are recorded and
+    printed, not raised, and scraping continues with the next map or product.
+
+    Returns (entries, listing_failures, product_failures, skipped) where
+    listing_failures and product_failures are lists of (url, error message)
+    and skipped is a list of product URLs parsed successfully but missing a
+    name/price."""
     base_url = base_url.rstrip("/") + "/"
     entries = []
+    listing_failures = []
+    product_failures = []
+    skipped = []
+
     for src_path, category_slug in maps:
         listing_url = base_url + src_path
         print(f"[listing] {listing_url} -> {category_slug}")
-        listing_html = polite_get(listing_url)
-        product_urls = parse_opencart_listing(listing_html, listing_url)[:limit]
+        try:
+            listing_html = polite_get(listing_url)
+            product_urls = parse_opencart_listing(listing_html, listing_url)[:limit]
+        except Exception as e:  # noqa: BLE001 -- one bad category must not sink the run
+            print(f"  FAILED -- {listing_url}: {e}")
+            listing_failures.append((listing_url, str(e)))
+            continue
         print(f"  {len(product_urls)} product URL(s)")
 
         for url in product_urls:
             print(f"  [product] {url}")
-            html = polite_get(url)
-            p = parse_opencart_product(html)
+            try:
+                html = polite_get(url)
+                p = parse_opencart_product(html)
+            except Exception as e:  # noqa: BLE001 -- one bad product must not sink the run
+                print(f"    FAILED -- {url}: {e}")
+                product_failures.append((url, str(e)))
+                continue
             if not p.get("name") or not p.get("price"):
                 print(f"    skipped -- missing name/price for {url}")
+                skipped.append(url)
                 continue
             entries.append({
                 "category_path": category_slug,  # a slug from seed_store_catalog TAXONOMY
@@ -85,14 +112,35 @@ def scrape(base_url, maps, limit):
                 "images": p["images"][:3],
                 "source_url": url,  # partner stores only
             })
-    return entries
+    return entries, listing_failures, product_failures, skipped
+
+
+def _print_summary(entries, listing_failures, product_failures, skipped):
+    print()
+    print("=== summary ===")
+    print(f"{len(entries)} product(s) collected")
+    if skipped:
+        print(f"{len(skipped)} product page(s) skipped (missing name/price):")
+        for url in skipped:
+            print(f"  - {url}")
+    if listing_failures:
+        print(f"{len(listing_failures)} listing(s) failed:")
+        for url, err in listing_failures:
+            print(f"  - {url}: {err}")
+    if product_failures:
+        print(f"{len(product_failures)} product page(s) failed to fetch/parse:")
+        for url, err in product_failures:
+            print(f"  - {url}: {err}")
 
 
 def main(argv=None):
     args = parse_args(argv)
     maps = _parse_maps(args.maps)
-    entries = scrape(args.base_url, maps, args.limit)
-    write_fixture(args.out, entries)
+    entries, listing_failures, product_failures, skipped = scrape(args.base_url, maps, args.limit)
+    _print_summary(entries, listing_failures, product_failures, skipped)
+
+    if not write_fixture(args.out, entries):
+        sys.exit(1)
 
 
 if __name__ == "__main__":
