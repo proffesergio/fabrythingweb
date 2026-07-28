@@ -43,13 +43,23 @@ python manage.py seed_food_demo --if-empty || echo "WARNING: seed_food_demo fail
 
 # Expanded store taxonomy (Fashion/Phones/Computers/Gadgets categories). Create-only
 # and imageless, so it is cheap and safe on every deploy. Deliberately --categories-only:
-# the full `seed_store_catalog` (no flag) also downloads and re-hosts every product
-# image via core.storage.save_file, which falls back to local MEDIA_ROOT when AWS S3
-# keys aren't configured. Render's filesystem is EPHEMERAL, so that would write
-# images that vanish on the next release (dead product image URLs) and add minutes
-# to every build. Product seeding with images is a one-off, run manually/offline —
-# do NOT drop this flag to "finish the job" on a deploy.
+# the full `seed_store_catalog` (no flag) downloads ~600 product images, compresses
+# them and stores them via core.storage.save_file. That is minutes of build time and
+# only ever needs to happen once, so it is opt-in below rather than run every deploy.
 python manage.py seed_store_catalog --categories-only || echo "WARNING: seed_store_catalog failed (non-fatal)"
+
+# One-off: seed the real products (Fabrilife fashion + the two partner computer
+# stores) WITH their images. Images are content-addressed rows in the database
+# (core.ImageBlob, served from /api/media/<sha256>/), so unlike local MEDIA_ROOT
+# they survive Render's ephemeral filesystem. Opt-in and self-disarming, same
+# pattern as RELEASE_LOGIN below: set SEED_STORE_PRODUCTS=true in the Render
+# dashboard, deploy once, then REMOVE the variable — otherwise every later deploy
+# pays the download cost again for nothing. The command is create-only, so a
+# repeat run cannot overwrite prices or names an admin has edited.
+if [ "$SEED_STORE_PRODUCTS" = "true" ]; then
+  echo "SEED_STORE_PRODUCTS=true — seeding store products and images (slow, one-off):"
+  python manage.py seed_store_catalog || echo "WARNING: product seeding failed (non-fatal)"
+fi
 
 # Delivery geography: the 13 Bancharampur unions + their villages. Runs on every
 # deploy but is CREATE-ONLY — it adds anything missing and never overwrites a

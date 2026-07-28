@@ -8,7 +8,16 @@ Python is `.\.venv\Scripts\python.exe`; in Git Bash it is
 
 ---
 
-## 1. Generate the partner-store fixtures (the slow part — please run this)
+> **Status: step 1 is done.** Both partner fixtures are committed —
+> potakait **64 products**, canvasit **70 products**, all with real BDT prices
+> and images. Two scraper bugs your run exposed are fixed: canvasit's OpenCart
+> theme uses different product-card classes (that's why it returned 0), and a
+> single 404 category (`/routers` — the real path is `/router`) aborted the
+> whole potakait run and discarded ~50 already-scraped products. A bad category
+> now warns and continues. You only need to re-run this if you want to refresh
+> or extend the catalog.
+
+## 1. Generate the partner-store fixtures (already done — kept for re-runs)
 
 These hit potakait.com and canvasit.com.bd at **1 request/second** (your
 friends' stores, reseller permission). Each command below is roughly
@@ -76,20 +85,40 @@ max 800×800 JPEG, and re-hosts it on our storage — slow on first run):
 ./.venv/Scripts/python.exe manage.py seed_store_catalog
 ```
 
-### ⚠️ Read this before seeding products on the live server
+### Where the images live (no S3 needed)
 
-Image upload goes to **S3 when AWS keys are set, otherwise to the local
-`MEDIA_ROOT`** — and Render's filesystem is **ephemeral**, wiped on every
-deploy. So if S3 is not configured on Render, product images seeded there will
-disappear at the next release and every product will show a broken image.
+Since you don't have S3 keys yet, product images are stored **in the database**
+as content-addressed rows (`core.ImageBlob`) and served from
+`/api/media/<sha256>/`. Each image is downloaded once, compressed to max
+800×800 JPEG, and deduplicated by content hash.
 
-That is why the deploy only seeds *categories*. Before you seed products in
-production, confirm these four env vars are set in the Render dashboard:
-`AWS_ACCESS_KEY_ID`, `AWS_ACESS_KEY_SECRET` (note the spelling — the codebase
-has this typo), `AWS_S3_REGION_NAME`, `AWS_STORAGE_BUCKET_NAME`.
+This matters beyond seeding: images previously went to Render's local disk,
+which is **wiped on every deploy** — so images you uploaded through the admin
+panel were already silently disappearing. They now survive.
 
-**Tell me whether S3 is configured** and I'll either wire product seeding into
-the deploy or set up a storage approach that survives restarts.
+Measured on real potakait products: about **15 KB per image**, so a full seed of
+all ~200 products is roughly **9 MB** — comfortable on Neon. The serving URL is
+immutable and sent with a one-year cache header plus ETag/304, so browsers
+re-fetch nothing.
+
+When you do get S3 keys later, set them in Render and new uploads go to S3
+automatically — no migration needed, and existing database-served images keep
+working.
+
+### Seeding products on the live server
+
+You can't run `manage.py` on Render's free tier, so product seeding is gated by
+an environment variable, the same self-disarming pattern this repo already uses
+for `RELEASE_LOGIN`:
+
+1. In the Render dashboard, set **`SEED_STORE_PRODUCTS=true`**
+2. Deploy (or click Manual Deploy). The build downloads and stores ~600 images —
+   expect it to take several minutes.
+3. **Remove the variable again.** Otherwise every future deploy repeats the work
+   for nothing.
+
+The command is create-only, so even if it does run twice it cannot overwrite a
+price or name you've edited in the admin panel.
 
 Safety: `seed_store_catalog` is **create-only**. Re-running it never
 overwrites a category you renamed in the admin panel. `--force-update` is the
