@@ -1,4 +1,4 @@
-from core.helpers import CommonListAPIMixin, CustomPageNumberPagination, createParsedCreatedAtUpdatedAt, isPlatformScope, renderResponse
+from core.helpers import CommonListAPIMixin, CustomPageNumberPagination, absolutize_image_list, createParsedCreatedAtUpdatedAt, isPlatformScope, renderResponse
 from catalog.models import Categories
 from rest_framework import generics
 from rest_framework import serializers
@@ -13,6 +13,7 @@ class CategorySerializer(serializers.ModelSerializer):
     domain_user_id=serializers.SerializerMethodField()
     added_by_user_id=serializers.SerializerMethodField()
     parent_id=serializers.SerializerMethodField()
+    image=serializers.SerializerMethodField()
 
     class Meta:
         model = Categories
@@ -20,7 +21,11 @@ class CategorySerializer(serializers.ModelSerializer):
 
     def get_children(self, obj):
         children = Categories.objects.filter(parent_id=obj.id)
-        return CategorySerializer(children, many=True).data
+        return CategorySerializer(children, many=True, context=self.context).data
+
+    def get_image(self, obj):
+        # BUG 1: same relative-/api/media-path problem as ProductSerializer.get_image.
+        return absolutize_image_list(obj.image, self.context.get('request'))
 
     def get_domain_user_id(self,obj):
         if not obj.domain_user_id:

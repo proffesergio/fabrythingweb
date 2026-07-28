@@ -16,6 +16,7 @@ from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from accounts.models import UserShippingAddress, Users
+from catalog.category_tree import descendant_category_ids
 from catalog.models import Categories, ProductQuestions, ProductReviews, Products, ProductVariant
 from core.helpers import CommonListAPIMixin, CustomPageNumberPagination, renderResponse
 from core.models import StoreConfiguration
@@ -107,10 +108,15 @@ class PublicProductListView(generics.ListAPIView):
         if category_slug:
             category = Categories.objects.filter(slug=category_slug).first()
             if category:
-                category_ids = [category.id] + list(
-                    Categories.objects.filter(parent_id=category.id).values_list('id', flat=True)
-                )
-                queryset = queryset.filter(category_id__in=category_ids)
+                # BUG 2: the taxonomy is 3 levels deep and products live in the
+                # leaves — a one-level `parent_id=` filter missed every
+                # grandchild. descendant_category_ids() walks the whole subtree.
+                queryset = queryset.filter(category_id__in=descendant_category_ids(category))
+            else:
+                # BUG 3: an unrecognised slug used to fall through with no
+                # filter applied at all, silently returning the entire
+                # catalog. It must return nothing instead.
+                queryset = queryset.none()
 
         gender = params.get('gender')
         if gender:
@@ -161,12 +167,13 @@ class PublicProductDetailView(APIView):
         if not product:
             return renderResponse(data='Product not found', message='Product not found', status=404)
 
-        data = StorefrontProductDetailSerializer(product).data
+        data = StorefrontProductDetailSerializer(product, context={'request': request}).data
         if product.category_id:
             related = Products.objects.filter(
                 category_id=product.category_id, status='ACTIVE'
             ).exclude(id=product.id)[:8]
-            data['related_products'] = StorefrontProductListSerializer(related, many=True).data
+            data['related_products'] = StorefrontProductListSerializer(
+                related, many=True, context={'request': request}).data
         else:
             data['related_products'] = []
         return renderResponse(data=data, message='Product retrieved successfully')
@@ -262,15 +269,16 @@ class PublicHomepageView(APIView):
             if best_seller_ids else best_sellers_qs[:8]
         )
 
+        ctx = {'request': request}
         data = {
-            'categories': StorefrontCategorySerializer(categories, many=True).data,
-            'new_arrivals': StorefrontProductListSerializer(new_arrivals, many=True).data,
-            'on_sale': StorefrontProductListSerializer(on_sale, many=True).data,
-            'best_rated': StorefrontProductListSerializer(best_rated, many=True).data,
-            'flash_sale': StorefrontProductListSerializer(flash_sale, many=True).data,
+            'categories': StorefrontCategorySerializer(categories, many=True, context=ctx).data,
+            'new_arrivals': StorefrontProductListSerializer(new_arrivals, many=True, context=ctx).data,
+            'on_sale': StorefrontProductListSerializer(on_sale, many=True, context=ctx).data,
+            'best_rated': StorefrontProductListSerializer(best_rated, many=True, context=ctx).data,
+            'flash_sale': StorefrontProductListSerializer(flash_sale, many=True, context=ctx).data,
             'flash_sale_end': flash_sale_end.isoformat(),
-            'trending': StorefrontProductListSerializer(trending, many=True).data,
-            'best_sellers': StorefrontProductListSerializer(best_sellers, many=True).data,
+            'trending': StorefrontProductListSerializer(trending, many=True, context=ctx).data,
+            'best_sellers': StorefrontProductListSerializer(best_sellers, many=True, context=ctx).data,
         }
         return renderResponse(data=data, message='Homepage data retrieved successfully')
 
@@ -554,7 +562,8 @@ class CustomerOrderDetailView(APIView):
         order = Order.objects.filter(customer=request.user, pk=pk).first()
         if not order:
             return renderResponse(data='Order not found', message='Not found', status=404)
-        return renderResponse(data=CustomerOrderDetailSerializer(order).data, message='Order retrieved')
+        data = CustomerOrderDetailSerializer(order, context={'request': request}).data
+        return renderResponse(data=data, message='Order retrieved')
 
 
 class CustomerOrderCancelView(APIView):
@@ -710,7 +719,7 @@ class AdminOrderDetailView(APIView):
         order = Order.objects.filter(pk=pk).first()
         if not order:
             return renderResponse(data='Order not found', message='Not found', status=404)
-        data = CustomerOrderDetailSerializer(order).data
+        data = CustomerOrderDetailSerializer(order, context={'request': request}).data
         data['allowed_transitions'] = list(order.ALLOWED_TRANSITIONS.get(order.status, set()))
         if order.customer:
             data['customer'] = {

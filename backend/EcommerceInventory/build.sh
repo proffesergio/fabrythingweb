@@ -38,7 +38,16 @@ python manage.py seed_admin_modules
 # (which would keep the site on the old version). Migrations + nav above already applied.
 # --if-empty: seed demo data only on a fresh/empty DB, so redeploys never clobber
 # the real products/restaurants the owner enters.
-python manage.py seed_demo --if-empty      || echo "WARNING: seed_demo failed (non-fatal)"
+#
+# seed_demo (which calls seed_bd_store) is DISABLED here on purpose: the real
+# catalog (Fabrilife fashion + the two partner computer stores, seeded via
+# SEED_STORE_PRODUCTS below) is now live, and the owner wants only real
+# products on the site. seed_bd_store's ~60 loremflickr-placeholder products
+# are stale demo data at this point, not a fresh-DB bootstrap — leaving it
+# enabled would keep reseeding a dummy catalog next to the real one on every
+# empty-DB deploy. One-time cleanup of anything already seeded lives in
+# `purge_demo_catalog` (dry-run by default, --apply to delete). seed_food_demo
+# is a different app (food delivery, not this storefront) and stays on.
 python manage.py seed_food_demo --if-empty || echo "WARNING: seed_food_demo failed (non-fatal)"
 
 # Expanded store taxonomy (Fashion/Phones/Computers/Gadgets categories). Create-only

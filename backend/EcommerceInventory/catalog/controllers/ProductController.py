@@ -1,5 +1,5 @@
 from accounts.models import Users
-from core.helpers import CommonListAPIMixin, CustomPageNumberPagination, createParsedCreatedAtUpdatedAt, isPlatformScope, renderResponse
+from core.helpers import CommonListAPIMixin, CustomPageNumberPagination, absolutize_image_list, createParsedCreatedAtUpdatedAt, isPlatformScope, renderResponse
 from catalog.models import ProductQuestions, ProductReviews, Products
 from catalog.services_price_sync import sync_source_prices
 from rest_framework import generics
@@ -38,9 +38,17 @@ class ProductSerializer(serializers.ModelSerializer):
     category_id=serializers.SerializerMethodField()
     domain_user_id=serializers.SerializerMethodField()
     added_by_user_id=serializers.SerializerMethodField()
+    image=serializers.SerializerMethodField()
     class Meta:
         model = Products
         fields = '__all__'
+
+    def get_image(self,obj):
+        # BUG 1: Products.image can hold a relative /api/media/<sha256>/ path
+        # (core.storage.save_file's DB-blob fallback) — absolutize it here too,
+        # same as the storefront serializer, so the admin panel image previews
+        # don't 404 either. See core.helpers.absolutize_media_url.
+        return absolutize_image_list(obj.image, self.context.get('request'))
 
     def get_category_id(self,obj):
         return "#"+str(obj.category_id.id)+" "+obj.category_id.name
