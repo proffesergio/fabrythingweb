@@ -1,4 +1,4 @@
-from core.helpers import getDynamicFormFields, getDynamicFormModels, getExludeFields, renderResponse, isPlatformScope
+from core.helpers import getDynamicFormFields, getDynamicFormModels, getExludeFields, renderResponse, isPlatformScope, absolutize_image_list
 from accounts.models import Users
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -101,6 +101,14 @@ class DynamicFormController(APIView):
         #Getting the first object of the JSON
         response_json=model_json[0]['fields']
         response_json['id']=model_json[0]['pk']
+        #This raw serialize() bypasses the normal DRF serializers
+        #(ProductSerializer/CategorySerializer) that absolutize a stored
+        #relative media path -- without this, a product/category saved here
+        #would carry a bare /api/media/<hash>/ path in the response until the
+        #next list refetch re-serializes it correctly. See
+        #core.helpers.absolutize_media_url.
+        if 'image' in response_json:
+            response_json['image']=absolutize_image_list(response_json['image'], request)
         #Returning the Response
         return renderResponse(data=response_json,message='Data saved successfully')
 

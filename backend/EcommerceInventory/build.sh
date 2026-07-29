@@ -38,7 +38,16 @@ python manage.py seed_admin_modules
 # (which would keep the site on the old version). Migrations + nav above already applied.
 # --if-empty: seed demo data only on a fresh/empty DB, so redeploys never clobber
 # the real products/restaurants the owner enters.
-python manage.py seed_demo --if-empty      || echo "WARNING: seed_demo failed (non-fatal)"
+#
+# seed_demo (which calls seed_bd_store) is DISABLED here on purpose: the real
+# catalog (Fabrilife fashion + the two partner computer stores, seeded via
+# SEED_STORE_PRODUCTS below) is now live, and the owner wants only real
+# products on the site. seed_bd_store's ~60 loremflickr-placeholder products
+# are stale demo data at this point, not a fresh-DB bootstrap — leaving it
+# enabled would keep reseeding a dummy catalog next to the real one on every
+# empty-DB deploy. One-time cleanup of anything already seeded lives in
+# `purge_demo_catalog` (dry-run by default, --apply to delete). seed_food_demo
+# is a different app (food delivery, not this storefront) and stays on.
 python manage.py seed_food_demo --if-empty || echo "WARNING: seed_food_demo failed (non-fatal)"
 
 # Expanded store taxonomy (Fashion/Phones/Computers/Gadgets categories). Create-only
@@ -59,6 +68,25 @@ python manage.py seed_store_catalog --categories-only || echo "WARNING: seed_sto
 if [ "$SEED_STORE_PRODUCTS" = "true" ]; then
   echo "SEED_STORE_PRODUCTS=true — seeding store products and images (slow, one-off):"
   python manage.py seed_store_catalog || echo "WARNING: product seeding failed (non-fatal)"
+fi
+
+# One-off: delete the ~60 loremflickr placeholder products seed_bd_store used to
+# create, now that real products are live. DELETES ROWS, so it is opt-in and
+# two-stage — there is no shell on Render's free plan, so this is the only way to
+# run it against production:
+#   1. set PURGE_DEMO_CATALOG=report  -> deploy, read the dry-run in the build log
+#   2. set PURGE_DEMO_CATALOG=apply   -> deploy again to actually delete
+#   3. REMOVE the variable.
+# The dry run lists every product it would delete and, crucially, any live
+# customer CART items / reviews / questions that would go with them. Products
+# referenced by an order are always skipped. Take a Neon branch before step 2 —
+# the delete is irreversible.
+if [ -n "$PURGE_DEMO_CATALOG" ]; then
+  echo "PURGE_DEMO_CATALOG=$PURGE_DEMO_CATALOG — demo catalog purge:"
+  python manage.py purge_demo_catalog            # always print the dry run first
+  if [ "$PURGE_DEMO_CATALOG" = "apply" ]; then
+    python manage.py purge_demo_catalog --apply || echo "WARNING: purge failed (non-fatal)"
+  fi
 fi
 
 # Delivery geography: the 13 Bancharampur unions + their villages. Runs on every

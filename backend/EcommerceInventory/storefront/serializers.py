@@ -2,7 +2,9 @@ from django.db.models import Avg
 from rest_framework import serializers
 
 from accounts.models import UserShippingAddress, Users
+from catalog.category_tree import descendant_category_ids
 from catalog.models import Categories, ProductQuestions, ProductReviews, Products, ProductVariant
+from core.helpers import absolutize_image_list, absolutize_media_url
 from orders.models import Order, OrderItem, OrderStatusLog
 
 
@@ -12,6 +14,7 @@ from orders.models import Order, OrderItem, OrderStatusLog
 class StorefrontCategorySerializer(serializers.ModelSerializer):
     children = serializers.SerializerMethodField()
     product_count = serializers.SerializerMethodField()
+    image = serializers.SerializerMethodField()
 
     class Meta:
         model = Categories
@@ -19,12 +22,16 @@ class StorefrontCategorySerializer(serializers.ModelSerializer):
 
     def get_children(self, obj):
         children = Categories.objects.filter(parent_id=obj.id)
-        return StorefrontCategorySerializer(children, many=True).data
+        return StorefrontCategorySerializer(children, many=True, context=self.context).data
+
+    def get_image(self, obj):
+        return absolutize_image_list(obj.image, self.context.get('request'))
 
     def get_product_count(self, obj):
-        child_ids = list(Categories.objects.filter(parent_id=obj.id).values_list('id', flat=True))
+        # BUG 2: same one-level bug as the product-list filter — use the
+        # shared whole-subtree walk so the two can't drift apart again.
         return Products.objects.filter(
-            category_id__in=[obj.id] + child_ids, status='ACTIVE',
+            category_id__in=descendant_category_ids(obj), status='ACTIVE',
         ).count()
 
 
@@ -44,6 +51,7 @@ class StorefrontProductListSerializer(serializers.ModelSerializer):
     review_count = serializers.SerializerMethodField()
     discount_percentage = serializers.SerializerMethodField()
     total_stock = serializers.SerializerMethodField()
+    image = serializers.SerializerMethodField()
 
     class Meta:
         model = Products
@@ -55,6 +63,12 @@ class StorefrontProductListSerializer(serializers.ModelSerializer):
             'average_rating', 'review_count', 'discount_percentage',
             'total_stock', 'created_at',
         ]
+
+    def get_image(self, obj):
+        # BUG 1: `Products.image` stores whatever core.storage.save_file
+        # returned — a relative `/api/media/<sha256>/` path when the DB-blob
+        # fallback was used. See core.helpers.absolutize_media_url.
+        return absolutize_image_list(obj.image, self.context.get('request'))
 
     def get_category_name(self, obj):
         return obj.category_id.name if obj.category_id else None
@@ -271,7 +285,8 @@ class OrderItemSerializer(serializers.ModelSerializer):
     def get_product_image(self, obj):
         if obj.variant and obj.variant.product and obj.variant.product.image:
             images = obj.variant.product.image
-            return images[0] if isinstance(images, list) and images else None
+            image = images[0] if isinstance(images, list) and images else None
+            return absolutize_media_url(image, self.context.get('request'))
         return None
 
 

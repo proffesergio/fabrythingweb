@@ -97,6 +97,57 @@ def getDynamicFormFields(model_instance,domain_user_id,skip_related=[],skip_fiel
     return fields
 
 
+def absolutize_media_url(value, request):
+    """Turn one stored image path into a URL a client can actually load.
+
+    ``core.storage.save_file`` returns a *relative* path
+    (``/api/media/<sha256>/``) when the DB-blob fallback is used (see
+    ``core/storage.py``), and that path is stored verbatim on a product or
+    category. It is meaningless to a client on a different origin — the
+    storefront (fabrything.com) is not the API (fabrythingweb.onrender.com) —
+    so it must be made absolute at serialization time, not in the database
+    (~600 rows already carry it, and a migration would hard-code one
+    environment).
+
+    Already-absolute URLs are returned unchanged: many products still carry
+    ``http(s)://`` source URLs from the partner stores they were scraped
+    from, and those must never be rewritten. `None`/empty values pass through
+    unchanged too.
+
+    A missing ``request`` is a bug in the calling serializer's context, not
+    something to paper over — returning the relative path unchanged here
+    would silently reproduce exactly the bug this helper exists to fix, so it
+    raises instead of guessing. Every call site must pass
+    ``context={'request': request}``.
+    """
+    if not value:
+        return value
+    if not isinstance(value, str):
+        # A legacy row can carry a stray non-string entry (e.g. a dict or
+        # int) in the `image` JSONField. That is malformed data, not a
+        # missing-request bug -- degrade gracefully by leaving it untouched
+        # instead of crashing the whole response on `.startswith()`. Matches
+        # the same guard in purge_demo_catalog._is_demo_image.
+        return value
+    if value.startswith('http://') or value.startswith('https://'):
+        return value
+    if request is None:
+        raise ValueError(
+            f"absolutize_media_url() needs a request in serializer context to "
+            f"resolve relative path {value!r} — pass context={{'request': request}}."
+        )
+    return request.build_absolute_uri(value)
+
+
+def absolutize_image_list(images, request):
+    """Apply ``absolutize_media_url`` across a product/category ``image``
+    JSONField, which stores a list of paths/URLs. ``None`` or an empty list
+    pass through unchanged."""
+    if not images:
+        return images
+    return [absolutize_media_url(url, request) for url in images]
+
+
 def renderResponse(data,message,status=200):
     if status>=200 and status<300:
         return Response({'data':data,'message':message},status=status)

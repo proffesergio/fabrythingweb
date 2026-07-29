@@ -1,5 +1,53 @@
 # Store expansion — runbook for the owner
 
+---
+
+## ⚡ NEXT: deploy the P0 fixes (branch `fix/storefront-p0`)
+
+Four live bugs are fixed on this branch. **472 backend tests green**, reviewed,
+and the review caught a data-loss bug that is now fixed too.
+
+**What was actually wrong:**
+
+| Your report | Real cause |
+| --- | --- |
+| Products have no pictures | Image URLs were stored relative (`/api/media/...`). On fabrything.com (Vercel) that resolves to the *frontend*, not the API on Render — so every image 404'd. Now absolute. |
+| "No Products Found" on menu/category clicks | The category filter only descended **one** level, but the tree is three deep (Fashion → Men → T-shirts). Fashion showed 16 of its 64 products. Now walks the whole subtree. |
+| (not yet noticed) | An unknown category slug applied **no filter at all** and returned the entire 252-product catalog. Now returns empty. |
+| Fake products still showing | `purge_demo_catalog` command added to delete them. |
+
+### Step 1 — merge and deploy
+
+```bash
+cd /c/Users/bhnbi/Music/SaaS/fabrything/fabrythingweb
+git checkout main
+git merge --no-ff fix/storefront-p0 -m "Fix storefront P0s: images, category depth, unknown slug, demo purge"
+git push origin main
+curl https://fabrythingweb.onrender.com/api/health/     # expect 200
+```
+
+Images and category browsing should work immediately after this deploy. Check a
+product page and click "Computers" in the menu.
+
+### Step 2 — remove the fake products (two deploys, deliberately)
+
+There is no shell on Render's free plan, so this is env-var driven:
+
+1. **Take a Neon branch/snapshot first** — the delete is irreversible.
+2. Set **`PURGE_DEMO_CATALOG=report`** in the Render dashboard → deploy → open the
+   build log and **read the dry-run list**. It names every product it would
+   delete, and any live customer **cart items, reviews or questions** that would
+   go with them. Products that appear in a real order are always skipped.
+3. If the list looks right, set **`PURGE_DEMO_CATALOG=apply`** → deploy.
+4. **Remove the variable.**
+
+After this, Shoes / Watches / Eyewear / Wallets & Bags / Home Appliances /
+Skincare disappear from the menu (your choice — no real products for them yet).
+Fashion, Phones, Computers and Gadgets stay, even though Phones and Gadgets are
+still empty until we add stock for them.
+
+---
+
 Branch: `feature/store-expansion`. Everything below is safe to run repeatedly.
 
 Run all commands from `backend/EcommerceInventory`. On Windows PowerShell the
@@ -8,16 +56,7 @@ Python is `.\.venv\Scripts\python.exe`; in Git Bash it is
 
 ---
 
-> **Status: step 1 is done.** Both partner fixtures are committed —
-> potakait **64 products**, canvasit **70 products**, all with real BDT prices
-> and images. Two scraper bugs your run exposed are fixed: canvasit's OpenCart
-> theme uses different product-card classes (that's why it returned 0), and a
-> single 404 category (`/routers` — the real path is `/router`) aborted the
-> whole potakait run and discarded ~50 already-scraped products. A bad category
-> now warns and continues. You only need to re-run this if you want to refresh
-> or extend the catalog.
-
-## 1. Generate the partner-store fixtures (already done — kept for re-runs)
+## 1. Generate the partner-store fixtures (the slow part — please run this)
 
 These hit potakait.com and canvasit.com.bd at **1 request/second** (your
 friends' stores, reseller permission). Each command below is roughly
@@ -44,8 +83,7 @@ parallel.
 ```bash
 ./.venv/Scripts/python.exe tools/scrape/scrape_opencart.py https://canvasit.com.bd \
   catalog/fixtures/seed/canvasit.json \
-  --map laptop=computers-laptops \
-  --map desktop-pc=computers-desktops \
+  --map laptop=computers-laptops --map desktop-pc=computers-desktops \
   --map monitor=computers-monitors \
   --map processor=computers-components \
   --map keyboard=computers-keyboards-mice \
@@ -85,40 +123,20 @@ max 800×800 JPEG, and re-hosts it on our storage — slow on first run):
 ./.venv/Scripts/python.exe manage.py seed_store_catalog
 ```
 
-### Where the images live (no S3 needed)
+### ⚠️ Read this before seeding products on the live server
 
-Since you don't have S3 keys yet, product images are stored **in the database**
-as content-addressed rows (`core.ImageBlob`) and served from
-`/api/media/<sha256>/`. Each image is downloaded once, compressed to max
-800×800 JPEG, and deduplicated by content hash.
+Image upload goes to **S3 when AWS keys are set, otherwise to the local
+`MEDIA_ROOT`** — and Render's filesystem is **ephemeral**, wiped on every
+deploy. So if S3 is not configured on Render, product images seeded there will
+disappear at the next release and every product will show a broken image.
 
-This matters beyond seeding: images previously went to Render's local disk,
-which is **wiped on every deploy** — so images you uploaded through the admin
-panel were already silently disappearing. They now survive.
+That is why the deploy only seeds _categories_. Before you seed products in
+production, confirm these four env vars are set in the Render dashboard:
+`AWS_ACCESS_KEY_ID`, `AWS_ACESS_KEY_SECRET` (note the spelling — the codebase
+has this typo), `AWS_S3_REGION_NAME`, `AWS_STORAGE_BUCKET_NAME`.
 
-Measured on real potakait products: about **15 KB per image**, so a full seed of
-all ~200 products is roughly **9 MB** — comfortable on Neon. The serving URL is
-immutable and sent with a one-year cache header plus ETag/304, so browsers
-re-fetch nothing.
-
-When you do get S3 keys later, set them in Render and new uploads go to S3
-automatically — no migration needed, and existing database-served images keep
-working.
-
-### Seeding products on the live server
-
-You can't run `manage.py` on Render's free tier, so product seeding is gated by
-an environment variable, the same self-disarming pattern this repo already uses
-for `RELEASE_LOGIN`:
-
-1. In the Render dashboard, set **`SEED_STORE_PRODUCTS=true`**
-2. Deploy (or click Manual Deploy). The build downloads and stores ~600 images —
-   expect it to take several minutes.
-3. **Remove the variable again.** Otherwise every future deploy repeats the work
-   for nothing.
-
-The command is create-only, so even if it does run twice it cannot overwrite a
-price or name you've edited in the admin panel.
+**Tell me whether S3 is configured** and I'll either wire product seeding into
+the deploy or set up a storage approach that survives restarts.
 
 Safety: `seed_store_catalog` is **create-only**. Re-running it never
 overwrites a category you renamed in the admin panel. `--force-update` is the
@@ -181,16 +199,16 @@ than guessing.
 
 ## What's already done on this branch
 
-| | |
-| --- | --- |
-| Category editor 404 | Fixed — admins can edit platform-owned rows; edits no longer re-own them |
-| `Products.source_url` / `source_price` / `price_synced_at` | Added (migration included) |
-| Category taxonomy | Fashion / Phones / Computers / Gadgets, create-only seeder, adopts your existing Men's/Women's Fashion into the tree |
-| Scrapers + parsers | Partner OpenCart stores + Fabrilife, with real captured-HTML tests |
-| Fabrilife fashion fixture | 64 real products with real prices, sizes and images |
-| Product seeding | Fixtures → products + sellable variants, images downloaded, compressed to 800×800 JPEG and re-hosted |
-| Partner price sync | `sync_source_prices` command + admin "Sync prices" button; only ever touches products with a `source_url` |
-| Deploy wiring | `build.sh` seeds categories on every deploy (safe/idempotent); product seeding stays manual — see the S3 warning above |
+|                                                            |                                                                                                                        |
+| ---------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| Category editor 404                                        | Fixed — admins can edit platform-owned rows; edits no longer re-own them                                               |
+| `Products.source_url` / `source_price` / `price_synced_at` | Added (migration included)                                                                                             |
+| Category taxonomy                                          | Fashion / Phones / Computers / Gadgets, create-only seeder, adopts your existing Men's/Women's Fashion into the tree   |
+| Scrapers + parsers                                         | Partner OpenCart stores + Fabrilife, with real captured-HTML tests                                                     |
+| Fabrilife fashion fixture                                  | 64 real products with real prices, sizes and images                                                                    |
+| Product seeding                                            | Fixtures → products + sellable variants, images downloaded, compressed to 800×800 JPEG and re-hosted                   |
+| Partner price sync                                         | `sync_source_prices` command + admin "Sync prices" button; only ever touches products with a `source_url`              |
+| Deploy wiring                                              | `build.sh` seeds categories on every deploy (safe/idempotent); product seeding stays manual — see the S3 warning above |
 
 Backend suite: **432 tests green**.
 
@@ -202,12 +220,12 @@ partner stores, which matter more).
 Worth knowing about, because both were invisible from the outside:
 
 1. **Privilege escalation.** My original fix for your category-editor 404 was
-   too broad: it widened access for *every* model the dynamic form handles —
+   too broad: it widened access for _every_ model the dynamic form handles —
    including Users and Warehouse — not just categories and products. That
    would have let an admin of one tenant edit another tenant's user accounts
    and promote them to Super Admin. Now restricted to categories and products
    only, with tests covering the other models.
 2. **Price sync updated the wrong table.** Checkout charges from the product
-   *variant*, but the sync only wrote the product row. Your storefront would
+   _variant_, but the sync only wrote the product row. Your storefront would
    have shown the new partner price while charging customers the old one. The
    sync now updates variants too, and a test pins it.
