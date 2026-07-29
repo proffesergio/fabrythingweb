@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { CssBaseline, ThemeProvider, createTheme, AppBar, Toolbar, IconButton, Typography, Drawer, List, ListItem, ListItemText, Collapse, Divider, Card, CardContent, Fab, Box, Hidden, InputBase, Avatar, Menu, MenuItem, ListItemIcon, BottomNavigation, BottomNavigationAction, Link } from '@mui/material';
-import { LightMode, DarkMode, Menu as MenuIcon, ExpandLess, ExpandMore, Search as SearchIcon, AccountCircle, Settings as SettingsIcon, Notifications as NotificationsIcon, Logout, Home, Code as CodeIcon, Public as PublicIcon, Business as BusinessIcon, AlternateEmail as AlternateEmailIcon, AutoAwesomeTwoTone, Circle, AddCircleOutlineOutlined, DashboardOutlined, ShoppingCartOutlined, StorefrontOutlined, GroupOutlined, InventoryOutlined, CategoryOutlined, Category, ShoppingBasketOutlined, ShoppingBasketRounded, ReceiptOutlined, WarehouseOutlined, Map as MapIcon, ReceiptLong, Restaurant as RestaurantIcon, TwoWheeler, HowToReg, Payments } from '@mui/icons-material';
+import { LightMode, DarkMode, Menu as MenuIcon, ExpandLess, ExpandMore, Search as SearchIcon, AccountCircle, Settings as SettingsIcon, Notifications as NotificationsIcon, Logout, Home, Code as CodeIcon, Public as PublicIcon, Business as BusinessIcon, AlternateEmail as AlternateEmailIcon, AutoAwesomeTwoTone, Circle, AddCircleOutlineOutlined, DashboardOutlined, ShoppingCartOutlined, StorefrontOutlined, GroupOutlined, InventoryOutlined, CategoryOutlined, Category, ShoppingBasketOutlined, ShoppingBasketRounded, ReceiptOutlined, WarehouseOutlined, Map as MapIcon, ReceiptLong, Restaurant as RestaurantIcon, TwoWheeler, HowToReg, Payments, CloudDownloadOutlined } from '@mui/icons-material';
 import { ThemeProvider as Emotion10ThemeProvider } from '@emotion/react';
 import './style.scss';
 import { orangeDarkTheme, orangeLightTheme, basicTheme,darkTheme,lightTheme,customTheme,blueLightTheme,blueDarkTheme,greenLightTheme,greenDarkTheme,redLightTheme,redDarkTheme } from './themes';
@@ -164,6 +164,8 @@ const Layout = ({sidebarList,pageTitle,childPage}) => {
         return <SettingsIcon />;
       case 'Inventory':
         return <InventoryOutlined />;
+      case 'CloudDownload':
+        return <CloudDownloadOutlined />;
       case 'Category':
         return <Category />;
       case 'Redeem':
