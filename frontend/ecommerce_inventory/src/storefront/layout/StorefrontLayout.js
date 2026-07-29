@@ -21,6 +21,7 @@ import MegaMenu, { MobileCategoryMenu } from '../components/MegaMenu';
 import LiveSearch from '../components/LiveSearch';
 import BrandLogo from '../../components/BrandLogo';
 import MessengerButton from '../components/MessengerButton';
+import WhatsAppButton from '../../components/WhatsAppButton';
 
 // Highlighted "Food" nav entry pointing at `/food`. Two separate motions, and
 // only two: the icon blinks (opacity) and the background gradient slides
@@ -474,6 +475,15 @@ export default function StorefrontLayout({ toggleDarkMode, darkMode }) {
                         </Paper>
                     )}
 
+                    {/* Floating WhatsApp chat link — stacked above the Messenger FAB (same
+                        right column, one FAB-height + gap higher) so neither covers the
+                        other; both already clear the mobile BottomNavigation. */}
+                    <WhatsAppButton
+                        bottom={{
+                            xs: 'calc(56px + 16px + 56px + 12px)',
+                            md: 'calc(24px + 56px + 12px)',
+                        }}
+                    />
                     {/* Floating Messenger deep link — dormant until configured, see MessengerButton.js */}
                     <MessengerButton />
                 </Box>

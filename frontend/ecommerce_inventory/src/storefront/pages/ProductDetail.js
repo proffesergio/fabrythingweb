@@ -107,15 +107,21 @@ export default function ProductDetail() {
                 {/* Images */}
                 <Grid item xs={12} md={6}>
                     <Box sx={{ position: 'sticky', top: 80 }}>
+                        {/* Partner photos have inconsistent aspect ratios and tight crops --
+                            padding + object-fit: contain shows the whole product instead of
+                            edge-cropping it (matches ProductCard's treatment). Neutral
+                            `action.hover` surface instead of a hardcoded hex so this reads
+                            correctly in dark mode too. */}
                         <Box sx={{
                             width: '100%', height: { xs: 400, md: 500 },
-                            borderRadius: 2, overflow: 'hidden', bgcolor: '#f5f5f5', mb: 1,
+                            borderRadius: 2, overflow: 'hidden', bgcolor: 'action.hover', mb: 1,
+                            p: { xs: 2, md: 3 },
                         }}>
                             {images.length > 0 ? (
                                 <img
                                     src={images[selectedImage]}
                                     alt={product.name}
-                                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                    style={{ width: '100%', height: '100%', objectFit: 'contain' }}
                                     onError={(e) => { e.target.src = 'https://via.placeholder.com/500x600?text=No+Image'; }}
                                 />
                             ) : (
@@ -133,11 +139,12 @@ export default function ProductDetail() {
                                         sx={{
                                             width: 64, height: 64, borderRadius: 1, overflow: 'hidden',
                                             cursor: 'pointer', flexShrink: 0,
+                                            bgcolor: 'action.hover', p: 0.5,
                                             border: selectedImage === i ? '2px solid' : '2px solid transparent',
                                             borderColor: selectedImage === i ? 'secondary.main' : 'transparent',
                                         }}
                                     >
-                                        <img src={img} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                        <img src={img} alt="" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
                                     </Box>
                                 ))}
                             </Box>

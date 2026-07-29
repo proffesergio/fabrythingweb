@@ -77,6 +77,10 @@ class StoreConfigView(APIView):
                 # frontend must treat '' as "no Messenger button", not a
                 # broken link.
                 'messenger_page_id': cfg.messenger_page_id,
+                # Same rule for the floating WhatsApp chat button (both the
+                # storefront and the food frontend read this from here) --
+                # blank means "hide the button", not a broken wa.me link.
+                'whatsapp_chat_number': cfg.whatsapp_chat_number,
             },
             message='Store configuration',
         )

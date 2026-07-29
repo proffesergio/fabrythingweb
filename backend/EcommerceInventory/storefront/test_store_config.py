@@ -29,3 +29,26 @@ class StoreConfigMessengerFieldTests(TestCase):
     def test_config_endpoint_requires_no_auth(self):
         res = self.client.get("/api/store/config/")
         self.assertEqual(res.status_code, 200)
+
+
+class StoreConfigWhatsAppChatFieldTests(TestCase):
+    """The floating WhatsApp chat button (storefront + food frontend) reads
+    its number from this same public config endpoint, exactly like
+    messenger_page_id -- blank means "hide the button", not a broken link."""
+
+    def setUp(self):
+        self.client = APIClient()
+
+    def test_whatsapp_chat_number_defaults_to_empty_string(self):
+        res = self.client.get("/api/store/config/")
+        self.assertEqual(res.status_code, 200, res.content)
+        self.assertEqual(res.json()["data"]["whatsapp_chat_number"], "")
+
+    def test_whatsapp_chat_number_reflects_configured_value(self):
+        cfg = StoreConfiguration.get_solo()
+        cfg.whatsapp_chat_number = "8801842168117"
+        cfg.save()
+
+        res = self.client.get("/api/store/config/")
+        self.assertEqual(res.status_code, 200, res.content)
+        self.assertEqual(res.json()["data"]["whatsapp_chat_number"], "8801842168117")
