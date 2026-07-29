@@ -1,5 +1,5 @@
 from purchasing.models import PurchaseOrder, PurchaseOrderItems, PurchaseOrderLogs
-from core.helpers import CommonListAPIMixin, CustomPageNumberPagination, getDynamicFormFields, renderResponse
+from core.helpers import CommonListAPIMixin, CustomPageNumberPagination, PLATFORM_STAFF_ROLES, getDynamicFormFields, renderResponse
 from rest_framework import generics
 from rest_framework.permissions import IsAuthenticated
 from rest_framework_simplejwt.authentication import JWTAuthentication
@@ -69,10 +69,21 @@ class PurchaseOrderSerializer(serializers.ModelSerializer):
         return instance
 
 class CreatePurchaseOrderView(generics.CreateAPIView):
+    """Purchase-order creation/edit is a back-office (inventory/purchasing
+    staff) action -- it was IsAuthenticated only, with no role check, so any
+    authenticated Customer could POST here and create real PurchaseOrder/
+    PurchaseOrderItems/PurchaseOrderLogs rows under their own domain (no
+    existing row needed first, unlike the warehouse/dynamic-form writes).
+    Gated on the role axis only (PLATFORM_STAFF_ROLES), not the full
+    isPlatformStaff predicate -- both branches below already scope by the
+    caller's own domain_user_id_id, so a legitimate non-root Staff/Admin
+    sub-account must keep creating purchase orders for its own tenant."""
     authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated]
 
     def get(self,request,id=None):
+        if request.user.role not in PLATFORM_STAFF_ROLES:
+            return renderResponse(data='Forbidden', message='Forbidden', status=403)
         po=PurchaseOrder.objects.filter(domain_user_id=request.user.domain_user_id_id,id=id).first() if id else PurchaseOrder()
         poItems=PurchaseOrderItems.objects.filter(po_id=id) if id else []
         poItems=PurchaseOrderItemSerializer(poItems,many=True).data
@@ -85,6 +96,8 @@ class CreatePurchaseOrderView(generics.CreateAPIView):
         return renderResponse(data={'poData':poData,'poItems':poItems,'poFields':poFields,'poItemFields':poItemFields},message='Purchase Order Fields',status=200)
 
     def post(self,request,id=None):
+        if request.user.role not in PLATFORM_STAFF_ROLES:
+            return renderResponse(data='Forbidden', message='Forbidden', status=403)
         data=request.data
         data.update({'created_by_user_id':request.user.id})
         data.update({'domain_user_id':request.user.domain_user_id_id})

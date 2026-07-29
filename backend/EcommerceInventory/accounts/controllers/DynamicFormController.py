@@ -37,7 +37,18 @@ class DynamicFormController(APIView):
         #Checking if Model Exist in Our Dynamic Form Models
         if modelName not in getDynamicFormModels():
             return renderResponse(data='Model Not Exist',message='Model Not Exist',status=404)
-        
+
+        if id is None and not isPlatformStaff(request.user):
+            # Creation is a back-office action for every dynamic-form model
+            # (product, category, warehouse, supplier/users, rackShelfFloor),
+            # not just the widened ones -- without this gate any authenticated
+            # Customer/Rider/Restaurant (isPlatformScope is True for them too,
+            # see isPlatformStaff's docstring) could write arbitrary rows into
+            # these tables under their own domain. Those rows are still real:
+            # they land in admin lists/counts, so a "your own domain" caveat
+            # doesn't make it safe.
+            return renderResponse(data='Forbidden', message='Forbidden', status=403)
+
         #Getting the Model Name from Dynamic Form Models
         model=getDynamicFormModels()[modelName]
         #Getting the Model Class from the Model Name
@@ -127,7 +138,13 @@ class DynamicFormController(APIView):
     def get(self,request,modelName,id=None):
         if modelName not in getDynamicFormModels():
             return renderResponse(data='Model Not Found',message='Model Not Found',status=404)
-        
+
+        if id is None and not isPlatformStaff(request.user):
+            # Matches the same gate on post() above -- a blank create-form
+            # schema is low severity on its own, but it should require the
+            # same authorization as actually being able to submit it.
+            return renderResponse(data='Forbidden', message='Forbidden', status=403)
+
         model = getDynamicFormModels()[modelName]
         model_class=apps.get_model(model)
 

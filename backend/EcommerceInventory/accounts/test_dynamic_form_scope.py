@@ -11,7 +11,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 
 from accounts.models import Users
 from accounts.controllers.DynamicFormController import DynamicFormController
-from catalog.models import Categories
+from catalog.models import Categories, Products
 from inventory.models import Warehouse
 
 
@@ -269,3 +269,100 @@ class DynamicFormNonStaffRoleEscalationTests(TestCase):
         must keep the widened access this whole mechanism exists for."""
         res = self._get("category", self.category.id, self.owner)
         self.assertEqual(res.status_code, 200)
+
+
+class DynamicFormCreationAuthorizationTests(TestCase):
+    """The create path (id=None) has the same authorization hole as the
+    cross-domain edit path above, for every dynamic-form model, not only the
+    widened ones: any authenticated Customer/Rider/Restaurant could write a
+    new row into catalog.Products, catalog.Categories, inventory.Warehouse or
+    accounts.Users under their own domain -- still a real write (it lands in
+    admin lists/counts) even though it can't cross tenants. Gated by
+    isPlatformStaff on both POST (creation itself) and GET (the blank
+    create-form schema) with id=None."""
+
+    def setUp(self):
+        self.admin = Users.objects.create_user(
+            username="create-gate-admin", email="create-gate-admin@x.com", password="x",
+            role="Admin", country="Bangladesh")
+        self.customer = Users.objects.create_user(
+            username="create-gate-customer", email="create-gate-customer@x.com", password="x",
+            role="Customer", country="Bangladesh")
+
+    def _post(self, modelName, user, data):
+        request = APIRequestFactory().post(f"/api/getForm/{modelName}/", data, format="json")
+        force_authenticate(request, user=user)
+        return DynamicFormController.as_view()(request, modelName=modelName)
+
+    def _get(self, modelName, user):
+        request = APIRequestFactory().get(f"/api/getForm/{modelName}/")
+        force_authenticate(request, user=user)
+        return DynamicFormController.as_view()(request, modelName=modelName)
+
+    def test_customer_forbidden_from_creating_category(self):
+        res = self._post("category", self.customer,
+                          {"name": "Hijack Cat", "description": "d", "display_order": 0, "slug": "hijack-cat"})
+        self.assertEqual(res.status_code, 403)
+        self.assertFalse(Categories.objects.filter(slug="hijack-cat").exists())
+
+    def test_customer_forbidden_from_creating_product(self):
+        cat = Categories.objects.create(
+            name="Gate Cat", slug="gate-cat", description="",
+            domain_user_id=self.admin, added_by_user_id=self.admin)
+        res = self._post("product", self.customer, _product_payload(cat.id))
+        self.assertEqual(res.status_code, 403)
+        self.assertFalse(Products.objects.filter(slug="df-create-test-product").exists())
+
+    def test_customer_forbidden_from_blank_create_form(self):
+        res = self._get("category", self.customer)
+        self.assertEqual(res.status_code, 403)
+
+    def test_admin_can_still_create_category(self):
+        res = self._post("category", self.admin,
+                          {"name": "Real Cat", "description": "d", "display_order": 0, "slug": "real-gate-cat"})
+        self.assertEqual(res.status_code, 200, res.data)
+        self.assertTrue(Categories.objects.filter(slug="real-gate-cat").exists())
+
+    def test_admin_can_still_create_product(self):
+        cat = Categories.objects.create(
+            name="Gate Cat 2", slug="gate-cat-2", description="",
+            domain_user_id=self.admin, added_by_user_id=self.admin)
+        res = self._post("product", self.admin, _product_payload(cat.id))
+        self.assertEqual(res.status_code, 200, res.data)
+        self.assertTrue(Products.objects.filter(slug="df-create-test-product").exists())
+
+    def test_admin_can_still_fetch_blank_create_form(self):
+        res = self._get("category", self.admin)
+        self.assertEqual(res.status_code, 200)
+
+
+def _product_payload(category_id):
+    return {
+        "name": "DF Create Test Product",
+        "slug": "df-create-test-product",
+        "image": [],
+        "description": "d",
+        "specifications": {},
+        "html_description": "",
+        "highlights": [],
+        "sku": "DF-CREATE-0001",
+        "initial_buying_price": 100,
+        "initial_selling_price": 200,
+        "dimensions": "0x0x0",
+        "uom": "PCS",
+        "color": "",
+        "tax_percentage": 0,
+        "brand": "",
+        "brand_model": "",
+        "status": "ACTIVE",
+        "gender": "UNISEX",
+        "available_sizes": [],
+        "size_chart": {},
+        "material": "",
+        "seo_title": "",
+        "seo_description": "",
+        "seo_keywords": [],
+        "source_url": "",
+        "addition_details": {},
+        "category_id": category_id,
+    }
