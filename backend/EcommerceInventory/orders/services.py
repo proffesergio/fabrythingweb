@@ -12,8 +12,14 @@ from rest_framework.exceptions import ValidationError
 
 from catalog.models import ProductVariant
 from core.models import StoreConfiguration
+from core.whatsapp import send_whatsapp_on_commit
 
 from .models import Order, OrderItem, OrderStatusLog
+
+# Template to create in Meta Business Manager — see the WhatsApp setup report
+# for the exact body text/params. Numbered params: order number, customer
+# name, customer phone, item count, total (with currency).
+STORE_ORDER_ADMIN_TEMPLATE = "store_new_order_admin"
 
 
 class OutOfStock(ValidationError):
@@ -113,4 +119,17 @@ def place_cod_order(*, customer, items, contact_name, contact_phone,
         changed_by=order.customer,
         reason="Order placed",
     )
+
+    # WhatsApp alert to the admin. Deferred to after this transaction commits
+    # (see send_whatsapp_on_commit) and a total no-op while the provider is
+    # unconfigured or no admin number has been set — never able to affect the
+    # order that was just placed.
+    admin_number = (StoreConfiguration.get_solo().whatsapp_admin_number or "").strip()
+    send_whatsapp_on_commit(
+        admin_number, kind="store_order_admin", related_order=order.order_number,
+        template_name=STORE_ORDER_ADMIN_TEMPLATE,
+        params=[order.order_number, contact_name, contact_phone,
+               str(len(order_items)), f"{total} {config.currency}"],
+    )
+
     return order

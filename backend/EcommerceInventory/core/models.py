@@ -28,6 +28,13 @@ class StoreConfiguration(models.Model):
     currency = models.CharField(max_length=3, default="BDT")
     store_name = models.CharField(max_length=120, default="Fabrything")
     support_phone = models.CharField(max_length=20, blank=True, default="")
+    # Where WhatsApp order alerts land (core.whatsapp). This is a *number*, not
+    # a credential, so it lives here rather than in an env var — the owner can
+    # change it from the admin panel without a redeploy. The Cloud API token
+    # and phone_number_id stay in env vars (see core/whatsapp.py); a leaked
+    # destination number is not a security incident the way a leaked token is.
+    # International format, digits only, no leading "+" (e.g. "8801XXXXXXXXX").
+    whatsapp_admin_number = models.CharField(max_length=20, blank=True, default="")
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
@@ -78,3 +85,36 @@ class ImageBlob(models.Model):
 
     def __str__(self):
         return f"{self.sha256} ({self.content_type}, {self.byte_size} bytes)"
+
+
+class WhatsAppAlertLog(models.Model):
+    """One row per WhatsApp Cloud API send *attempt* (core.whatsapp.send_whatsapp).
+
+    Written only when a send was actually attempted — i.e. the provider was
+    configured (env credentials present) and a destination number was known.
+    A genuinely dormant/unconfigured provider never touches this table, so an
+    empty table is expected until the owner pastes in credentials.
+
+    This exists because the real failure mode of a "ships dormant" alert
+    integration is not a loud crash — it's a silent no-send nobody notices.
+    The admin list for this model is how the owner confirms alerts are
+    actually going out once credentials are in.
+    """
+
+    recipient = models.CharField(max_length=32)
+    kind = models.CharField(max_length=32)
+    related_order = models.CharField(max_length=32, blank=True, default="")
+    # A short, human-readable summary of the template parameters sent — never
+    # the access token, which this module never receives in the first place.
+    payload_summary = models.CharField(max_length=300, blank=True, default="")
+    success = models.BooleanField(default=False)
+    error = models.CharField(max_length=500, blank=True, default="")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        indexes = [models.Index(fields=["kind", "related_order"])]
+
+    def __str__(self):
+        status = "OK" if self.success else "FAILED"
+        return f"[{status}] {self.kind} -> {self.recipient} ({self.related_order})"
