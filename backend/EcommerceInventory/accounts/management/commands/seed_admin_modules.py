@@ -121,6 +121,15 @@ MODULES = [
         'display_order': 6,
         'parent': None,
     },
+    # Live chat inbox -- a single page, so (like Customers above) it's a
+    # top-level entry with its own module_url rather than a parent+children.
+    {
+        'module_name': 'Live Chat',
+        'module_icon': 'Chat',
+        'module_url': '/manage/chat/inbox',
+        'display_order': 8,
+        'parent': None,
+    },
     # ── Food delivery vertical (unified here so this seeder never deletes it) ──
     {
         'module_name': 'Food',

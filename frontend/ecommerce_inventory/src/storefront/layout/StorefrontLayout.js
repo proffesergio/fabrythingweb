@@ -22,6 +22,7 @@ import LiveSearch from '../components/LiveSearch';
 import BrandLogo from '../../components/BrandLogo';
 import MessengerButton from '../components/MessengerButton';
 import WhatsAppButton from '../../components/WhatsAppButton';
+import ChatWidget from '../components/ChatWidget';
 
 // Highlighted "Food" nav entry pointing at `/food`. Two separate motions, and
 // only two: the icon blinks (opacity) and the background gradient slides
@@ -486,6 +487,16 @@ export default function StorefrontLayout({ toggleDarkMode, darkMode }) {
                     />
                     {/* Floating Messenger deep link — dormant until configured, see MessengerButton.js */}
                     <MessengerButton />
+                    {/* Floating live-chat launcher — stacked one more FAB-height + gap
+                        above WhatsApp (which is itself stacked above Messenger), so all
+                        three sit in one column without ever overlapping each other or the
+                        mobile BottomNavigation. */}
+                    <ChatWidget
+                        bottom={{
+                            xs: 'calc(56px + 16px + 56px + 12px + 56px + 12px)',
+                            md: 'calc(24px + 56px + 12px + 56px + 12px)',
+                        }}
+                    />
                 </Box>
             </Box>
         </>
