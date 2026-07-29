@@ -123,7 +123,19 @@ export default function ProductDetail() {
                             tile is what makes them read correctly, even in dark mode (a dark
                             tile would show an obvious white rectangle around the photo). */}
                         <Box sx={{
-                            width: '100%', height: { xs: 400, md: 500 },
+                            width: '100%', maxWidth: '100%', height: { xs: 400, md: 500 },
+                            // boxSizing must be explicit here: this Box has both a
+                            // percentage width AND padding, and the storefront route is
+                            // never wrapped in <CssBaseline /> (only the admin/food shells
+                            // are), so it does not inherit the browser-default-defeating
+                            // `border-box` reset. Under the browser's real default
+                            // (content-box), the padding below is added ON TOP of the
+                            // 100% width, so this tile silently renders wider than its
+                            // Grid column and its opaque #fff background paints over the
+                            // start of the details column's text -- that was the reported
+                            // "image overlapping the product details" bug (brand/title/
+                            // price clipped on the left edge). Do not remove this.
+                            boxSizing: 'border-box',
                             borderRadius: 2, overflow: 'hidden', bgcolor: '#fff', mb: 1,
                             p: { xs: 2, md: 3 },
                         }}>
@@ -131,7 +143,7 @@ export default function ProductDetail() {
                                 <img
                                     src={images[selectedImage]}
                                     alt={product.name}
-                                    style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+                                    style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block' }}
                                     onError={(e) => { e.target.src = 'https://via.placeholder.com/500x600?text=No+Image'; }}
                                 />
                             ) : (
@@ -149,6 +161,10 @@ export default function ProductDetail() {
                                         sx={{
                                             width: 64, height: 64, borderRadius: 1, overflow: 'hidden',
                                             cursor: 'pointer', flexShrink: 0,
+                                            // Same content-box trap as the main image tile above:
+                                            // a fixed width plus padding needs an explicit
+                                            // border-box or it renders larger than 64px.
+                                            boxSizing: 'border-box',
                                             bgcolor: '#fff', p: 0.5,
                                             border: selectedImage === i ? '2px solid' : '2px solid transparent',
                                             borderColor: selectedImage === i ? 'secondary.main' : 'transparent',
