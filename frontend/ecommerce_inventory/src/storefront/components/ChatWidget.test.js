@@ -119,3 +119,58 @@ test('a staff reply that arrives on a background poll appears in the open thread
     // a literal "null"/"undefined").
     expect(afterCursorSeen).toEqual(['10', '10']);
 });
+
+/**
+ * Pins the unread badge lifecycle wired to the existing
+ * `customer_unread_count` / `chat/threads/updates/` badge endpoint: it must
+ * appear on the closed launcher once staff has replied, and clear as soon as
+ * the customer opens that conversation (which POSTs .../read/).
+ */
+test('unread badge appears after a staff reply and clears once the thread is opened', async () => {
+    let badgeUnread = 0;
+    const unreadThread = { ...THREAD, unread_count: 0 };
+
+    mockCallApi.mockImplementation(({ url, method }) => {
+        if (url === 'chat/threads/updates/') return respond({ total_unread: badgeUnread });
+        if (url === 'chat/threads/' && (method === undefined || method === 'GET')) {
+            return respond([unreadThread]);
+        }
+        if (url === `chat/threads/${THREAD.id}/read/`) {
+            badgeUnread = 0;
+            unreadThread.unread_count = 0;
+            return respond({ unread_count: 0 });
+        }
+        if (url.startsWith(`chat/threads/${THREAD.id}/messages/`)) {
+            return respond({ messages: [], latest_id: null });
+        }
+        return respond({});
+    });
+
+    render(<ChatWidget />);
+
+    // Nothing unread yet: no badge content rendered on the launcher.
+    await advanceAndFlush(0);
+    expect(screen.queryByText('3')).not.toBeInTheDocument();
+
+    // Simulate a staff reply landing while the panel is closed: the next
+    // idle badge poll reports a nonzero total_unread.
+    badgeUnread = 3;
+    unreadThread.unread_count = 3;
+    await advanceAndFlush(45000);
+    await waitFor(() => expect(screen.getByText('3')).toBeInTheDocument());
+
+    // Opening the launcher and the conversation marks it read; the badge
+    // clears via the same refreshBadge() call the read POST triggers.
+    fireEvent.click(screen.getByRole('button', { name: /chat with us/i }));
+    await screen.findByText('Open');
+    const threadButton = screen.getAllByRole('button').find((btn) => btn.textContent.includes('Open'));
+    fireEvent.click(threadButton);
+
+    // Let the read POST -> refreshBadge promise chain settle (two async
+    // hops deep). MUI's Badge keeps the last badgeContent node around under
+    // an "invisible" class for its exit transition rather than unmounting it
+    // immediately, so the real assertion is "hidden", not "gone from the DOM".
+    await advanceAndFlush(0);
+    await advanceAndFlush(0);
+    expect(screen.getByText('3')).toHaveClass('MuiBadge-invisible');
+});
