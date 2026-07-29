@@ -85,10 +85,15 @@ export default function ProductCard({ product, showFlashBadge }) {
                         transition: 'all 0.3s ease',
                     }}
                 >
+                    {/* p bumped on xs only — these sit permanently visible on mobile
+                        (opacity xs:1 above), so their ~30px default small-IconButton
+                        hit area is genuinely tappable rather than a hover affordance;
+                        desktop padding is left at the component default. */}
                     <IconButton
                         size="small"
                         onClick={(e) => e.stopPropagation()}
                         sx={{
+                            p: { xs: 1.25 },
                             bgcolor: 'white', boxShadow: 1,
                             '&:hover': { bgcolor: 'secondary.main', color: 'white' },
                         }}
@@ -99,6 +104,7 @@ export default function ProductCard({ product, showFlashBadge }) {
                         size="small"
                         onClick={(e) => { e.stopPropagation(); navigate(`/product/${product.slug}`); }}
                         sx={{
+                            p: { xs: 1.25 },
                             bgcolor: 'white', boxShadow: 1,
                             '&:hover': { bgcolor: 'primary.main', color: 'white' },
                         }}
@@ -107,12 +113,13 @@ export default function ProductCard({ product, showFlashBadge }) {
                     </IconButton>
                 </Box>
 
-                {/* Image */}
+                {/* Image — flatter aspect ratio on mobile so the card doesn't run tall;
+                    unchanged on desktop. */}
                 <Box sx={{ position: 'relative', overflow: 'hidden' }}>
                     <CardMedia
                         component="img"
                         sx={{
-                            aspectRatio: '3/4',
+                            aspectRatio: { xs: '1 / 1', md: '3/4' },
                             objectFit: 'cover',
                             transition: 'transform 0.4s ease',
                             '&:hover': { transform: 'scale(1.05)' },
@@ -123,12 +130,16 @@ export default function ProductCard({ product, showFlashBadge }) {
                     />
                 </Box>
 
-                <CardContent sx={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 0.5, p: 1.5 }}>
-                    <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                <CardContent sx={{ flex: 1, display: 'flex', flexDirection: 'column', gap: { xs: 0.25, md: 0.5 }, p: { xs: 1, md: 1.5 }, '&:last-child': { pb: { xs: 1, md: 1.5 } } }}>
+                    <Typography variant="body2" color="text.secondary" sx={{ fontSize: { xs: '0.62rem', md: '0.7rem' }, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                         {product.brand || product.category_name}
                     </Typography>
+                    {/* Clamped to 2 lines — catalog names (e.g. full laptop model strings)
+                        run 60-115+ characters and would otherwise wrap to 4+ lines and
+                        stretch the card, breaking the mobile grid's row heights. */}
                     <Typography variant="subtitle2" sx={{
-                        fontWeight: 600, lineHeight: 1.3,
+                        fontWeight: 600, lineHeight: 1.25,
+                        fontSize: { xs: '0.78rem', md: '0.875rem' },
                         overflow: 'hidden', textOverflow: 'ellipsis',
                         display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical',
                     }}>
@@ -145,7 +156,7 @@ export default function ProductCard({ product, showFlashBadge }) {
                     )}
 
                     <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 1, mt: 'auto' }}>
-                        <Typography variant="h6" sx={{ fontWeight: 700, fontSize: '1.1rem', color: hasDiscount ? 'secondary.main' : 'text.primary' }}>
+                        <Typography variant="h6" sx={{ fontWeight: 700, fontSize: { xs: '0.95rem', md: '1.1rem' }, color: hasDiscount ? 'secondary.main' : 'text.primary' }}>
                             ৳{price?.toLocaleString()}
                         </Typography>
                         {hasDiscount && (
@@ -156,6 +167,12 @@ export default function ProductCard({ product, showFlashBadge }) {
                     </Box>
                 </CardContent>
 
+                {/* Quick-add is a hover affordance on desktop. On mobile there's no
+                    hover state to reveal it, so it would just sit permanently visible,
+                    reserving ~40px of card height for a button that duplicates
+                    "tap the card" (which already routes to the product page). Dropping
+                    it from the mobile layout is most of what buys back the 2-cards-per-
+                    screen target; tapping the card is still the way to act on it. */}
                 <Button
                     className="quick-add"
                     size="small"
@@ -164,9 +181,10 @@ export default function ProductCard({ product, showFlashBadge }) {
                     startIcon={<ShoppingCart fontSize="small" />}
                     onClick={handleQuickAdd}
                     sx={{
+                        display: { xs: 'none', md: 'flex' },
                         mx: 1.5, mb: 1.5,
-                        opacity: { xs: 1, md: 0 },
-                        transform: { xs: 'translateY(0)', md: 'translateY(10px)' },
+                        opacity: { md: 0 },
+                        transform: { md: 'translateY(10px)' },
                         transition: 'all 0.3s ease',
                         fontWeight: 600,
                     }}
