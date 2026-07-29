@@ -8,6 +8,8 @@ from core.helpers import absolutize_image_list, absolutize_media_url
 from core.models import StoreConfiguration
 from orders.models import Order, OrderItem, OrderStatusLog
 
+from .models import Banner
+
 
 # ─── Catalog ────────────────────────────────────────────────────────────────
 
@@ -343,3 +345,48 @@ class CustomerOrderDetailSerializer(CustomerOrderListSerializer):
                   'subtotal', 'shipping_amount', 'total_amount', 'currency',
                   'contact_name', 'contact_phone', 'shipping_address', 'notes',
                   'canceled_reason', 'items', 'status_logs', 'created_at']
+
+
+# ─── Banners ────────────────────────────────────────────────────────────────
+
+
+class BannerPublicSerializer(serializers.ModelSerializer):
+    """Storefront-facing shape: the frontend never builds a product URL
+    itself -- `cta_link` is already resolved here (product slug if a
+    `cta_product` is set, else the raw `cta_url` fallback, else null)."""
+
+    image = serializers.SerializerMethodField()
+    cta_link = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Banner
+        fields = [
+            'id', 'image', 'eyebrow', 'headline', 'subtext',
+            'animation_style', 'background', 'cta_label', 'cta_link', 'display_order',
+        ]
+        read_only_fields = fields
+
+    def get_image(self, obj):
+        return absolutize_media_url(obj.image, self.context.get('request'))
+
+    def get_cta_link(self, obj):
+        if obj.cta_product_id and getattr(obj.cta_product, 'slug', None):
+            return f'/product/{obj.cta_product.slug}'
+        return obj.cta_url or None
+
+
+class BannerAdminSerializer(serializers.ModelSerializer):
+    """Full CRUD shape for the admin banner manager."""
+
+    cta_product_name = serializers.CharField(source='cta_product.name', read_only=True, default=None)
+
+    class Meta:
+        model = Banner
+        fields = [
+            'id', 'image', 'eyebrow', 'headline', 'subtext',
+            'animation_style', 'background',
+            'cta_label', 'cta_product', 'cta_product_name', 'cta_url',
+            'display_order', 'is_active', 'starts_at', 'ends_at',
+            'created_at', 'updated_at',
+        ]
+        read_only_fields = ['id', 'cta_product_name', 'created_at', 'updated_at']

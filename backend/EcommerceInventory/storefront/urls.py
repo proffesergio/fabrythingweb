@@ -32,6 +32,12 @@ from .views import (
     AdminOrderDetailView,
     AdminOrderListView,
 )
+from .views_banners import (
+    AdminBannerDetailView,
+    AdminBannerListCreateView,
+    AdminBannerReorderView,
+    PublicBannerListView,
+)
 
 urlpatterns = [
     # Public (no auth)
@@ -40,6 +46,7 @@ urlpatterns = [
     path('categories/', PublicCategoryListView.as_view(), name='store_categories'),
     path('products/', PublicProductListView.as_view(), name='store_products'),
     path('products/<slug:slug>/', PublicProductDetailView.as_view(), name='store_product_detail'),
+    path('banners/', PublicBannerListView.as_view(), name='store_banners'),
 
     # Customer Auth
     path('auth/signup/', CustomerSignupView.as_view(), name='store_signup'),
@@ -70,4 +77,7 @@ urlpatterns = [
     path('admin/customers/', AdminCustomerListView.as_view(), name='admin_customers'),
     path('admin/orders/', AdminOrderListView.as_view(), name='admin_orders'),
     path('admin/orders/<int:pk>/', AdminOrderDetailView.as_view(), name='admin_order_detail'),
+    path('admin/banners/', AdminBannerListCreateView.as_view(), name='admin_banners'),
+    path('admin/banners/reorder/', AdminBannerReorderView.as_view(), name='admin_banners_reorder'),
+    path('admin/banners/<int:pk>/', AdminBannerDetailView.as_view(), name='admin_banner_detail'),
 ]

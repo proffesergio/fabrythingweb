@@ -36,6 +36,7 @@ import FoodPayments from './pages/food/FoodPayments';
 import PartnerApplications from './pages/food/PartnerApplications';
 import RiderCash from './pages/food/RiderCash';
 import ChatInbox from './pages/chat/ChatInbox';
+import ManageBanners from './pages/banners/ManageBanners';
 import RiderDashboard from './rider/RiderDashboard';
 import RiderLogin from './rider/RiderLogin';
 
@@ -228,6 +229,7 @@ function App() {
           {path:"manage/food/partners",element:<ProtectedRoute element={<PartnerApplications/>}/>},
           {path:"manage/food/rider-cash",element:<ProtectedRoute element={<RiderCash/>}/>},
           {path:"manage/chat/inbox",element:<ProtectedRoute element={<ChatInbox/>}/>},
+          {path:"manage/banners",element:<ProtectedRoute element={<ManageBanners/>}/>},
           {path:"*",element:<Error404Page/>},
         ]},
     ]

@@ -130,6 +130,15 @@ MODULES = [
         'display_order': 8,
         'parent': None,
     },
+    # Homepage hero banners -- a single manager page, same reasoning as
+    # Live Chat/Customers above.
+    {
+        'module_name': 'Banners',
+        'module_icon': 'ViewCarousel',
+        'module_url': '/manage/banners',
+        'display_order': 9,
+        'parent': None,
+    },
     # ── Food delivery vertical (unified here so this seeder never deletes it) ──
     {
         'module_name': 'Food',

@@ -11,7 +11,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 
 from accounts.models import Users
 from accounts.controllers.DynamicFormController import DynamicFormController
-from catalog.models import Categories
+from catalog.models import Categories, Products
 from inventory.models import Warehouse
 
 
@@ -199,3 +199,170 @@ class DynamicFormCrossTenantEscalationTests(TestCase):
             domain_user_id=self.tenant_b_admin, added_by_user_id=self.tenant_b_admin)
         res = self._get("category", foreign_cat.id, self.tenant_a_admin)
         self.assertEqual(res.status_code, 200)
+
+
+class DynamicFormNonStaffRoleEscalationTests(TestCase):
+    """CRITICAL regression test, the same bug as
+    DynamicFormCrossTenantEscalationTests above but for the *role* axis
+    instead of the tenant axis: core.helpers.isPlatformScope is true for ANY
+    domain-root user, and Users.save() self-assigns domain_user_id = self.id
+    for every account created without one -- so a plain self-signed-up
+    Customer (or Rider, or Restaurant) is their own domain root too, even
+    though the product/category widening (PLATFORM_SCOPE_WIDENED_MODELS) was
+    only ever meant for back-office roles. Before the fix this let a Customer
+    fetch AND edit ANY product/category belonging to ANY tenant via
+    /api/getForm/product/<id>/ and /api/getForm/category/<id>/ -- a full
+    cross-domain privilege escalation reachable by anyone who can sign up."""
+
+    def setUp(self):
+        self.owner = Users.objects.create_user(
+            username="store-owner", email="store-owner@x.com", password="x",
+            role="Admin", country="Bangladesh")
+        self.customer = Users.objects.create_user(
+            username="plain-customer", email="plain-customer@x.com", password="x",
+            role="Customer", country="Bangladesh")
+        self.rider = Users.objects.create_user(
+            username="plain-rider", email="plain-rider@x.com", password="x",
+            role="Rider", country="Bangladesh")
+        self.restaurant = Users.objects.create_user(
+            username="plain-restaurant", email="plain-restaurant@x.com", password="x",
+            role="Restaurant", country="Bangladesh")
+        # Each is its own domain root, exactly like isPlatformScope's trap.
+        for u in (self.customer, self.rider, self.restaurant):
+            self.assertEqual(u.domain_user_id_id, u.id)
+
+        self.category = Categories.objects.create(
+            name="Store Category", slug="store-category", description="",
+            domain_user_id=self.owner, added_by_user_id=self.owner)
+
+    def _get(self, modelName, obj_id, user):
+        request = APIRequestFactory().get(f"/api/getForm/{modelName}/{obj_id}/")
+        force_authenticate(request, user=user)
+        return DynamicFormController.as_view()(request, modelName=modelName, id=obj_id)
+
+    def _post(self, modelName, obj_id, user, data):
+        request = APIRequestFactory().post(f"/api/getForm/{modelName}/{obj_id}/", data, format="json")
+        force_authenticate(request, user=user)
+        return DynamicFormController.as_view()(request, modelName=modelName, id=obj_id)
+
+    def test_customer_cannot_fetch_category_edit_form(self):
+        res = self._get("category", self.category.id, self.customer)
+        self.assertEqual(res.status_code, 403)
+
+    def test_customer_cannot_edit_category(self):
+        res = self._post("category", self.category.id, self.customer,
+                          {"name": "Hijacked", "description": "x", "slug": "store-category", "display_order": 0})
+        self.assertEqual(res.status_code, 403)
+        self.category.refresh_from_db()
+        self.assertEqual(self.category.name, "Store Category")
+
+    def test_rider_cannot_fetch_category_edit_form(self):
+        res = self._get("category", self.category.id, self.rider)
+        self.assertEqual(res.status_code, 403)
+
+    def test_restaurant_cannot_fetch_category_edit_form(self):
+        res = self._get("category", self.category.id, self.restaurant)
+        self.assertEqual(res.status_code, 403)
+
+    def test_legitimate_domain_root_admin_still_works(self):
+        """Must not regress: a real Admin (domain-root, back-office role)
+        must keep the widened access this whole mechanism exists for."""
+        res = self._get("category", self.category.id, self.owner)
+        self.assertEqual(res.status_code, 200)
+
+
+class DynamicFormCreationAuthorizationTests(TestCase):
+    """The create path (id=None) has the same authorization hole as the
+    cross-domain edit path above, for every dynamic-form model, not only the
+    widened ones: any authenticated Customer/Rider/Restaurant could write a
+    new row into catalog.Products, catalog.Categories, inventory.Warehouse or
+    accounts.Users under their own domain -- still a real write (it lands in
+    admin lists/counts) even though it can't cross tenants. Gated by
+    isPlatformStaff on both POST (creation itself) and GET (the blank
+    create-form schema) with id=None."""
+
+    def setUp(self):
+        self.admin = Users.objects.create_user(
+            username="create-gate-admin", email="create-gate-admin@x.com", password="x",
+            role="Admin", country="Bangladesh")
+        self.customer = Users.objects.create_user(
+            username="create-gate-customer", email="create-gate-customer@x.com", password="x",
+            role="Customer", country="Bangladesh")
+
+    def _post(self, modelName, user, data):
+        request = APIRequestFactory().post(f"/api/getForm/{modelName}/", data, format="json")
+        force_authenticate(request, user=user)
+        return DynamicFormController.as_view()(request, modelName=modelName)
+
+    def _get(self, modelName, user):
+        request = APIRequestFactory().get(f"/api/getForm/{modelName}/")
+        force_authenticate(request, user=user)
+        return DynamicFormController.as_view()(request, modelName=modelName)
+
+    def test_customer_forbidden_from_creating_category(self):
+        res = self._post("category", self.customer,
+                          {"name": "Hijack Cat", "description": "d", "display_order": 0, "slug": "hijack-cat"})
+        self.assertEqual(res.status_code, 403)
+        self.assertFalse(Categories.objects.filter(slug="hijack-cat").exists())
+
+    def test_customer_forbidden_from_creating_product(self):
+        cat = Categories.objects.create(
+            name="Gate Cat", slug="gate-cat", description="",
+            domain_user_id=self.admin, added_by_user_id=self.admin)
+        res = self._post("product", self.customer, _product_payload(cat.id))
+        self.assertEqual(res.status_code, 403)
+        self.assertFalse(Products.objects.filter(slug="df-create-test-product").exists())
+
+    def test_customer_forbidden_from_blank_create_form(self):
+        res = self._get("category", self.customer)
+        self.assertEqual(res.status_code, 403)
+
+    def test_admin_can_still_create_category(self):
+        res = self._post("category", self.admin,
+                          {"name": "Real Cat", "description": "d", "display_order": 0, "slug": "real-gate-cat"})
+        self.assertEqual(res.status_code, 200, res.data)
+        self.assertTrue(Categories.objects.filter(slug="real-gate-cat").exists())
+
+    def test_admin_can_still_create_product(self):
+        cat = Categories.objects.create(
+            name="Gate Cat 2", slug="gate-cat-2", description="",
+            domain_user_id=self.admin, added_by_user_id=self.admin)
+        res = self._post("product", self.admin, _product_payload(cat.id))
+        self.assertEqual(res.status_code, 200, res.data)
+        self.assertTrue(Products.objects.filter(slug="df-create-test-product").exists())
+
+    def test_admin_can_still_fetch_blank_create_form(self):
+        res = self._get("category", self.admin)
+        self.assertEqual(res.status_code, 200)
+
+
+def _product_payload(category_id):
+    return {
+        "name": "DF Create Test Product",
+        "slug": "df-create-test-product",
+        "image": [],
+        "description": "d",
+        "specifications": {},
+        "html_description": "",
+        "highlights": [],
+        "sku": "DF-CREATE-0001",
+        "initial_buying_price": 100,
+        "initial_selling_price": 200,
+        "dimensions": "0x0x0",
+        "uom": "PCS",
+        "color": "",
+        "tax_percentage": 0,
+        "brand": "",
+        "brand_model": "",
+        "status": "ACTIVE",
+        "gender": "UNISEX",
+        "available_sizes": [],
+        "size_chart": {},
+        "material": "",
+        "seo_title": "",
+        "seo_description": "",
+        "seo_keywords": [],
+        "source_url": "",
+        "addition_details": {},
+        "category_id": category_id,
+    }

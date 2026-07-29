@@ -1,4 +1,4 @@
-from core.helpers import getDynamicFormFields, getDynamicFormModels, getExludeFields, renderResponse, isPlatformScope, absolutize_image_list
+from core.helpers import getDynamicFormFields, getDynamicFormModels, getExludeFields, renderResponse, PLATFORM_STAFF_ROLES, isPlatformStaff, absolutize_image_list
 from accounts.models import Users
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -9,17 +9,24 @@ import json
 from django.apps import apps
 
 # The category/product editor is the ONLY place the platform-scope widening
-# (core.helpers.isPlatformScope) was ever meant to apply -- seeded categories
-# and products are owned by the first Super Admin, so domain-root users need
-# to reach them across domains to edit them (see core.helpers.isPlatformScope
-# docstring). isPlatformScope is true for ANY domain-root user, not only Super
-# Admins, and every other dynamic-form model ('supplier'/'users' ->
+# (core.helpers.isPlatformStaff) was ever meant to apply -- seeded categories
+# and products are owned by the first Super Admin, so domain-root staff need
+# to reach them across domains to edit them (see core.helpers.isPlatformStaff
+# docstring). Every other dynamic-form model ('supplier'/'users' ->
 # accounts.Users, 'warehouse' -> inventory.Warehouse, 'rackShelfFloor' ->
 # inventory.RackAndShelvesAndFloor) has real per-tenant rows. Widening the
 # lookup for those too let one tenant's domain-root Admin fetch AND edit
 # another tenant's Users row via POST /api/getForm/users/<id>/ -- including
 # flipping role to "Super Admin" -- a full cross-tenant privilege escalation.
 # Keep this list to exactly what the widening was designed for.
+#
+# isPlatformStaff, not isPlatformScope, gates the widening below: isPlatformScope
+# alone is true for ANY domain-root user, and Users.save() self-assigns
+# domain_user_id = self.id for every account created without one -- so a
+# plain self-signed-up Customer/Rider/Restaurant is their own domain root
+# too. Without the role check, that let any such account fetch AND edit ANY
+# product/category belonging to ANY tenant through this same widening --
+# see accounts/test_dynamic_form_scope.py::DynamicFormNonStaffRoleEscalationTests.
 PLATFORM_SCOPE_WIDENED_MODELS = {'category', 'product'}
 
 class DynamicFormController(APIView):
@@ -30,7 +37,18 @@ class DynamicFormController(APIView):
         #Checking if Model Exist in Our Dynamic Form Models
         if modelName not in getDynamicFormModels():
             return renderResponse(data='Model Not Exist',message='Model Not Exist',status=404)
-        
+
+        if id is None and not isPlatformStaff(request.user):
+            # Creation is a back-office action for every dynamic-form model
+            # (product, category, warehouse, supplier/users, rackShelfFloor),
+            # not just the widened ones -- without this gate any authenticated
+            # Customer/Rider/Restaurant (isPlatformScope is True for them too,
+            # see isPlatformStaff's docstring) could write arbitrary rows into
+            # these tables under their own domain. Those rows are still real:
+            # they land in admin lists/counts, so a "your own domain" caveat
+            # doesn't make it safe.
+            return renderResponse(data='Forbidden', message='Forbidden', status=403)
+
         #Getting the Model Name from Dynamic Form Models
         model=getDynamicFormModels()[modelName]
         #Getting the Model Class from the Model Name
@@ -77,8 +95,13 @@ class DynamicFormController(APIView):
 
         #Creating the Model Instance and Saving the Data in the Database
         if id:
+            if modelName in PLATFORM_SCOPE_WIDENED_MODELS and request.user.role not in PLATFORM_STAFF_ROLES:
+                # Non-back-office roles (Customer/Rider/Restaurant/...) must
+                # never touch the product/category editor at all -- see
+                # PLATFORM_SCOPE_WIDENED_MODELS' comment above.
+                return renderResponse(data='Forbidden', message='Forbidden', status=403)
             qs = model_class.objects.filter(id=id)
-            if modelName not in PLATFORM_SCOPE_WIDENED_MODELS or not isPlatformScope(request.user):
+            if modelName not in PLATFORM_SCOPE_WIDENED_MODELS or not isPlatformStaff(request.user):
                 qs = qs.filter(domain_user_id_id=request.user.domain_user_id_id)
             model_instace = qs.first()
             if model_instace is None:
@@ -115,7 +138,13 @@ class DynamicFormController(APIView):
     def get(self,request,modelName,id=None):
         if modelName not in getDynamicFormModels():
             return renderResponse(data='Model Not Found',message='Model Not Found',status=404)
-        
+
+        if id is None and not isPlatformStaff(request.user):
+            # Matches the same gate on post() above -- a blank create-form
+            # schema is low severity on its own, but it should require the
+            # same authorization as actually being able to submit it.
+            return renderResponse(data='Forbidden', message='Forbidden', status=403)
+
         model = getDynamicFormModels()[modelName]
         model_class=apps.get_model(model)
 
@@ -123,8 +152,10 @@ class DynamicFormController(APIView):
             return renderResponse(data='Model Not Found',message='Model Not Found',status=404)
         
         if id:
+            if modelName in PLATFORM_SCOPE_WIDENED_MODELS and request.user.role not in PLATFORM_STAFF_ROLES:
+                return renderResponse(data='Forbidden', message='Forbidden', status=403)
             qs = model_class.objects.filter(id=id)
-            if modelName not in PLATFORM_SCOPE_WIDENED_MODELS or not isPlatformScope(request.user):
+            if modelName not in PLATFORM_SCOPE_WIDENED_MODELS or not isPlatformStaff(request.user):
                 qs = qs.filter(domain_user_id_id=request.user.domain_user_id_id)
             model_instance = qs.first()
             if model_instance is None:

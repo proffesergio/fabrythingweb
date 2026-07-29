@@ -3,7 +3,7 @@
 into our catalog. See catalog/services_scrape_import.py for the machinery
 and docs/PRODUCT_IMPORT.md for the owner-facing how-to.
 
-Both endpoints are platform-scope only (core.helpers.isPlatformScope), same
+Both endpoints are platform-staff only (core.helpers.isPlatformStaff), same
 rule as every other admin catalog endpoint (AdminSyncPricesView,
 AdminProductQuickUpdateView).
 """
@@ -22,7 +22,7 @@ from catalog.services_scrape_import import (
     browse_candidates,
     import_candidates,
 )
-from core.helpers import isPlatformScope, renderResponse
+from core.helpers import isPlatformStaff, renderResponse
 
 
 class AdminBrowseImportCandidatesView(APIView):
@@ -36,7 +36,7 @@ class AdminBrowseImportCandidatesView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        if not isPlatformScope(request.user):
+        if not isPlatformStaff(request.user):
             return renderResponse(data='Forbidden', message='Forbidden', status=403)
 
         source = request.query_params.get('source')
@@ -90,7 +90,7 @@ class AdminImportProductsView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
-        if not isPlatformScope(request.user):
+        if not isPlatformStaff(request.user):
             return renderResponse(data='Forbidden', message='Forbidden', status=403)
 
         data = request.data
