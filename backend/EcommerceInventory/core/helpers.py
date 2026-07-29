@@ -195,6 +195,51 @@ class CustomPageNumberPagination(PageNumberPagination):
     max_page_size=100
 
 
+def resolves_to_orderable_field(queryset, ordering):
+    """True if `ordering` (optionally a leading '-' for descending) names a
+    real field on `queryset`'s model or one of the queryset's own
+    annotations -- i.e. it is safe to pass to `queryset.order_by()` without
+    Django raising `FieldError`. Shared by `apply_requested_ordering` below
+    and by storefront/views.py's own ordering-alias resolution so the two
+    validation paths cannot drift apart.
+    """
+    if not ordering:
+        return False
+
+    field_name = ordering[1:] if ordering.startswith('-') else ordering
+    if not field_name:
+        return False
+
+    model_field_names = {f.name for f in queryset.model._meta.get_fields()}
+    annotation_names = set(queryset.query.annotations.keys())
+    return field_name in model_field_names or field_name in annotation_names
+
+
+def apply_requested_ordering(queryset, ordering):
+    """Safely apply a user-supplied `ordering` query param to `queryset`.
+
+    Both common_list_decorator implementations used to pass the raw query
+    param straight to queryset.order_by(). That is fine for a real column
+    (e.g. ``name`` or ``-created_at``) but a view's get_queryset() often maps
+    *friendly* ordering names (``newest``, ``price_low``, ...) to a real field
+    itself (see storefront/views.py) and only ever intended those friendly
+    names to reach here -- 'newest' is not a column on any model, so
+    order_by('newest') raises django.core.exceptions.FieldError, which
+    surfaces as a bare 500. The same is true of any typo or garbage value a
+    client sends (`?ordering=;DROP ...`).
+
+    A query param must never be able to 500 a list endpoint. Validate the
+    (optionally '-'-prefixed) field name against the queryset's model fields
+    and its own annotations before ordering by it; if it doesn't resolve to
+    either, leave the queryset exactly as it was handed in -- the view has
+    likely already ordered it correctly (as storefront's get_queryset does)
+    -- rather than raising or silently returning unordered data.
+    """
+    if resolves_to_orderable_field(queryset, ordering):
+        return queryset.order_by(ordering)
+    return queryset
+
+
 class CommonListAPIMixin:
     serializer_class=None
     pagination_class=CustomPageNumberPagination
@@ -218,9 +263,7 @@ class CommonListAPIMixin:
                     queryset=queryset.filter(search_conditions)
 
                 ordering=self.request.query_params.get('ordering',None)
-
-                if ordering:
-                    queryset=queryset.order_by(ordering)
+                queryset=apply_requested_ordering(queryset,ordering)
 
                 page=self.paginate_queryset(queryset)
 
@@ -279,9 +322,7 @@ class CommonListAPIMixinWithFilter:
                     queryset=queryset.filter(search_conditions)
 
                 ordering=self.request.query_params.get('ordering',None)
-
-                if ordering:
-                    queryset=queryset.order_by(ordering)
+                queryset=apply_requested_ordering(queryset,ordering)
 
                 page=self.paginate_queryset(queryset)
 
