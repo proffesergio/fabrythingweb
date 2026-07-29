@@ -1,6 +1,7 @@
 from accounts.models import Users
 from core.helpers import CommonListAPIMixin, CustomPageNumberPagination, absolutize_image_list, createParsedCreatedAtUpdatedAt, isPlatformScope, renderResponse
-from catalog.models import ProductQuestions, ProductReviews, Products
+from catalog.category_tree import descendant_category_ids
+from catalog.models import Categories, ProductQuestions, ProductReviews, Products, ProductVariant
 from catalog.services_price_sync import sync_source_prices
 from rest_framework import generics
 from rest_framework import serializers
@@ -39,6 +40,8 @@ class ProductSerializer(serializers.ModelSerializer):
     domain_user_id=serializers.SerializerMethodField()
     added_by_user_id=serializers.SerializerMethodField()
     image=serializers.SerializerMethodField()
+    total_stock=serializers.SerializerMethodField()
+    variant_count=serializers.SerializerMethodField()
     class Meta:
         model = Products
         fields = '__all__'
@@ -49,6 +52,17 @@ class ProductSerializer(serializers.ModelSerializer):
         # same as the storefront serializer, so the admin panel image previews
         # don't 404 either. See core.helpers.absolutize_media_url.
         return absolutize_image_list(obj.image, self.context.get('request'))
+
+    def get_total_stock(self,obj):
+        # Surfaced so the admin all-products list can show a stock number
+        # without an extra request per row -- stock itself lives on
+        # ProductVariant, not this row (see AdminProductQuickUpdateView).
+        return obj.total_stock
+
+    def get_variant_count(self,obj):
+        # Lets the admin list decide whether stock is directly inline-editable
+        # (exactly one variant) or needs the per-variant picker (several).
+        return obj.variants.count()
 
     def get_category_id(self,obj):
         return "#"+str(obj.category_id.id)+" "+obj.category_id.name
@@ -76,8 +90,25 @@ class ProductListView(generics.ListAPIView):
             queryset = Products.objects.all()
         else:
             queryset = Products.objects.filter(domain_user_id=self.request.user.domain_user_id_id)
+
+        category_param = self.request.query_params.get('category')
+        if category_param:
+            # Browse-by-category filter for the admin product list. The
+            # taxonomy is 3 levels deep and products live in the leaves, so
+            # this must walk the whole subtree (catalog.category_tree,
+            # shared with the storefront filter) rather than matching only
+            # direct children -- see BUG 2 in category_tree.py.
+            lookup = Q(id=category_param) if str(category_param).isdigit() else Q(slug=category_param)
+            category = Categories.objects.filter(lookup).first()
+            if category:
+                queryset = queryset.filter(category_id__in=descendant_category_ids(category))
+            else:
+                # An unrecognised category must return nothing, not silently
+                # fall through to the whole catalog -- see BUG 3 in
+                # storefront/views.py, the same trap on the storefront side.
+                queryset = queryset.none()
         return queryset
-    
+
     @CommonListAPIMixin.common_list_decorator(ProductSerializer)
     def list(self,request,*args,**kwargs):
         return super().list(request,*args,**kwargs)
@@ -164,6 +195,168 @@ class AdminSyncPricesView(APIView):
             data={"changes": [c for c in changes if c["updated"]],
                   "checked": len(changes)},
             message='Prices synced')
+
+
+def _variant_summary(variant):
+    return {
+        "id": variant.id,
+        "sku": variant.sku,
+        "size": variant.size,
+        "color": variant.color,
+        "stock_quantity": variant.stock_quantity,
+        "price": float(variant.price),
+        "discount_price": float(variant.discount_price) if variant.discount_price is not None else None,
+    }
+
+
+class AdminProductQuickUpdateView(APIView):
+    """PATCH /api/products/admin/<pk>/quick-update/
+
+    Patches only the "quick" fields the all-products list edits inline, so an
+    admin can fix a price/stock typo without opening the full edit form.
+    Platform-scope only (Super Admin or a domain-root user), same rule as
+    every other admin catalog endpoint (core.helpers.isPlatformScope).
+
+    Editable fields -- nothing else, and never source_url/source_price (those
+    belong to the partner price sync in services_price_sync.py):
+      - initial_selling_price (float, > 0)
+      - discount_price (float or null; must be < the selling price in effect
+        after this same request, i.e. the new price if one was sent)
+      - status ("ACTIVE" / "INACTIVE") -- availability
+      - stock_quantity -- lives on ProductVariant, not Products. A product
+        with exactly one variant is updated directly. A product with several
+        variants requires an explicit `variant_id` in the body; without one
+        the request is rejected (field_errors.variant_id) rather than
+        silently guessing which SKU the number belongs to. The response
+        always includes the full `variants` list so the UI can offer a
+        per-variant picker.
+
+    Price changes are mirrored onto every ACTIVE variant's price/discount_price,
+    matching the precedent in services_price_sync.sync_source_prices: checkout
+    charges ProductVariant.effective_price, not the Products row, so the two
+    must never be allowed to disagree.
+    """
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    ALLOWED_STATUSES = {"ACTIVE", "INACTIVE"}
+
+    def patch(self, request, pk):
+        if not isPlatformScope(request.user):
+            return renderResponse(data='Forbidden', message='Forbidden', status=403)
+
+        try:
+            product = Products.objects.get(pk=pk)
+        except Products.DoesNotExist:
+            return renderResponse(data='Product not found', message='Not Found', status=404)
+
+        data = request.data
+        errors = {}
+        update_fields = []
+
+        # --- initial_selling_price -------------------------------------
+        new_selling_price = product.initial_selling_price
+        if 'initial_selling_price' in data:
+            raw = data.get('initial_selling_price')
+            try:
+                new_selling_price = float(raw)
+            except (TypeError, ValueError):
+                errors['initial_selling_price'] = ['Must be a number.']
+            else:
+                if new_selling_price <= 0:
+                    errors['initial_selling_price'] = ['Must be greater than 0.']
+
+        # --- discount_price ----------------------------------------------
+        new_discount_price = product.discount_price
+        discount_provided = 'discount_price' in data
+        if discount_provided:
+            raw = data.get('discount_price')
+            if raw is None or raw == '':
+                new_discount_price = None
+            else:
+                try:
+                    new_discount_price = float(raw)
+                except (TypeError, ValueError):
+                    errors['discount_price'] = ['Must be a number.']
+
+        if 'discount_price' not in errors and new_discount_price is not None \
+                and 'initial_selling_price' not in errors:
+            if new_discount_price >= new_selling_price:
+                errors['discount_price'] = ['Discount price must be less than the selling price.']
+
+        # --- status (availability) ---------------------------------------
+        new_status = product.status
+        if 'status' in data:
+            new_status = data.get('status')
+            if new_status not in self.ALLOWED_STATUSES:
+                errors['status'] = [f"Must be one of {sorted(self.ALLOWED_STATUSES)}."]
+
+        # --- stock_quantity (lives on ProductVariant) ---------------------
+        target_variant = None
+        new_stock_quantity = None
+        if 'stock_quantity' in data:
+            raw = data.get('stock_quantity')
+            try:
+                new_stock_quantity = int(raw)
+            except (TypeError, ValueError):
+                errors['stock_quantity'] = ['Must be a whole number.']
+            else:
+                if new_stock_quantity < 0:
+                    errors['stock_quantity'] = ['Cannot be negative.']
+
+            if 'stock_quantity' not in errors:
+                variants = list(product.variants.all())
+                variant_id = data.get('variant_id')
+                if variant_id:
+                    target_variant = next((v for v in variants if v.id == int(variant_id)), None)
+                    if target_variant is None:
+                        errors['variant_id'] = ['Variant does not belong to this product.']
+                elif len(variants) == 1:
+                    target_variant = variants[0]
+                elif len(variants) == 0:
+                    errors['stock_quantity'] = ['This product has no variants to hold stock.']
+                else:
+                    errors['variant_id'] = [
+                        'This product has multiple variants; specify variant_id to update its stock.']
+
+        if errors:
+            return renderResponse(data=errors, message='Validation error', status=400)
+
+        # --- apply -----------------------------------------------------
+        if 'initial_selling_price' in data:
+            product.initial_selling_price = new_selling_price
+            update_fields.append('initial_selling_price')
+        if discount_provided:
+            product.discount_price = new_discount_price
+            update_fields.append('discount_price')
+        if 'status' in data:
+            product.status = new_status
+            update_fields.append('status')
+
+        if update_fields:
+            update_fields.append('updated_at')
+            product.save(update_fields=update_fields)
+
+        # Keep every active variant's price in agreement with the product --
+        # same rule services_price_sync.sync_source_prices follows, because
+        # checkout charges ProductVariant.effective_price, not this row.
+        if 'initial_selling_price' in data or discount_provided:
+            product.variants.filter(is_active=True).update(
+                price=new_selling_price, discount_price=new_discount_price)
+
+        if target_variant is not None:
+            target_variant.stock_quantity = new_stock_quantity
+            target_variant.save(update_fields=['stock_quantity', 'updated_at'])
+
+        variants = [_variant_summary(v) for v in product.variants.all()]
+        response_data = {
+            "id": product.id,
+            "initial_selling_price": product.initial_selling_price,
+            "discount_price": product.discount_price,
+            "status": product.status,
+            "variants": variants,
+        }
+        return renderResponse(data=response_data, message='Product updated')
 
 
 class UpdateProductQuestionsView(generics.UpdateAPIView):

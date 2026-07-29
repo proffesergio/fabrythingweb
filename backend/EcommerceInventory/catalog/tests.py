@@ -45,6 +45,32 @@ class AdminProductListTests(TestCase):
         self.assertGreaterEqual(len(res.json()["data"]["data"]), 1)
 
 
+class AdminProductListStockFieldsTests(TestCase):
+    """The admin all-products list needs total_stock/variant_count on each
+    row to render inline stock editing (single-variant products edit stock
+    directly; multi-variant products need a picker) without an extra request
+    per row."""
+
+    def setUp(self):
+        self.client = APIClient()
+        self.admin = User.objects.create(username="stockadmin", email="stockadmin@x.com", role="Super Admin")
+        self.cat = Categories.objects.create(name="Stock Cat", slug="stock-cat", description="")
+
+    def test_list_exposes_total_stock_and_variant_count(self):
+        from catalog.models import ProductVariant
+        p = Products.objects.create(name="Stocked Tee", slug="stocked-tee", sku="ST-0001",
+                                    category_id=self.cat, status="ACTIVE", description="",
+                                    initial_buying_price=50, initial_selling_price=100)
+        ProductVariant.objects.create(product=p, sku="ST-0001-A", size="S", price=100, stock_quantity=7, is_active=True)
+        ProductVariant.objects.create(product=p, sku="ST-0001-B", size="M", price=100, stock_quantity=3, is_active=True)
+        auth(self.client, self.admin)
+        res = self.client.get("/api/products/")
+        self.assertEqual(res.status_code, 200, res.content)
+        row = next(r for r in res.json()["data"]["data"] if r["slug"] == "stocked-tee")
+        self.assertEqual(row["total_stock"], 10)
+        self.assertEqual(row["variant_count"], 2)
+
+
 class ProductSourceFieldsTests(TestCase):
     def test_source_fields_default_empty(self):
         cat = Categories.objects.create(name="Laptops", slug="laptops-t", description="")
