@@ -1,10 +1,10 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-    Box, Breadcrumbs, Button, Chip, IconButton, LinearProgress, Table, TableBody, TableCell,
+    Box, Breadcrumbs, Button, Checkbox, Chip, IconButton, LinearProgress, Table, TableBody, TableCell,
     TableContainer, TableHead, TableRow, Paper, TextField, Typography, Stack, Avatar,
-    InputAdornment, Pagination, Tooltip, Dialog, DialogContent, Divider, MenuItem, Switch,
-    CircularProgress,
+    InputAdornment, Pagination, Tooltip, Dialog, DialogContent, DialogActions, DialogTitle,
+    Divider, MenuItem, Switch, CircularProgress, Alert,
 } from "@mui/material";
 import Add from "@mui/icons-material/Add";
 import Edit from "@mui/icons-material/Edit";
@@ -12,6 +12,7 @@ import SaveIcon from "@mui/icons-material/Save";
 import UndoIcon from "@mui/icons-material/Undo";
 import SearchIcon from "@mui/icons-material/Search";
 import SyncIcon from "@mui/icons-material/Sync";
+import LocalShippingIcon from "@mui/icons-material/LocalShipping";
 import RateReviewOutlinedIcon from "@mui/icons-material/RateReviewOutlined";
 import HelpOutlineIcon from "@mui/icons-material/HelpOutline";
 import { toast } from "react-toastify";
@@ -39,6 +40,10 @@ const draftFromProduct = (p) => ({
     initial_selling_price: String(p.initial_selling_price ?? ""),
     discount_price: p.discount_price === null || p.discount_price === undefined ? "" : String(p.discount_price),
     stock_quantity: String(p.total_stock ?? 0),
+    // null/undefined -- no per-product override, falls back to the store's
+    // flat rate -- must render as blank, the same as discount_price's "no
+    // discount" state, not as "0" (0 is a real, distinct "ships free" value).
+    shipping_fee: p.shipping_fee === null || p.shipping_fee === undefined ? "" : String(p.shipping_fee),
     saved: true, // no unsaved changes yet
 });
 
@@ -61,6 +66,16 @@ const ManageProducts = ({ onProductSelected }) => {
     const [edits, setEdits] = useState({});
     const [rowErrors, setRowErrors] = useState({});
     const [savingIds, setSavingIds] = useState({});
+
+    // Bulk shipping-fee state: checkboxes select rows on the current page
+    // ("individual" products); with none checked, the dialog falls back to
+    // the active category filter ("all" products in that category/subtree).
+    const [selectedIds, setSelectedIds] = useState(new Set());
+    const [bulkOpen, setBulkOpen] = useState(false);
+    const [bulkFee, setBulkFee] = useState("");
+    const [bulkSaving, setBulkSaving] = useState(false);
+    const [bulkCategoryCount, setBulkCategoryCount] = useState(null);
+    const [bulkCategoryCountLoading, setBulkCategoryCountLoading] = useState(false);
 
     const flatCategories = useMemo(() => flattenCategories(categories), [categories]);
 
@@ -92,6 +107,9 @@ const ManageProducts = ({ onProductSelected }) => {
             list.forEach((p) => { nextEdits[p.id] = draftFromProduct(p); });
             setEdits(nextEdits);
             setRowErrors({});
+            // A refetched page's rows are not the same rows that were
+            // selected before -- never carry a stale selection across pages.
+            setSelectedIds(new Set());
         }
     }, [page, debounced, categoryFilter]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -124,6 +142,13 @@ const ManageProducts = ({ onProductSelected }) => {
         setRowErrors((prev) => ({ ...prev, [product.id]: {} }));
     };
 
+    // product.shipping_fee can come back as a string ("250.00", from a plain
+    // DecimalField) -- always compare as Number so "250.00" and 250 don't
+    // register as a spurious diff.
+    const currentShippingFee = (product) =>
+        product.shipping_fee === null || product.shipping_fee === undefined
+            ? null : Number(product.shipping_fee);
+
     const isDirty = (product) => {
         const d = edits[product.id];
         if (!d) return false;
@@ -132,7 +157,9 @@ const ManageProducts = ({ onProductSelected }) => {
         const discountChanged = draftDiscount !== (product.discount_price ?? null);
         const stockEditable = (product.variant_count ?? 0) <= 1;
         const stockChanged = stockEditable && Number(d.stock_quantity) !== (product.total_stock ?? 0);
-        return priceChanged || discountChanged || stockChanged;
+        const draftShippingFee = d.shipping_fee === "" ? null : Number(d.shipping_fee);
+        const shippingChanged = draftShippingFee !== currentShippingFee(product);
+        return priceChanged || discountChanged || stockChanged || shippingChanged;
     };
 
     // Applies a server-confirmed product onto local state, keeping the table
@@ -156,6 +183,10 @@ const ManageProducts = ({ onProductSelected }) => {
         if (stockEditable && Number(draft.stock_quantity) !== (product.total_stock ?? 0)) {
             body.stock_quantity = Number(draft.stock_quantity);
         }
+        const draftShippingFee = draft.shipping_fee === "" ? null : Number(draft.shipping_fee);
+        if (draftShippingFee !== currentShippingFee(product)) {
+            body.shipping_fee = draftShippingFee;
+        }
         if (Object.keys(body).length === 0) return;
 
         setSavingIds((prev) => ({ ...prev, [product.id]: true }));
@@ -178,6 +209,7 @@ const ManageProducts = ({ onProductSelected }) => {
                 initial_selling_price: data.initial_selling_price,
                 discount_price: data.discount_price,
                 status: data.status,
+                shipping_fee: data.shipping_fee,
                 total_stock: totalStock,
                 variant_count: data.variants?.length ?? product.variant_count,
             });
@@ -187,6 +219,7 @@ const ManageProducts = ({ onProductSelected }) => {
                     initial_selling_price: String(data.initial_selling_price),
                     discount_price: data.discount_price === null ? "" : String(data.discount_price),
                     stock_quantity: String(totalStock),
+                    shipping_fee: data.shipping_fee === null || data.shipping_fee === undefined ? "" : String(data.shipping_fee),
                     saved: true,
                 },
             }));
@@ -217,6 +250,85 @@ const ManageProducts = ({ onProductSelected }) => {
         }
     };
 
+    // --- Bulk shipping fee (apply to selected rows, or a whole category) ---
+
+    const toggleSelectRow = (id) => {
+        setSelectedIds((prev) => {
+            const next = new Set(prev);
+            if (next.has(id)) next.delete(id); else next.add(id);
+            return next;
+        });
+    };
+
+    const allOnPageSelected = products.length > 0 && products.every((p) => selectedIds.has(p.id));
+    const toggleSelectAllOnPage = () => {
+        setSelectedIds((prev) => {
+            if (allOnPageSelected) return new Set();
+            return new Set(products.map((p) => p.id));
+        });
+    };
+
+    const selectedCategoryName = useMemo(() => {
+        const found = flatCategories.find((c) => String(c.id) === String(categoryFilter));
+        return found?.name || "";
+    }, [flatCategories, categoryFilter]);
+
+    const openBulkDialog = async () => {
+        setBulkFee("");
+        setBulkOpen(true);
+        setBulkCategoryCount(null);
+        // Only need a fresh count when the dialog will actually target the
+        // category (no rows checked) -- the count must ignore the search box
+        // (the bulk endpoint itself only understands product_ids/category,
+        // not free-text search), so it's fetched fresh rather than reused
+        // from the on-screen (possibly search-narrowed) totalPages state.
+        if (selectedIds.size === 0 && categoryFilter) {
+            setBulkCategoryCountLoading(true);
+            const res = await callApi({
+                url: "products/", method: "GET",
+                params: { category: categoryFilter, pageSize: 1, page: 1 },
+            });
+            setBulkCategoryCountLoading(false);
+            if (res?.status === 200) {
+                setBulkCategoryCount(res.data.data.totalItems ?? null);
+            }
+        }
+    };
+
+    const bulkScope = selectedIds.size > 0 ? "selection" : (categoryFilter ? "category" : null);
+
+    const handleBulkApply = async () => {
+        if (!bulkScope) return;
+        const body = { shipping_fee: bulkFee === "" ? null : Number(bulkFee) };
+        if (bulkScope === "selection") {
+            body.product_ids = Array.from(selectedIds);
+        } else {
+            body.category = categoryFilter;
+        }
+
+        setBulkSaving(true);
+        // rawError: same reason as every other admin write here -- without
+        // it a 400 (e.g. a negative fee, or a batch over the server's cap)
+        // would come back as null and this would toast a fake success.
+        const res = await callApi({
+            url: "products/admin/shipping-fee/bulk/", method: "POST", body,
+            rawError: true, silent: true,
+        });
+        setBulkSaving(false);
+
+        if (res?.status === 200) {
+            const updated = res.data.data.updated;
+            toast.success(`Shipping fee updated on ${updated} product${updated === 1 ? "" : "s"}`);
+            setBulkOpen(false);
+            setSelectedIds(new Set());
+            getProducts();
+        } else {
+            const fieldErrors = res?.data?.field_errors || {};
+            const firstError = Object.values(fieldErrors)[0]?.[0];
+            toast.error(firstError || res?.data?.message || "Could not apply the bulk shipping fee");
+        }
+    };
+
     return (
         <Box sx={{ width: "100%" }}>
             {!onProductSelected && (
@@ -226,6 +338,13 @@ const ManageProducts = ({ onProductSelected }) => {
                         <Typography variant="body2">Products</Typography>
                     </Breadcrumbs>
                     <Stack direction="row" spacing={1}>
+                        <Button
+                            variant="outlined" startIcon={<LocalShippingIcon />}
+                            disabled={selectedIds.size === 0 && !categoryFilter}
+                            onClick={openBulkDialog}
+                        >
+                            Bulk shipping fee
+                        </Button>
                         <Button variant="outlined" startIcon={<SyncIcon />} disabled={syncing} onClick={handleSyncPrices}>
                             {syncing ? "Syncing…" : "Sync prices"}
                         </Button>
@@ -261,10 +380,23 @@ const ManageProducts = ({ onProductSelected }) => {
                 <Table>
                     <TableHead>
                         <TableRow>
+                            {!onProductSelected && (
+                                <TableCell padding="checkbox">
+                                    <Tooltip title="Select all on this page, to bulk-apply a shipping fee">
+                                        <Checkbox
+                                            size="small"
+                                            checked={allOnPageSelected}
+                                            indeterminate={selectedIds.size > 0 && !allOnPageSelected}
+                                            onChange={toggleSelectAllOnPage}
+                                        />
+                                    </Tooltip>
+                                </TableCell>
+                            )}
                             <TableCell>Product</TableCell>
                             <TableCell>Category</TableCell>
                             <TableCell align="right">Price</TableCell>
                             <TableCell align="right">Discount</TableCell>
+                            <TableCell align="right">Shipping</TableCell>
                             <TableCell align="right">Stock</TableCell>
                             <TableCell align="center">Available</TableCell>
                             <TableCell align="right">Actions</TableCell>
@@ -272,7 +404,7 @@ const ManageProducts = ({ onProductSelected }) => {
                     </TableHead>
                     <TableBody>
                         {products.length === 0 && !loading && (
-                            <TableRow><TableCell colSpan={7} align="center">No products found</TableCell></TableRow>
+                            <TableRow><TableCell colSpan={onProductSelected ? 8 : 9} align="center">No products found</TableCell></TableRow>
                         )}
                         {products.map((p) => {
                             const draft = edits[p.id] || draftFromProduct(p);
@@ -283,6 +415,16 @@ const ManageProducts = ({ onProductSelected }) => {
 
                             return (
                                 <TableRow key={p.id} hover selected={dirty}>
+                                    {!onProductSelected && (
+                                        <TableCell padding="checkbox">
+                                            <Checkbox
+                                                size="small"
+                                                checked={selectedIds.has(p.id)}
+                                                onChange={() => toggleSelectRow(p.id)}
+                                                inputProps={{ "aria-label": `Select ${p.name}` }}
+                                            />
+                                        </TableCell>
+                                    )}
                                     <TableCell>
                                         <Stack direction="row" spacing={1.5} alignItems="center">
                                             <Avatar variant="rounded" src={firstImage(p.image)} sx={{ width: 44, height: 44 }}>
@@ -303,6 +445,11 @@ const ManageProducts = ({ onProductSelected }) => {
                                             </TableCell>
                                             <TableCell align="right">
                                                 <Typography variant="body2" color="text.secondary">{p.discount_price ? `৳${p.discount_price}` : "—"}</Typography>
+                                            </TableCell>
+                                            <TableCell align="right">
+                                                <Typography variant="body2" color="text.secondary">
+                                                    {p.shipping_fee !== null && p.shipping_fee !== undefined ? `৳${p.shipping_fee}` : "store rate"}
+                                                </Typography>
                                             </TableCell>
                                             <TableCell align="right">{p.total_stock ?? "—"}</TableCell>
                                             <TableCell align="center">
@@ -333,6 +480,17 @@ const ManageProducts = ({ onProductSelected }) => {
                                                 />
                                             </TableCell>
                                             <TableCell align="right">
+                                                <TextField
+                                                    size="small" type="number" disabled={saving} value={draft.shipping_fee}
+                                                    onChange={(e) => setDraftField(p.id, "shipping_fee", e.target.value)}
+                                                    error={!!errors.shipping_fee}
+                                                    helperText={errors.shipping_fee?.[0]}
+                                                    placeholder="store rate"
+                                                    InputProps={{ startAdornment: <InputAdornment position="start">৳</InputAdornment> }}
+                                                    sx={{ width: 120 }}
+                                                />
+                                            </TableCell>
+                                            <TableCell align="right">
                                                 {stockEditable ? (
                                                     <TextField
                                                         size="small" type="number" disabled={saving} value={draft.stock_quantity}
@@ -354,6 +512,7 @@ const ManageProducts = ({ onProductSelected }) => {
                                                             size="small" color="success" checked={p.status === "ACTIVE"}
                                                             disabled={saving}
                                                             onChange={() => handleToggleAvailability(p)}
+                                                            inputProps={{ "aria-label": `Toggle availability for ${p.name}` }}
                                                         />
                                                     </span>
                                                 </Tooltip>
@@ -405,6 +564,55 @@ const ManageProducts = ({ onProductSelected }) => {
             </Dialog>
             <Dialog maxWidth="lg" fullWidth open={!!questionsFor} onClose={() => setQuestionsFor(null)}>
                 <DialogContent><ManageQuestions product_id={questionsFor} /></DialogContent>
+            </Dialog>
+
+            <Dialog maxWidth="xs" fullWidth open={bulkOpen} onClose={() => !bulkSaving && setBulkOpen(false)}>
+                <DialogTitle>Bulk shipping fee</DialogTitle>
+                <DialogContent>
+                    {bulkScope === "selection" && (
+                        <Alert severity="info" sx={{ mb: 2 }}>
+                            This will set the shipping fee on <strong>{selectedIds.size}</strong> selected
+                            product{selectedIds.size === 1 ? "" : "s"}.
+                        </Alert>
+                    )}
+                    {bulkScope === "category" && (
+                        <Alert severity="info" sx={{ mb: 2 }}>
+                            {bulkCategoryCountLoading ? (
+                                "Counting matching products…"
+                            ) : (
+                                <>
+                                    This will set the shipping fee on{" "}
+                                    <strong>{bulkCategoryCount ?? "all"}</strong> product
+                                    {bulkCategoryCount === 1 ? "" : "s"} in{" "}
+                                    <strong>{selectedCategoryName || "the selected category"}</strong>{" "}
+                                    (its full subtree, ignoring the search box).
+                                </>
+                            )}
+                        </Alert>
+                    )}
+                    {!bulkScope && (
+                        <Alert severity="warning" sx={{ mb: 2 }}>
+                            Check some products, or pick a category filter, before applying a bulk fee.
+                        </Alert>
+                    )}
+                    <TextField
+                        fullWidth size="small" type="number" label="Shipping fee"
+                        value={bulkFee} onChange={(e) => setBulkFee(e.target.value)}
+                        placeholder="leave blank to use the store rate"
+                        InputProps={{ startAdornment: <InputAdornment position="start">৳</InputAdornment> }}
+                        disabled={bulkSaving}
+                        helperText="Leave blank to reset to the store's flat rate; 0 means free delivery."
+                    />
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={() => setBulkOpen(false)} disabled={bulkSaving}>Cancel</Button>
+                    <Button
+                        variant="contained" onClick={handleBulkApply}
+                        disabled={!bulkScope || bulkSaving || bulkCategoryCountLoading}
+                    >
+                        {bulkSaving ? "Applying…" : "Apply"}
+                    </Button>
+                </DialogActions>
             </Dialog>
         </Box>
     );

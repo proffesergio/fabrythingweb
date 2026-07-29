@@ -68,6 +68,18 @@ class Products(models.Model):
     # initial_selling_price (today's un-marked-up price) on first run.
     base_price=models.FloatField(blank=True,null=True)
     discount_price=models.FloatField(blank=True,null=True)
+    # Per-product shipping override. NULL (the default) means "use the
+    # store's flat rate" (core.models.StoreConfiguration.fixed_shipping_rate)
+    # -- this must stay distinct from an explicit 0, which means this
+    # specific product ships free. Order-level shipping is the max() of the
+    # store's flat rate and every distinct per-product fee in the cart (see
+    # core.models.StoreConfiguration.shipping_for) -- one delivery trip, and
+    # the bulkiest/most expensive-to-ship item sets the cost.
+    shipping_fee=models.DecimalField(
+        max_digits=8, decimal_places=2, blank=True, null=True,
+        help_text="Per-product shipping fee. Leave blank to use the store's "
+                  "flat rate; 0 means this product ships free.",
+    )
     weight=models.FloatField(blank=True,null=True)
     dimensions=models.CharField(default='0x0x0',max_length=255,blank=True)
     uom=models.CharField(max_length=255,default='PCS',blank=True)

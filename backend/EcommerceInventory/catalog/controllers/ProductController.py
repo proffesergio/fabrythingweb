@@ -223,6 +223,11 @@ class AdminProductQuickUpdateView(APIView):
       - discount_price (float or null; must be < the selling price in effect
         after this same request, i.e. the new price if one was sent)
       - status ("ACTIVE" / "INACTIVE") -- availability
+      - shipping_fee (float >= 0, or null). Null means "use the store's flat
+        rate" -- distinct from an explicit 0, which means this product ships
+        free. Order-level shipping is computed from this field in exactly one
+        place, core.models.StoreConfiguration.shipping_for; nothing here
+        recomputes it.
       - stock_quantity -- lives on ProductVariant, not Products. A product
         with exactly one variant is updated directly. A product with several
         variants requires an explicit `variant_id` in the body; without one
@@ -291,6 +296,25 @@ class AdminProductQuickUpdateView(APIView):
             if new_status not in self.ALLOWED_STATUSES:
                 errors['status'] = [f"Must be one of {sorted(self.ALLOWED_STATUSES)}."]
 
+        # --- shipping_fee --------------------------------------------------
+        # None means "use the store flat rate"; an explicit 0 means this
+        # product ships free -- the two must not be conflated (see the model
+        # field's docstring in catalog/models.py).
+        new_shipping_fee = product.shipping_fee
+        shipping_fee_provided = 'shipping_fee' in data
+        if shipping_fee_provided:
+            raw = data.get('shipping_fee')
+            if raw is None or raw == '':
+                new_shipping_fee = None
+            else:
+                try:
+                    new_shipping_fee = float(raw)
+                except (TypeError, ValueError):
+                    errors['shipping_fee'] = ['Must be a number.']
+                else:
+                    if new_shipping_fee < 0:
+                        errors['shipping_fee'] = ['Cannot be negative.']
+
         # --- stock_quantity (lives on ProductVariant) ---------------------
         target_variant = None
         new_stock_quantity = None
@@ -332,6 +356,9 @@ class AdminProductQuickUpdateView(APIView):
         if 'status' in data:
             product.status = new_status
             update_fields.append('status')
+        if shipping_fee_provided:
+            product.shipping_fee = new_shipping_fee
+            update_fields.append('shipping_fee')
 
         if update_fields:
             update_fields.append('updated_at')
@@ -354,9 +381,98 @@ class AdminProductQuickUpdateView(APIView):
             "initial_selling_price": product.initial_selling_price,
             "discount_price": product.discount_price,
             "status": product.status,
+            "shipping_fee": float(product.shipping_fee) if product.shipping_fee is not None else None,
             "variants": variants,
         }
         return renderResponse(data=response_data, message='Product updated')
+
+
+class AdminBulkShippingFeeView(APIView):
+    """POST /api/products/admin/shipping-fee/bulk/
+
+    Sets ``shipping_fee`` on many products in one call -- the owner asked to
+    be able to apply a fee to "all or individual products", and doing that
+    one quick-update PATCH at a time doesn't scale to a catalog-wide change.
+
+    Body: ``{"shipping_fee": <number or null>, "product_ids": [...]}`` OR
+    ``{"shipping_fee": ..., "category": <id or slug>}`` -- exactly one of
+    ``product_ids``/``category``. ``category`` reuses
+    ``catalog.category_tree.descendant_category_ids`` (the same whole-subtree
+    walk the admin/storefront category filters use) so "apply to a category"
+    means the *whole* subtree, not just its direct products, and can't drift
+    from those filters.
+
+    Same authorization as quick-update (isPlatformScope) and the same
+    field_errors validation shape. Negative fees are rejected. The match is
+    capped at MAX_BATCH rows so a fat-fingered top-level category can't silently
+    rewrite the entire catalog in one request -- narrow the selection instead.
+    """
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    MAX_BATCH = 2000
+
+    def post(self, request):
+        if not isPlatformScope(request.user):
+            return renderResponse(data='Forbidden', message='Forbidden', status=403)
+
+        data = request.data
+        errors = {}
+
+        shipping_fee = None
+        if 'shipping_fee' not in data:
+            errors['shipping_fee'] = ['This field is required.']
+        else:
+            raw = data.get('shipping_fee')
+            if raw is None or raw == '':
+                shipping_fee = None
+            else:
+                try:
+                    shipping_fee = float(raw)
+                except (TypeError, ValueError):
+                    errors['shipping_fee'] = ['Must be a number.']
+                else:
+                    if shipping_fee < 0:
+                        errors['shipping_fee'] = ['Cannot be negative.']
+
+        product_ids = data.get('product_ids')
+        category_param = data.get('category')
+
+        if product_ids and category_param:
+            errors['product_ids'] = ['Specify either product_ids or category, not both.']
+        elif product_ids is not None and (not isinstance(product_ids, list) or not product_ids):
+            errors['product_ids'] = ['Must be a non-empty list of product ids.']
+        elif not product_ids and not category_param:
+            errors['product_ids'] = ['Specify product_ids or category.']
+
+        if errors:
+            return renderResponse(data=errors, message='Validation error', status=400)
+
+        if product_ids:
+            queryset = Products.objects.filter(id__in=product_ids)
+        else:
+            lookup = Q(id=category_param) if str(category_param).isdigit() else Q(slug=category_param)
+            category = Categories.objects.filter(lookup).first()
+            if not category:
+                return renderResponse(
+                    data={'category': ['Category not found.']}, message='Validation error', status=400)
+            queryset = Products.objects.filter(category_id__in=descendant_category_ids(category))
+
+        total = queryset.count()
+        if total == 0:
+            return renderResponse(
+                data={'product_ids': ['No matching products.']}, message='Validation error', status=400)
+        if total > self.MAX_BATCH:
+            return renderResponse(
+                data={'product_ids': [
+                    f'Matches {total} products; batches are capped at {self.MAX_BATCH}. Narrow the selection.'
+                ]},
+                message='Validation error', status=400)
+
+        updated = queryset.update(shipping_fee=shipping_fee)
+        return renderResponse(
+            data={'updated': updated, 'shipping_fee': shipping_fee},
+            message='Shipping fee updated')
 
 
 class UpdateProductQuestionsView(generics.UpdateAPIView):

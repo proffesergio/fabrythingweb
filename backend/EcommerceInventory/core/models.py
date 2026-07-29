@@ -113,12 +113,32 @@ class StoreConfiguration(models.Model):
             cache.set(CACHE_KEY, obj, timeout=300)
         return obj
 
-    def shipping_for(self, subtotal) -> Decimal:
-        """Resolve the shipping charge for a given order subtotal."""
+    def shipping_for(self, subtotal, product_shipping_fees=None) -> Decimal:
+        """Resolve the shipping charge for a given order subtotal.
+
+        ``product_shipping_fees`` is an optional iterable with one entry per
+        cart line (Decimal/float/None) -- ``catalog.models.Products.shipping_fee``
+        for the line's product. This is the single place the per-product
+        shipping rule is implemented; do not duplicate it in a view.
+
+        Rule: shipping = max(fixed_shipping_rate, every non-null per-product
+        fee in the cart) -- it's one delivery trip, so the bulkiest/costliest
+        item to ship sets the price, and the flat rate is always the floor
+        (an item with no override, or an explicit 0, never pulls the charge
+        *below* the store rate on its own -- see the worked examples in
+        docs/SHIPPING_FEES.md). Free-shipping-threshold, when it applies,
+        overrides all of this to 0 -- it is checked last and wins.
+        """
         subtotal = Decimal(str(subtotal))
         if self.free_shipping_threshold is not None and subtotal >= self.free_shipping_threshold:
             return Decimal("0.00")
-        return self.fixed_shipping_rate
+
+        candidates = [self.fixed_shipping_rate]
+        if product_shipping_fees:
+            candidates += [
+                Decimal(str(fee)) for fee in product_shipping_fees if fee is not None
+            ]
+        return max(candidates)
 
 
 class ImageBlob(models.Model):

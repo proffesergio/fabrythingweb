@@ -17,6 +17,15 @@ export default function ProductCard({ product, showFlashBadge }) {
         (new Date() - new Date(product.created_at)) / (1000 * 60 * 60 * 24) < 7
     );
 
+    // `effective_shipping_fee` is always a number from the storefront API --
+    // the product's own override, or the store's flat rate when it has none
+    // -- so the customer is never shown nothing (see ProductDetail for the
+    // more prominent version of the same rule).
+    const shippingFee = product.effective_shipping_fee;
+    const shippingText = shippingFee === 0
+        ? 'Free delivery'
+        : (shippingFee != null ? `+৳${shippingFee.toLocaleString()} delivery` : null);
+
     const imageUrl = Array.isArray(product.image) && product.image.length > 0
         ? product.image[0]
         : '/placeholder.png';
@@ -180,6 +189,17 @@ export default function ProductCard({ product, showFlashBadge }) {
                             </Typography>
                         )}
                     </Box>
+                    {/* Quiet by design -- one compact line, no icon, no extra
+                        margin -- so the card doesn't grow past the height the
+                        mobile fix deliberately bought back. */}
+                    {shippingText && (
+                        <Typography
+                            variant="caption"
+                            sx={{ color: 'text.secondary', fontSize: '0.62rem', lineHeight: 1.2 }}
+                        >
+                            {shippingText}
+                        </Typography>
+                    )}
                 </CardContent>
 
                 {/* Quick-add is a hover affordance on desktop. On mobile there's no

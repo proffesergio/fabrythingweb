@@ -5,6 +5,7 @@ from accounts.models import UserShippingAddress, Users
 from catalog.category_tree import descendant_category_ids
 from catalog.models import Categories, ProductQuestions, ProductReviews, Products, ProductVariant
 from core.helpers import absolutize_image_list, absolutize_media_url
+from core.models import StoreConfiguration
 from orders.models import Order, OrderItem, OrderStatusLog
 
 
@@ -52,6 +53,12 @@ class StorefrontProductListSerializer(serializers.ModelSerializer):
     discount_percentage = serializers.SerializerMethodField()
     total_stock = serializers.SerializerMethodField()
     image = serializers.SerializerMethodField()
+    # Plain SerializerMethodFields (not a ModelSerializer-inferred
+    # DecimalField) so both come back as JSON numbers -- DRF's DecimalField
+    # serializes as a string ("250.00") by default, which would silently
+    # break `row.shipping_fee === 0` / arithmetic on the frontend.
+    shipping_fee = serializers.SerializerMethodField()
+    effective_shipping_fee = serializers.SerializerMethodField()
 
     class Meta:
         model = Products
@@ -62,6 +69,7 @@ class StorefrontProductListSerializer(serializers.ModelSerializer):
             'category_id', 'category_name',
             'average_rating', 'review_count', 'discount_percentage',
             'total_stock', 'created_at',
+            'shipping_fee', 'effective_shipping_fee',
         ]
 
     def get_image(self, obj):
@@ -105,6 +113,20 @@ class StorefrontProductListSerializer(serializers.ModelSerializer):
             return round(((obj.initial_selling_price - obj.discount_price) / obj.initial_selling_price) * 100)
         return 0
 
+    def get_shipping_fee(self, obj):
+        return float(obj.shipping_fee) if obj.shipping_fee is not None else None
+
+    def get_effective_shipping_fee(self, obj):
+        # `shipping_fee` (raw field, above) is null/None whenever the product
+        # has no override -- that's what lets the frontend distinguish "no
+        # fee set" from "explicitly free" (0). This method field is the
+        # *resolved* number so the frontend always has something concrete to
+        # show ("the customer always knows"), falling back to the store's
+        # flat rate rather than showing nothing.
+        if obj.shipping_fee is not None:
+            return float(obj.shipping_fee)
+        return float(StoreConfiguration.get_solo().fixed_shipping_rate)
+
 
 class StorefrontProductDetailSerializer(StorefrontProductListSerializer):
     reviews = serializers.SerializerMethodField()
@@ -126,6 +148,7 @@ class StorefrontProductDetailSerializer(StorefrontProductListSerializer):
             'total_stock', 'variants',
             'rating_distribution', 'reviews', 'questions',
             'created_at',
+            'shipping_fee', 'effective_shipping_fee',
         ]
 
     def get_variants(self, obj):
