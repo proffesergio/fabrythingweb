@@ -45,6 +45,7 @@ urlpatterns = [
     path('api/media/<str:sha256>/',serve_media_blob,name='media-blob'),
     path('api/store/',include('storefront.urls')),
     path('api/food/',include('food.urls')),
+    path('api/chat/',include('chat.urls')),
 ]
 
 if settings.DEBUG:
