@@ -46,6 +46,7 @@ urlpatterns = [
     path('api/store/',include('storefront.urls')),
     path('api/food/',include('food.urls')),
     path('api/chat/',include('chat.urls')),
+    path('api/print/',include('printing.urls')),
 ]
 
 if settings.DEBUG:
