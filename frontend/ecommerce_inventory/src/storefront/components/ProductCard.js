@@ -122,7 +122,12 @@ export default function ProductCard({ product, showFlashBadge }) {
                     position: 'relative',
                     overflow: 'hidden',
                     aspectRatio: { xs: '1 / 1', md: '3/4' },
-                    bgcolor: 'action.hover',
+                    // Explicit white, not a theme surface token: the scraped product
+                    // photos are shot on white, so the tile must stay white even in
+                    // dark mode (a dark tile would show an obvious white rectangle
+                    // around the photo). Only this tile is white; the card itself
+                    // still follows the theme.
+                    bgcolor: '#fff',
                     p: { xs: 1.5, md: 2 },
                 }}>
                     <CardMedia

@@ -109,12 +109,13 @@ export default function ProductDetail() {
                     <Box sx={{ position: 'sticky', top: 80 }}>
                         {/* Partner photos have inconsistent aspect ratios and tight crops --
                             padding + object-fit: contain shows the whole product instead of
-                            edge-cropping it (matches ProductCard's treatment). Neutral
-                            `action.hover` surface instead of a hardcoded hex so this reads
-                            correctly in dark mode too. */}
+                            edge-cropping it (matches ProductCard's treatment). Explicit white,
+                            not a theme surface token: the photos are shot on white, so a white
+                            tile is what makes them read correctly, even in dark mode (a dark
+                            tile would show an obvious white rectangle around the photo). */}
                         <Box sx={{
                             width: '100%', height: { xs: 400, md: 500 },
-                            borderRadius: 2, overflow: 'hidden', bgcolor: 'action.hover', mb: 1,
+                            borderRadius: 2, overflow: 'hidden', bgcolor: '#fff', mb: 1,
                             p: { xs: 2, md: 3 },
                         }}>
                             {images.length > 0 ? (
@@ -139,7 +140,7 @@ export default function ProductDetail() {
                                         sx={{
                                             width: 64, height: 64, borderRadius: 1, overflow: 'hidden',
                                             cursor: 'pointer', flexShrink: 0,
-                                            bgcolor: 'action.hover', p: 0.5,
+                                            bgcolor: '#fff', p: 0.5,
                                             border: selectedImage === i ? '2px solid' : '2px solid transparent',
                                             borderColor: selectedImage === i ? 'secondary.main' : 'transparent',
                                         }}
