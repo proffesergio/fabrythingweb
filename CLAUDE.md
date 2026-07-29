@@ -4,6 +4,28 @@ Read this before exploring. It exists so a fresh session does not have to
 re-derive the layout with Glob/Grep. If something here contradicts the code,
 the code wins — fix this file in the same commit.
 
+## Test budget — run what you shipped, not the world
+
+The suite is ~680 tests. Running all of it after every edit is the single
+biggest avoidable token/time cost in this repo.
+
+- **While iterating: run only the app or module you are changing.**
+  `DJANGO_SETTINGS_MODULE=config.settings.test python manage.py test chat`
+  (or `catalog`, `storefront`, `food`, `accounts`, `core`). Narrow further to a
+  class or method while chasing one failure:
+  `... manage.py test chat.tests.test_customer_api.ThreadMessagesTests`.
+- **Run the full suite once, immediately before committing** — not after every
+  edit, and not "to be safe" mid-task.
+- **Frontend: `npm test -- --watchAll=false` only when you touched
+  `frontend/`.** Never run it for a backend-only change. `App.test.js` has a
+  **pre-existing** failure (missing `swiper` dep) that is not yours — do not
+  chase it.
+- **Do not run a full `react-scripts build` to check a backend change.** It
+  takes minutes and proves nothing about Python.
+- Skip work the task did not ask for: don't re-verify a module you didn't
+  touch, don't re-read a file the project map already describes, and don't
+  re-derive facts recorded here.
+
 **Exploration budget.** In order, cheapest first — stop as soon as you can act:
 1. This file. The layout, the API surface and the traps below are current.
 2. A targeted `Grep` for a **symbol** (`grep -rn "domain_user_id\.id"`), not a
