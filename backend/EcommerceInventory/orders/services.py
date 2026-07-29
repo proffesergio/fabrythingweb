@@ -83,11 +83,14 @@ def place_cod_order(*, customer, items, contact_name, contact_phone,
         subtotal += line_total
         order_items.append((variant, qty, unit_price, line_total))
 
-    # One per-product shipping fee per cart line -- see StoreConfiguration.
-    # shipping_for for the max() rule (highest per-product fee, floored at
-    # the store's flat rate; free-shipping-threshold still wins over both).
+    # One per-product shipping fee (and free_shipping promo flag) per cart
+    # line -- see StoreConfiguration.shipping_for for the full rule (highest
+    # per-product fee among non-promo lines, floored at the store's flat
+    # rate; an all-promo cart ships free; free-shipping-threshold still wins
+    # over all of it).
     product_shipping_fees = [variant.product.shipping_fee for variant, _, _, _ in order_items]
-    shipping = config.shipping_for(subtotal, product_shipping_fees)
+    free_shipping_flags = [variant.product.free_shipping for variant, _, _, _ in order_items]
+    shipping = config.shipping_for(subtotal, product_shipping_fees, free_shipping_flags)
     total = subtotal + shipping
 
     order = Order.objects.create(

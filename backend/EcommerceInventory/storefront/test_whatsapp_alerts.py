@@ -8,6 +8,7 @@ tests themselves — these are the storefront integration point.
 from decimal import Decimal
 from unittest import mock
 
+from django.core.cache import cache
 from django.test import TestCase
 from rest_framework.test import APIClient
 
@@ -23,6 +24,13 @@ ENV_CONFIGURED = {
 
 class PlaceOrderWhatsAppAlertTests(TestCase):
     def setUp(self):
+        # POST /api/store/orders/ is throttled (orders.create, see
+        # storefront/views.py); ScopedRateThrottle's counter lives in the
+        # process-wide cache, so without clearing it here this class's quota
+        # is shared with (and can be exhausted by) every other test file that
+        # also places orders in the same `manage.py test` run -- see
+        # storefront/test_shipping_fee_checkout.py, which does the same.
+        cache.clear()
         self.client = APIClient()
         self.category = Categories.objects.create(name="Tees", slug="tees", description="d")
         self.product = Products.objects.create(

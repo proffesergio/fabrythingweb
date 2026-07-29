@@ -53,3 +53,12 @@ test('falls back to showing the store rate rather than nothing when unset', asyn
   renderDetail();
   expect(await screen.findByText('Delivery: ৳60')).toBeInTheDocument();
 });
+
+// free_shipping is the explicit per-product promo flag (distinct from
+// shipping_fee == 0) -- see docs/SHIPPING_FEES.md.
+test('shows "Free delivery" when free_shipping is true, even with a nonzero effective_shipping_fee', async () => {
+  mockProduct = { ...baseProduct, free_shipping: true, effective_shipping_fee: 60 };
+  renderDetail();
+  expect(await screen.findByText('Free delivery')).toBeInTheDocument();
+  expect(screen.queryByText(/^Delivery: /)).not.toBeInTheDocument();
+});

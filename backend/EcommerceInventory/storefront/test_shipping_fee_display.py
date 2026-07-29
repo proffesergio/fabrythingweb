@@ -58,6 +58,27 @@ class ProductListSerializerShippingFeeTests(ShippingFeeDisplayTestBase):
         self.assertEqual(row["shipping_fee"], 250.0)
         self.assertEqual(row["effective_shipping_fee"], 250.0)
 
+    def test_product_with_free_shipping_promo_flag_exposes_it_true(self):
+        Products.objects.create(
+            name="Promo", slug="sfd-promo", sku="SFD-PROMO", category_id=self.cat,
+            status="ACTIVE", description="", initial_buying_price=100, initial_selling_price=200,
+            free_shipping=True,
+        )
+        res = self.client.get("/api/store/products/")
+        self.assertEqual(res.status_code, 200, res.content)
+        row = next(r for r in res.json()["data"]["data"] if r["slug"] == "sfd-promo")
+        self.assertTrue(row["free_shipping"])
+
+    def test_product_without_promo_flag_exposes_it_false(self):
+        Products.objects.create(
+            name="NoPromo", slug="sfd-nopromo", sku="SFD-NOPROMO", category_id=self.cat,
+            status="ACTIVE", description="", initial_buying_price=100, initial_selling_price=200,
+        )
+        res = self.client.get("/api/store/products/")
+        self.assertEqual(res.status_code, 200, res.content)
+        row = next(r for r in res.json()["data"]["data"] if r["slug"] == "sfd-nopromo")
+        self.assertFalse(row["free_shipping"])
+
 
 class ProductDetailSerializerShippingFeeTests(ShippingFeeDisplayTestBase):
     def test_detail_view_exposes_shipping_fee_fields(self):
@@ -83,3 +104,14 @@ class ProductDetailSerializerShippingFeeTests(ShippingFeeDisplayTestBase):
         data = res.json()["data"]
         self.assertIsNone(data["shipping_fee"])
         self.assertEqual(data["effective_shipping_fee"], 60.0)
+
+    def test_detail_view_exposes_free_shipping_promo_flag(self):
+        Products.objects.create(
+            name="Detail Promo", slug="sfd-detail-promo", sku="SFD-DETAIL-PROMO",
+            category_id=self.cat, status="ACTIVE", description="",
+            initial_buying_price=100, initial_selling_price=200, free_shipping=True,
+        )
+        res = self.client.get("/api/store/products/sfd-detail-promo/")
+        self.assertEqual(res.status_code, 200, res.content)
+        data = res.json()["data"]
+        self.assertTrue(data["free_shipping"])

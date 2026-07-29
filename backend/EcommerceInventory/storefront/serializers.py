@@ -69,7 +69,7 @@ class StorefrontProductListSerializer(serializers.ModelSerializer):
             'category_id', 'category_name',
             'average_rating', 'review_count', 'discount_percentage',
             'total_stock', 'created_at',
-            'shipping_fee', 'effective_shipping_fee',
+            'shipping_fee', 'effective_shipping_fee', 'free_shipping',
         ]
 
     def get_image(self, obj):
@@ -148,7 +148,7 @@ class StorefrontProductDetailSerializer(StorefrontProductListSerializer):
             'total_stock', 'variants',
             'rating_distribution', 'reviews', 'questions',
             'created_at',
-            'shipping_fee', 'effective_shipping_fee',
+            'shipping_fee', 'effective_shipping_fee', 'free_shipping',
         ]
 
     def get_variants(self, obj):

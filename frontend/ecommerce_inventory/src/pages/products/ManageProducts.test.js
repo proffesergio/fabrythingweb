@@ -274,3 +274,66 @@ test('the bulk shipping fee button is disabled with no selection and no category
   await waitFor(() => expect(screen.getByText('Cotton Shirt')).toBeInTheDocument());
   expect(screen.getByRole('button', { name: /Bulk shipping fee/i })).toBeDisabled();
 });
+
+// free_shipping is the explicit per-product promo flag (distinct from
+// shipping_fee == 0) -- a checkbox, not a typed number, per docs/SHIPPING_FEES.md.
+test('toggling the free-shipping checkbox saves free_shipping alone, leaving shipping_fee untouched', async () => {
+  render(<ManageProducts />);
+  await waitFor(() => expect(screen.getByText('Cotton Shirt')).toBeInTheDocument());
+
+  mockQuickUpdateResult = {
+    status: 200,
+    data: {
+      data: {
+        id: 1, initial_selling_price: 900, discount_price: 700, status: 'ACTIVE',
+        shipping_fee: null, free_shipping: true,
+        variants: [{ id: 10, sku: 'FT-1-DEF', size: '', color: '', stock_quantity: 12, price: 900, discount_price: 700 }],
+      },
+    },
+  };
+
+  const freeShippingBox = screen.getByRole('checkbox', { name: /Free shipping for Cotton Shirt/i });
+  expect(freeShippingBox).not.toBeChecked();
+  fireEvent.click(freeShippingBox);
+  fireEvent.click(await screen.findByLabelText(/Save Cotton Shirt/i));
+
+  await waitFor(() => expect(toast.success).toHaveBeenCalled());
+  const patchCall = mockCalls.find((c) => c.url === 'products/admin/1/quick-update/');
+  expect(patchCall.body).toEqual({ free_shipping: true });
+  expect(screen.getByRole('checkbox', { name: /Free shipping for Cotton Shirt/i })).toBeChecked();
+});
+
+test('bulk dialog defaults free-shipping to "don\'t change" and omits it from the request', async () => {
+  render(<ManageProducts />);
+  await waitFor(() => expect(screen.getByText('Cotton Shirt')).toBeInTheDocument());
+
+  fireEvent.click(screen.getByLabelText('Select Cotton Shirt'));
+  fireEvent.click(screen.getByRole('button', { name: /Bulk shipping fee/i }));
+  await screen.findByRole('alert');
+
+  mockBulkResult = { status: 200, data: { data: { updated: 1 } } };
+  fireEvent.click(screen.getByRole('button', { name: 'Apply' }));
+
+  await waitFor(() => expect(toast.success).toHaveBeenCalled());
+  const bulkCall = mockCalls.find((c) => c.url === 'products/admin/shipping-fee/bulk/');
+  expect(bulkCall.body).toEqual({ shipping_fee: null, product_ids: [1] });
+});
+
+test('bulk dialog can mark a whole category as a free-shipping promo', async () => {
+  render(<ManageProducts />);
+  await waitFor(() => expect(screen.getByText('Cotton Shirt')).toBeInTheDocument());
+
+  fireEvent.click(screen.getByLabelText('Select Cotton Shirt'));
+  fireEvent.click(screen.getByRole('button', { name: /Bulk shipping fee/i }));
+  await screen.findByRole('alert');
+
+  fireEvent.mouseDown(screen.getByLabelText('Free shipping promo'));
+  fireEvent.click(await screen.findByRole('option', { name: 'Mark as free-shipping promo' }));
+
+  mockBulkResult = { status: 200, data: { data: { updated: 1, free_shipping: true } } };
+  fireEvent.click(screen.getByRole('button', { name: 'Apply' }));
+
+  await waitFor(() => expect(toast.success).toHaveBeenCalled());
+  const bulkCall = mockCalls.find((c) => c.url === 'products/admin/shipping-fee/bulk/');
+  expect(bulkCall.body).toEqual({ shipping_fee: null, free_shipping: true, product_ids: [1] });
+});
