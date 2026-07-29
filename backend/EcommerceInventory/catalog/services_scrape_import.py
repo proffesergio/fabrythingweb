@@ -62,25 +62,52 @@ _ALGOLIA_SEARCH_KEY = "bfcfa7b10e2c9220df5d1d639d485218"  # public search-only k
 _ALGOLIA_INDEX = "products"
 _ALGOLIA_URL = f"https://{_ALGOLIA_APP_ID}-dsn.algolia.net/1/indexes/{_ALGOLIA_INDEX}/query"
 
-# Curated starting points for the category dropdown. potakait.com and
-# canvasit.com.bd don't expose a machine-readable category tree
-# catalog.scrape_parsers can fetch and parse (there is no such parser, and
-# writing one from scratch is out of scope here -- see the module docstring),
-# so this is a hand-picked set of known-good listing paths, weighted toward
-# the categories the owner actually wants stocked first (Phones, Gadgets). An
-# admin can always type a custom path in the search box instead.
-OPENCART_CATEGORY_PATHS = [
-    {"path": "smart-phone", "label": "Smartphones", "our_category": "phones-smartphones"},
-    {"path": "tablet-pc", "label": "Tablets", "our_category": "phones-tablets"},
-    {"path": "laptop", "label": "Laptops", "our_category": "computers-laptops"},
-    {"path": "desktop-pc", "label": "Desktops", "our_category": "computers-desktops"},
-    {"path": "monitor", "label": "Monitors", "our_category": "computers-monitors"},
-    {"path": "smart-watch", "label": "Smart Watches", "our_category": "gadgets-smart-watches"},
-    {"path": "earphone-headphone", "label": "Earbuds & Headphones", "our_category": "gadgets-earbuds"},
-    {"path": "speaker", "label": "Speakers & Audio", "our_category": "gadgets-speakers"},
-    {"path": "power-bank", "label": "Power Banks & Chargers", "our_category": "gadgets-power"},
-    {"path": "cover-and-protector", "label": "Cases & Protection", "our_category": "gadgets-cases"},
-]
+# Category dropdown paths -- VERIFIED against the live sites (2026-07-28: real
+# GET requests, not guesses), each returning a 200 with a parseable product
+# grid. These are also the exact paths that produced the committed fixtures
+# (catalog/fixtures/seed/potakait.json = 64 products, canvasit.json = 70).
+# `router` is singular on BOTH sites -- `routers` 404s; that typo already cost
+# a whole scrape run once.
+#
+# Only computer-hardware categories are verified for these two sites today.
+# potakait.com's markup gave no reliable path for phones/tablets/wearables,
+# and guessing here (as an earlier draft of this list did, with paths like
+# "smart-phone"/"tablet-pc"/"smart-watch") produced confident-looking options
+# that silently 404 or return zero results -- worse than not offering them.
+# canvasit.com.bd's search (see SOURCE_SEARCH_SUPPORTED below) covers the gap
+# for phones/gadgets there; potakait has no working search endpoint at all
+# (verified: every plausible search URL 404s and there's no <form> to read
+# one from), so phones/gadgets sourcing from potakait isn't available yet --
+# see docs/PRODUCT_IMPORT.md.
+OPENCART_CATEGORY_PATHS = {
+    "potakait": [
+        {"path": "laptops", "label": "Laptops", "our_category": "computers-laptops"},
+        {"path": "gaming-pc", "label": "Gaming PCs", "our_category": "computers-desktops"},
+        {"path": "monitors", "label": "Monitors", "our_category": "computers-monitors"},
+        {"path": "processors", "label": "Processors", "our_category": "computers-components"},
+        {"path": "keyboards", "label": "Keyboards", "our_category": "computers-keyboards-mice"},
+        {"path": "printers", "label": "Printers", "our_category": "computers-printers-office"},
+        {"path": "router", "label": "Routers", "our_category": "computers-networking"},
+    ],
+    "canvasit": [
+        {"path": "laptop", "label": "Laptops", "our_category": "computers-laptops"},
+        {"path": "desktop-pc", "label": "Desktops", "our_category": "computers-desktops"},
+        {"path": "monitor", "label": "Monitors", "our_category": "computers-monitors"},
+        {"path": "processor", "label": "Processors", "our_category": "computers-components"},
+        {"path": "keyboard", "label": "Keyboards", "our_category": "computers-keyboards-mice"},
+        {"path": "printer", "label": "Printers", "our_category": "computers-printers-office"},
+        {"path": "router", "label": "Routers", "our_category": "computers-networking"},
+    ],
+}
+
+# Which sources have a working free-text search we could find a real URL for.
+# potakait.com: verified 2026-07-28 -- index.php?route=product/search&search=,
+# /search?search=, /search?q= and /catalogsearch/result/?q= all 404, and the
+# homepage HTML has no <form> with a search input to reverse-engineer a
+# working route from. canvasit.com.bd's classic OpenCart search route DOES
+# work (verified: 200, 20 products parsed). fabrilife's Algolia query already
+# supports free text via the `query` param.
+SOURCE_SEARCH_SUPPORTED = {"potakait": False, "canvasit": True, "fabrilife": True}
 
 # fabrilife's own facet category names -- this IS the live/authoritative
 # mapping (lifted from tools/scrape/scrape_fabrilife.py, which already uses
@@ -108,6 +135,15 @@ class SourceFetchError(Exception):
     """A listing/search fetch failed outright (bad category, network error,
     site block) -- distinct from a single product failing, which is recorded
     per-item instead of raised."""
+
+
+class UnsupportedSearchError(ValueError):
+    """Raised when a free-text search (`q`) is requested for a source whose
+    search isn't available (see SOURCE_SEARCH_SUPPORTED). A ValueError
+    subclass so a caller that only distinguishes "bad input" from "network
+    failure" still treats it as the former, but the view attaches it to the
+    `q` field specifically rather than lumping it in with the generic
+    "provide a category or search term" message."""
 
 
 def _fabrilife_search(cats=None, query=None, hits_per_page=BROWSE_LIMIT):
@@ -169,14 +205,28 @@ def browse_candidates(source, *, category_path=None, query=None, limit=BROWSE_LI
     discount_price, image URL(s), source URL, and whether we already have it
     (matched by slug).
 
-    Also returns the curated category list for that source so the caller can
-    offer a dropdown instead of a free-text-only path. Raises ValueError for
-    an unknown/out-of-scope source (e.g. "arogga").
+    Also returns the category list for that source so the caller can offer a
+    dropdown instead of a free-text-only path. Raises ValueError for an
+    unknown/out-of-scope source (e.g. "arogga"), and UnsupportedSearchError
+    for a `query` against a source with no working search endpoint
+    (potakait.com -- see SOURCE_SEARCH_SUPPORTED).
+
+    The response distinguishes two different reasons a browse can come back
+    with zero candidates, since a silent empty state has bitten this codebase
+    before: ``listing_product_count`` is how many product links the
+    listing/search itself returned (0 genuinely means "nothing there"), and
+    ``fetch_failures`` is how many of those individual product pages then
+    failed to fetch/parse (a positive count with 0 candidates means "the
+    source has products here but we couldn't read them" -- likely the site
+    is down or blocking us -- not "empty category").
     """
     if source not in SOURCES:
         raise ValueError(f"Unknown or unsupported source: {source!r}")
     if not category_path and not query:
         raise ValueError("Provide a category or a search term.")
+    if query and not SOURCE_SEARCH_SUPPORTED.get(source, False):
+        raise UnsupportedSearchError(
+            f"{source} search isn't available -- browse by category instead.")
 
     limit = max(1, min(int(limit or BROWSE_LIMIT), BROWSE_LIMIT))
     fetch = fetch or polite_get
@@ -198,20 +248,28 @@ def browse_candidates(source, *, category_path=None, query=None, limit=BROWSE_LI
             raise SourceFetchError(str(e)) from e
         product_urls = parse_opencart_listing(listing_html, listing_url)[:limit]
         parser = parse_opencart_product
-        categories = OPENCART_CATEGORY_PATHS
+        categories = OPENCART_CATEGORY_PATHS.get(source, [])
 
     candidates = []
+    fetch_failures = 0
     for url in product_urls:
         try:
             html = fetch(url)
             parsed = parser(html)
         except Exception:  # noqa: BLE001 -- one bad product page must not sink the whole browse
+            fetch_failures += 1
             continue
         if not parsed.get("name"):
+            fetch_failures += 1
             continue
         candidates.append(_candidate_from_product(url, parsed))
 
-    return {"candidates": candidates, "categories": categories}
+    return {
+        "candidates": candidates,
+        "categories": categories,
+        "listing_product_count": len(product_urls),
+        "fetch_failures": fetch_failures,
+    }
 
 
 def _entry_from_parsed(source, url, parsed):

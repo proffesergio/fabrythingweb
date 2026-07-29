@@ -10,14 +10,21 @@ and Gadgets categories.
 
 1. Open **Products → Import Products** in the admin sidebar.
 2. Pick a **source** (see below).
-3. Pick a **category on that site** from the dropdown, or type a **search
-   term** instead (e.g. "hoodie"). One or the other is required.
+3. Pick a **category on that site** from the dropdown. On sources that
+   support it (see the table below), you can type a **search term** instead
+   (e.g. "hoodie") — one or the other is required. On a source with no
+   working search, the search box is disabled with an inline note; browse by
+   category there.
 4. Click **Fetch latest**. This takes a few seconds — every candidate is
    fetched from a real product page on the source site, one request at a
    time (see "Why it's slow" below).
 5. Review the results grid: image, name, price (with the discount price
    struck through when the item is on sale), and an **"Already in store"**
-   badge on anything we already carry.
+   badge on anything we already carry. If the grid comes back empty, the
+   message tells you *why*: "no products found" (the category/search is
+   genuinely empty) reads differently from "found N product links but
+   couldn't fetch any of them" (the source is down or blocking us) — see
+   "Zero results vs. unreachable" below.
 6. Click candidates to select them (checkbox), pick the **target category**
    in our own taxonomy, and click **Import N selected**.
 7. Wait for it — the button shows progress and disables itself while the
@@ -29,21 +36,35 @@ and Gadgets categories.
 Re-running an import with the same source URLs is safe — anything already
 present is skipped, never duplicated or overwritten.
 
-## Supported sources — and why Arogga isn't one yet
+## Supported sources
 
-| Source | Status |
-| --- | --- |
-| potakait.com | Supported — partner store (explicit reseller permission) |
-| canvasit.com.bd | Supported — partner store (explicit reseller permission) |
-| fabrilife.com | Supported — one-time seed source, **not** a resale partner |
-| Arogga.com | **Not yet** — shown in the source picker, disabled |
+| Source | Status | Browse by category | Search |
+| --- | --- | --- | --- |
+| potakait.com | Supported — partner store (explicit reseller permission) | Yes (7 verified categories, computer hardware only) | **No** — no working search endpoint exists (see below) |
+| canvasit.com.bd | Supported — partner store (explicit reseller permission) | Yes (7 verified categories, computer hardware only) | Yes |
+| fabrilife.com | Supported — one-time seed source, **not** a resale partner | Yes (fashion facet categories) | Yes |
+| Arogga.com | **Not yet** — shown in the source picker, disabled | — | — |
 
-Arogga is a planned source for the separate pharmacy/medical phase (SP3).
-There is no HTML/JSON parser for it in `catalog/scrape_parsers.py` yet, and
-building one wasn't in scope for this tool — importing medicine listings
-needs its own review (prescriptions, dosage data, regulatory fields) that a
-generic "pick and import" screen shouldn't paper over. It's listed and
-disabled rather than hidden so it's clear it's coming, not forgotten.
+**Why potakait.com has no search box.** Every plausible search URL was
+checked directly against the live site (`index.php?route=product/search&
+search=`, `/search?search=`, `/search?q=`, `/catalogsearch/result/?q=`) and
+all four return 404; the homepage HTML also has no `<form>` with a search
+input to reverse-engineer a working route from. Rather than ship a search box
+that silently returns zero results every time, it's disabled for this source
+— both in the UI (hidden, with an explanatory note) and in the API (a search
+request against potakait is rejected with a 400 and a `field_errors.q`
+message, never a quietly-empty 200). If potakait adds a working search later,
+flip `SOURCE_SEARCH_SUPPORTED["potakait"]` in
+`catalog/services_scrape_import.py` (and the mirrored constant in
+`ImportProducts.js`) once a real URL is verified.
+
+**Why Arogga isn't a source yet.** It's a planned source for the separate
+pharmacy/medical phase (SP3). There is no HTML/JSON parser for it in
+`catalog/scrape_parsers.py` yet, and building one wasn't in scope for this
+tool — importing medicine listings needs its own review (prescriptions,
+dosage data, regulatory fields) that a generic "pick and import" screen
+shouldn't paper over. It's listed and disabled rather than hidden so it's
+clear it's coming, not forgotten.
 
 **potakait.com and canvasit.com.bd** imports get `source_url` set on the
 product — that field is what `sync_source_prices` (the "Sync prices" button
@@ -54,6 +75,64 @@ so those products are a one-time import, not a synced one. This matches the
 existing offline scrape tools (`tools/scrape/scrape_opencart.py` vs.
 `tools/scrape/scrape_fabrilife.py`) and is enforced in
 `catalog/services_scrape_import.py`, not left to convention.
+
+## The verified category lists
+
+potakait.com and canvasit.com.bd don't expose a machine-readable category
+tree `scrape_parsers` can fetch and parse, so the "category on site" dropdown
+is a hand-picked list — but every path in it below was checked with a real
+request against the live site (200, product grid parsed successfully) before
+being added, not guessed:
+
+| | potakait.com | canvasit.com.bd | Maps to our category |
+| --- | --- | --- | --- |
+| Laptops | `laptops` | `laptop` | Computers → Laptops |
+| Desktops | `gaming-pc` | `desktop-pc` | Computers → Desktops |
+| Monitors | `monitors` | `monitor` | Computers → Monitors |
+| Processors | `processors` | `processor` | Computers → Components |
+| Keyboards | `keyboards` | `keyboard` | Computers → Keyboards & Mice |
+| Printers | `printers` | `printer` | Computers → Printers & Office |
+| Routers | `router` | `router` | Computers → Networking |
+
+Note **`router` is singular on both sites** — `routers` 404s on both; that
+typo already cost a whole scrape run once, so it's called out here
+deliberately.
+
+**Only computer-hardware categories are verified for potakait/canvasit
+today** — no working category path was found for phones, tablets, or
+wearables on either OpenCart theme, so guessing one (an earlier draft of this
+list had `smart-phone`/`tablet-pc`/`smart-watch`) would have shipped
+confident-looking dropdown options that silently 404 or return zero results,
+which is worse than not offering them. **To source phones/gadgets today, use
+canvasit's search box** (verified working) with a term like "phone" or
+"watch" — potakait has no search at all (see above), so it's category-browse
+only until a working phone/gadget category path is verified for it.
+
+fabrilife's category list *is* live/authoritative — it's the same
+facet-category mapping `tools/scrape/scrape_fabrilife.py` already uses to
+build fixtures, not a guess.
+
+## Zero results vs. unreachable
+
+A browse response distinguishes two very different reasons the candidate
+grid can come back empty, because silent empty states have bitten this
+codebase before (see `CLAUDE.md`):
+
+- **`listing_product_count: 0`** — the listing/search page itself returned no
+  product links at all. The category or search term genuinely has nothing in
+  it right now. The UI shows *"No products found for that category/search."*
+- **`listing_product_count > 0` but `candidates` is still empty** — the
+  listing found product links, but every one of those product pages then
+  failed to fetch or parse (`fetch_failures` counts them). This usually means
+  the source site is down, blocking us, or its markup changed. The UI shows
+  *"Found N product link(s) on the source site but couldn't fetch/read any
+  of them — it may be down or blocking us."* instead of the misleading
+  "nothing found" message.
+
+A hard failure to reach the listing/search endpoint itself (bad category,
+network error, timeout) is different again — that's a **502** with a message,
+not a 200 with an empty list, so it's never confused with either of the two
+cases above.
 
 ## The per-request import cap (12 products)
 
@@ -104,23 +183,14 @@ skips it rather than creating a duplicate or overwriting your edits.
 - `catalog/services_scrape_import.py` — `browse_candidates()` and
   `import_candidates()`, the machinery behind the two endpoints below. Every
   network call goes through an injectable `fetch`, so tests never touch the
-  network.
+  network. `OPENCART_CATEGORY_PATHS` (per-source, verified) and
+  `SOURCE_SEARCH_SUPPORTED` (which sources have a working search) live here.
 - `catalog/controllers/ProductImportController.py` — the two endpoints,
   both platform-scope only (`core.helpers.isPlatformScope`):
   - `GET /api/products/admin/import/browse/?source=&category=&q=`
   - `POST /api/products/admin/import/` — `{source, source_urls[], category_id}`
 - `frontend/.../pages/products/ImportProducts.js` — the admin screen,
   mounted at `/admin/manage/product-import`; nav entry seeded by
-  `python manage.py seed_admin_modules` (child of "Products").
-
-### The category dropdown is curated, not live
-
-potakait.com and canvasit.com.bd don't expose a machine-readable category
-tree `scrape_parsers` can fetch and parse, so the "category on site"
-dropdown is a hand-picked starting list
-(`OPENCART_CATEGORY_PATHS` in `services_scrape_import.py`), weighted toward
-Phones and Gadgets since that's what's empty today. fabrilife's list *is*
-live/authoritative — it's the same facet-category mapping
-`tools/scrape/scrape_fabrilife.py` already uses. If a curated potakait/
-canvasit path doesn't match the live site, use the search box instead — it
-falls back to the site's own search route.
+  `python manage.py seed_admin_modules` (child of "Products"). Its
+  `FALLBACK_CATEGORIES` and `SEARCH_SUPPORTED` constants mirror the backend
+  ones above and should be kept in sync if either changes.

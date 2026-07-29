@@ -18,6 +18,7 @@ from catalog.services_scrape_import import (
     IMPORT_LIMIT,
     SOURCES,
     SourceFetchError,
+    UnsupportedSearchError,
     browse_candidates,
     import_candidates,
 )
@@ -60,6 +61,15 @@ class AdminBrowseImportCandidatesView(APIView):
             result = browse_candidates(source, category_path=category_path, query=query, limit=limit)
         except SourceFetchError as e:
             return renderResponse(data=str(e), message='Could not fetch that listing', status=502)
+        except UnsupportedSearchError as e:
+            # Distinct from the generic "provide a category or search term"
+            # ValueError below: this is specifically about `q`, so it's
+            # attributed to that field rather than `category` -- the UI
+            # should already be hiding the search box for a source without
+            # search support, but the API refuses it either way rather than
+            # ever returning an empty "no results" list that looks like a
+            # genuine zero-result search.
+            return renderResponse(data={'q': [str(e)]}, message='Validation error', status=400)
         except ValueError as e:
             return renderResponse(data={'category': [str(e)]}, message='Validation error', status=400)
 

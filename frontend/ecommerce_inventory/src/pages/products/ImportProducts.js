@@ -20,28 +20,35 @@ const SOURCES = [
     { value: "arogga", label: "Arogga.com", disabled: true, note: "coming with the pharmacy phase" },
 ];
 
-// Curated starting suggestions for the category dropdown, mirroring
+// Starting suggestions for the category dropdown, mirroring
 // catalog.services_scrape_import's OPENCART_CATEGORY_PATHS /
 // FABRILIFE_CATEGORY_PATHS on the backend -- used only to pre-populate the
 // picker before the first search; the browse response's own `categories`
 // list (returned by the server, which owns the authoritative copy) replaces
-// this the moment a search comes back.
+// this the moment a search comes back. potakait/canvasit paths here are
+// VERIFIED against the live sites (2026-07-28 -- real requests, not
+// guesses); only computer-hardware categories are verified today (note
+// "router" is singular on both -- "routers" 404s). Phones/gadgets aren't
+// browsable by category on either OpenCart site yet -- on canvasit, use
+// search instead (it works); potakait has no working search endpoint at all.
 const FALLBACK_CATEGORIES = {
     potakait: [
-        { path: "smart-phone", label: "Smartphones" },
-        { path: "tablet-pc", label: "Tablets" },
-        { path: "laptop", label: "Laptops" },
-        { path: "smart-watch", label: "Smart Watches" },
-        { path: "earphone-headphone", label: "Earbuds & Headphones" },
-        { path: "power-bank", label: "Power Banks & Chargers" },
+        { path: "laptops", label: "Laptops" },
+        { path: "gaming-pc", label: "Gaming PCs" },
+        { path: "monitors", label: "Monitors" },
+        { path: "processors", label: "Processors" },
+        { path: "keyboards", label: "Keyboards" },
+        { path: "printers", label: "Printers" },
+        { path: "router", label: "Routers" },
     ],
     canvasit: [
-        { path: "smart-phone", label: "Smartphones" },
-        { path: "tablet-pc", label: "Tablets" },
         { path: "laptop", label: "Laptops" },
-        { path: "smart-watch", label: "Smart Watches" },
-        { path: "earphone-headphone", label: "Earbuds & Headphones" },
-        { path: "power-bank", label: "Power Banks & Chargers" },
+        { path: "desktop-pc", label: "Desktops" },
+        { path: "monitor", label: "Monitors" },
+        { path: "processor", label: "Processors" },
+        { path: "keyboard", label: "Keyboards" },
+        { path: "printer", label: "Printers" },
+        { path: "router", label: "Routers" },
     ],
     fabrilife: [
         { path: "men-tshirts", label: "Men's T-shirts" },
@@ -49,6 +56,13 @@ const FALLBACK_CATEGORIES = {
         { path: "women-kurti-tops", label: "Women's Kurti & Tops" },
     ],
 };
+
+// Which sources have a working free-text search -- must match
+// catalog.services_scrape_import.SOURCE_SEARCH_SUPPORTED on the backend.
+// potakait.com's search is JS/API-driven with no working URL we could find
+// (verified live: every plausible search route 404s), so the search box is
+// hidden for it rather than shipped as a silent zero-result trap.
+const SEARCH_SUPPORTED = { potakait: false, canvasit: true, fabrilife: true };
 
 const flattenCategories = (nodes, depth = 0) => {
     let out = [];
@@ -78,6 +92,13 @@ const ImportProducts = () => {
     const [sourceCategories, setSourceCategories] = useState(FALLBACK_CATEGORIES.potakait);
     const [browsed, setBrowsed] = useState(false);
     const [browseError, setBrowseError] = useState("");
+    // Zero-vs-unreachable bookkeeping from the last browse response, so an
+    // empty result grid can say *why* it's empty instead of always reading
+    // "no products found" -- see catalog.services_scrape_import.browse_
+    // candidates on the backend for the full reasoning.
+    const [browseMeta, setBrowseMeta] = useState({ listingProductCount: 0, fetchFailures: 0 });
+
+    const searchSupported = SEARCH_SUPPORTED[source] !== false;
 
     const [selected, setSelected] = useState(new Set());
     const [ourCategories, setOurCategories] = useState([]);
@@ -91,10 +112,12 @@ const ImportProducts = () => {
     useEffect(() => {
         setSourceCategories(FALLBACK_CATEGORIES[source] || []);
         setCategoryPath("");
+        setQuery("");
         setCandidates([]);
         setSelected(new Set());
         setResults(null);
         setBrowsed(false);
+        setBrowseError("");
     }, [source]);
 
     useEffect(() => {
@@ -105,28 +128,40 @@ const ImportProducts = () => {
     }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
     const handleBrowse = useCallback(async () => {
-        if (!categoryPath && !query.trim()) {
-            setBrowseError("Pick a category or type a search term first.");
+        const trimmedQuery = searchSupported ? query.trim() : "";
+        if (!categoryPath && !trimmedQuery) {
+            setBrowseError(searchSupported
+                ? "Pick a category or type a search term first."
+                : "Pick a category first — search isn't available for this source.");
             return;
         }
         setBrowseError("");
         setResults(null);
         const res = await callApi({
             url: "products/admin/import/browse/", method: "GET", rawError: true,
-            params: { source, category: categoryPath || undefined, q: query.trim() || undefined },
+            params: { source, category: categoryPath || undefined, q: trimmedQuery || undefined },
         });
         if (res?.status === 200) {
             const data = res.data.data;
             setCandidates(data.candidates || []);
             if (data.categories?.length) setSourceCategories(data.categories);
+            setBrowseMeta({
+                listingProductCount: data.listing_product_count ?? 0,
+                fetchFailures: data.fetch_failures ?? 0,
+            });
             setSelected(new Set());
             setBrowsed(true);
         } else {
             setCandidates([]);
+            setBrowseMeta({ listingProductCount: 0, fetchFailures: 0 });
             setBrowsed(true);
-            setBrowseError(res?.data?.message || "Could not fetch that listing.");
+            // Field-specific errors (e.g. `q` for an unsupported search) land
+            // in field_errors -- fall back to the flat message otherwise.
+            const fieldErrors = res?.data?.field_errors || {};
+            const fieldMessage = Object.values(fieldErrors)[0]?.[0];
+            setBrowseError(fieldMessage || res?.data?.message || "Could not fetch that listing.");
         }
-    }, [source, categoryPath, query]); // eslint-disable-line react-hooks/exhaustive-deps
+    }, [source, categoryPath, query, searchSupported]); // eslint-disable-line react-hooks/exhaustive-deps
 
     const toggleSelected = (url) => {
         setSelected((prev) => {
@@ -195,11 +230,18 @@ const ImportProducts = () => {
                         />
                     </Grid>
                     <Grid item xs={12} sm={3}>
-                        <TextField
-                            fullWidth size="small" label="...or search term"
-                            value={query} onChange={(e) => setQuery(e.target.value)}
-                            placeholder="e.g. hoodie"
-                        />
+                        {searchSupported ? (
+                            <TextField
+                                fullWidth size="small" label="...or search term"
+                                value={query} onChange={(e) => setQuery(e.target.value)}
+                                placeholder="e.g. hoodie"
+                            />
+                        ) : (
+                            <TextField
+                                fullWidth size="small" label="Search" disabled value=""
+                                helperText="Not available for this source — browse by category instead."
+                            />
+                        )}
                     </Grid>
                     <Grid item xs={12} sm={3}>
                         <Button
@@ -216,7 +258,15 @@ const ImportProducts = () => {
             {loading && <LinearProgress sx={{ mb: 2 }} />}
 
             {browsed && candidates.length === 0 && !browseError && (
-                <Alert severity="info" sx={{ mb: 2 }}>No products found for that category/search.</Alert>
+                browseMeta.listingProductCount > 0 ? (
+                    <Alert severity="warning" sx={{ mb: 2 }}>
+                        Found {browseMeta.listingProductCount} product link{browseMeta.listingProductCount === 1 ? "" : "s"} on
+                        the source site but couldn't fetch/read any of them — it may be down or
+                        blocking us right now. Try again in a moment.
+                    </Alert>
+                ) : (
+                    <Alert severity="info" sx={{ mb: 2 }}>No products found for that category/search.</Alert>
+                )
             )}
 
             {candidates.length > 0 && (

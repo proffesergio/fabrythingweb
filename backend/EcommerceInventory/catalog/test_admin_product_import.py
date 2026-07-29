@@ -99,23 +99,26 @@ class BrowseCandidatesTests(AdminProductImportTestBase):
 
     def test_browse_returns_candidates_with_already_have_flag(self):
         # "Phone A" already exists in our catalog (by slug) -- must be flagged.
+        # (Named "Phone A/B" for continuity with the rest of this file, but the
+        # category itself is "laptops" -- one of the verified potakait paths.)
         Products.objects.create(
             name="Phone A", slug="phone-a", sku="FS-9500", category_id=self.cat,
             description="", initial_buying_price=1, initial_selling_price=100,
             domain_user_id=self.owner, added_by_user_id=self.owner)
 
         def fake_fetch(url):
-            if url.endswith("smart-phone"):
+            if url.endswith("laptops"):
                 return OPENCART_LISTING
             if "phone-a" in url:
                 return _opencart_product_page("Phone A", 25000)
             return _opencart_product_page("Phone B", 30000, discount=28000)
 
         with patch("catalog.services_scrape_import.polite_get", side_effect=fake_fetch):
-            res = self.browse({"source": "potakait", "category": "smart-phone"}, self.owner)
+            res = self.browse({"source": "potakait", "category": "laptops"}, self.owner)
 
         self.assertEqual(res.status_code, 200, res.data)
-        candidates = res.data["data"]["candidates"]
+        data = res.data["data"]
+        candidates = data["candidates"]
         self.assertEqual(len(candidates), 2)
         by_name = {c["name"]: c for c in candidates}
         self.assertTrue(by_name["Phone A"]["already_have"])
@@ -124,8 +127,50 @@ class BrowseCandidatesTests(AdminProductImportTestBase):
         self.assertEqual(by_name["Phone B"]["discount_price"], 28000)
         self.assertTrue(by_name["Phone B"]["source_url"].startswith("https://potakait.com/"))
         self.assertTrue(by_name["Phone B"]["images"])
-        # A curated category list comes back so the UI can offer a dropdown.
-        self.assertTrue(any(c["path"] == "smart-phone" for c in res.data["data"]["categories"]))
+        # The verified category list comes back so the UI can offer a dropdown.
+        self.assertTrue(any(c["path"] == "laptops" for c in data["categories"]))
+        # Zero-vs-unreachable bookkeeping: both product links were found and
+        # both fetched cleanly.
+        self.assertEqual(data["listing_product_count"], 2)
+        self.assertEqual(data["fetch_failures"], 0)
+
+    def test_browse_potakait_search_rejected(self):
+        # potakait.com has no working search endpoint (verified live: every
+        # plausible URL 404s) -- a search request must be refused with a
+        # field-attributed error, never silently return zero results.
+        res = self.browse({"source": "potakait", "q": "phone"}, self.owner)
+        self.assertEqual(res.status_code, 400)
+        self.assertIn("q", res.data["field_errors"])
+
+    def test_browse_canvasit_search_works(self):
+        def fake_fetch(url):
+            if "route=product/search" in url:
+                return OPENCART_LISTING
+            return _opencart_product_page("Canvasit Phone", 20000)
+
+        with patch("catalog.services_scrape_import.polite_get", side_effect=fake_fetch):
+            res = self.browse({"source": "canvasit", "q": "phone"}, self.owner)
+
+        self.assertEqual(res.status_code, 200, res.data)
+        self.assertEqual(len(res.data["data"]["candidates"]), 2)
+
+    def test_browse_reports_fetch_failures_distinct_from_empty(self):
+        # The listing itself resolves and lists 2 product URLs, but every
+        # per-product fetch then fails -- this must NOT look identical to "0
+        # products in this category" in the response.
+        def fake_fetch(url):
+            if url.endswith("laptops"):
+                return OPENCART_LISTING
+            raise TimeoutError("no route to host")
+
+        with patch("catalog.services_scrape_import.polite_get", side_effect=fake_fetch):
+            res = self.browse({"source": "potakait", "category": "laptops"}, self.owner)
+
+        self.assertEqual(res.status_code, 200, res.data)
+        data = res.data["data"]
+        self.assertEqual(data["candidates"], [])
+        self.assertEqual(data["listing_product_count"], 2)
+        self.assertEqual(data["fetch_failures"], 2)
 
     def test_browse_fabrilife_listing(self):
         def fake_fetch(url):
