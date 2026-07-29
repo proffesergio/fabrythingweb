@@ -59,6 +59,14 @@ class Products(models.Model):
     sku=models.CharField(max_length=255)
     initial_buying_price=models.FloatField()
     initial_selling_price=models.FloatField()
+    # The supplier/source price BEFORE the platform markup (catalog/pricing.py
+    # apply_markup). Selling price is always derived from this, never mutated
+    # in place -- re-running an import/sync/backfill must be able to recompute
+    # the same selling price every time instead of stacking the markup on top
+    # of itself. Nullable because the 194 products that predate this feature
+    # have none yet; `apply_pricing_markup` backfills it from today's
+    # initial_selling_price (today's un-marked-up price) on first run.
+    base_price=models.FloatField(blank=True,null=True)
     discount_price=models.FloatField(blank=True,null=True)
     weight=models.FloatField(blank=True,null=True)
     dimensions=models.CharField(default='0x0x0',max_length=255,blank=True)
