@@ -16,10 +16,17 @@ from django.db import transaction
 from django.db.models import Count, Q
 from django.utils import timezone
 
+from core.models import StoreConfiguration, WhatsAppAlertLog
+from core.whatsapp import send_whatsapp_on_commit
 from food.geo import haversine_km
 from food.models import DeliveryOffer, FoodOrder, Rider
 from food.services import notify
 from food.services_cash import riders_over_ceiling
+
+# Templates to create in Meta Business Manager — see the WhatsApp setup
+# report for exact body text/params.
+RIDER_OFFER_TEMPLATE = "food_rider_delivery_offer"      # pickup, area, pay
+NO_RIDER_ADMIN_TEMPLATE = "food_no_rider_available_admin"  # order code, restaurant, area
 
 ACTIVE_STATUSES = [FoodOrder.Status.CONFIRMED, FoodOrder.Status.PREPARING,
                    FoodOrder.Status.OUT_FOR_DELIVERY]
@@ -87,6 +94,47 @@ def pick_rider_for(order, *, exclude_ids=()):
     return ranked.first()
 
 
+def _delivery_area_label(order):
+    """Best-effort human label for where the delivery is going, for the rider
+    and admin WhatsApp alerts — cheapest-to-narrowest known location."""
+    if order.village_id and order.village:
+        return order.village.name_bn or order.village.name
+    if order.zone_id and order.zone:
+        return order.zone.name_bn or order.zone.name
+    return (order.delivery_address or "")[:60]
+
+
+def _alert_rider_whatsapp(order, rider):
+    """Business-initiated WhatsApp alert to the rider an offer was just made
+    to — pickup restaurant, delivery area and their pay for this order."""
+    phone = (rider.phone or "").strip()
+    send_whatsapp_on_commit(
+        phone, kind="food_rider_offer", related_order=order.order_code,
+        template_name=RIDER_OFFER_TEMPLATE,
+        params=[order.restaurant.name, _delivery_area_label(order), f"{order.rider_base_pay}"],
+    )
+
+
+def _alert_admin_no_rider_available(order):
+    """Fallback WhatsApp alert when an order falls through with nobody to
+    offer it to — otherwise this sits silently in the admin queue.
+
+    Deliberately sent at most once per order (while the provider keeps
+    failing to reach the admin, it retries on the next sweep) — offer_order
+    runs on every rider poll via sweep_offers, so without this guard a
+    persistently rider-less order would re-alert every few seconds.
+    """
+    if WhatsAppAlertLog.objects.filter(kind="food_no_rider_admin",
+                                       related_order=order.order_code, success=True).exists():
+        return
+    admin_number = (StoreConfiguration.get_solo().whatsapp_admin_number or "").strip()
+    send_whatsapp_on_commit(
+        admin_number, kind="food_no_rider_admin", related_order=order.order_code,
+        template_name=NO_RIDER_ADMIN_TEMPLATE,
+        params=[order.order_code, order.restaurant.name, _delivery_area_label(order)],
+    )
+
+
 def _riders_already_tried(order):
     """Everyone who has already been offered this order, in any state — so the
     cascade always moves to someone new rather than re-pestering a decliner."""
@@ -122,6 +170,7 @@ def offer_order(order):
 
     rider = pick_rider_for(order, exclude_ids=_riders_already_tried(order))
     if rider is None:
+        _alert_admin_no_rider_available(order)
         return None
 
     offer = DeliveryOffer.objects.create(
@@ -130,6 +179,7 @@ def offer_order(order):
     notify(rider.user, f"New delivery offer {order.order_code}",
            f"Pick up from {order.restaurant.name} 🛵 — accept within {OFFER_TTL_SECONDS}s",
            order.order_code)
+    _alert_rider_whatsapp(order, rider)
     return offer
 
 
