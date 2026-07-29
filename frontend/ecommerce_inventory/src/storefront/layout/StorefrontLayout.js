@@ -20,6 +20,7 @@ import useApi from '../../hooks/APIHandler';
 import MegaMenu, { MobileCategoryMenu } from '../components/MegaMenu';
 import LiveSearch from '../components/LiveSearch';
 import BrandLogo from '../../components/BrandLogo';
+import MessengerButton from '../components/MessengerButton';
 
 // Highlighted "Food" nav entry pointing at `/food`. Two separate motions, and
 // only two: the icon blinks (opacity) and the background gradient slides
@@ -472,6 +473,9 @@ export default function StorefrontLayout({ toggleDarkMode, darkMode }) {
                             </BottomNavigation>
                         </Paper>
                     )}
+
+                    {/* Floating Messenger deep link — dormant until configured, see MessengerButton.js */}
+                    <MessengerButton />
                 </Box>
             </Box>
         </>

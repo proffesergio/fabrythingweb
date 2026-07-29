@@ -35,6 +35,17 @@ class StoreConfiguration(models.Model):
     # destination number is not a security incident the way a leaked token is.
     # International format, digits only, no leading "+" (e.g. "8801XXXXXXXXX").
     whatsapp_admin_number = models.CharField(max_length=20, blank=True, default="")
+    # Facebook Messenger deep link (m.me). Meta discontinued the embeddable
+    # Customer Chat Plugin in 2024, so the storefront button just opens
+    # https://m.me/<this value> in a new tab instead of an in-page widget.
+    # Accepts either the numeric Page ID or the page's username — both work
+    # in an m.me/ URL. Blank means "not configured yet": the storefront must
+    # not render the button at all in that case (see StoreConfigView).
+    messenger_page_id = models.CharField(
+        max_length=100, blank=True, default="",
+        help_text="Facebook Page ID (numeric) or Page username — either works in an "
+                  "m.me/ link. Leave blank to hide the Messenger button on the storefront.",
+    )
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:

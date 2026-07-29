@@ -6,7 +6,7 @@ from .models import StoreConfiguration, WhatsAppAlertLog
 @admin.register(StoreConfiguration)
 class StoreConfigurationAdmin(admin.ModelAdmin):
     list_display = ("store_name", "fixed_shipping_rate", "free_shipping_threshold", "cod_enabled",
-                    "currency", "whatsapp_admin_number")
+                    "currency", "whatsapp_admin_number", "messenger_page_id")
 
     def has_add_permission(self, request):
         # Singleton: only allow the one row.
