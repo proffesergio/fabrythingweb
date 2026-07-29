@@ -46,6 +46,19 @@ class StoreConfiguration(models.Model):
         help_text="Facebook Page ID (numeric) or Page username — either works in an "
                   "m.me/ link. Leave blank to hide the Messenger button on the storefront.",
     )
+    # Customer-facing WhatsApp *chat* link (the floating button on the
+    # storefront and food frontend) -- not to be confused with
+    # `whatsapp_admin_number` above, which is where server-side order alerts
+    # are sent (core/whatsapp.py). International format, digits only, no
+    # leading "+" (e.g. "8801842168117"), matching the wa.me/<number> link
+    # format. Blank means "not configured yet": both frontends must not
+    # render the button at all in that case, same rule as messenger_page_id.
+    whatsapp_chat_number = models.CharField(
+        max_length=20, blank=True, default="",
+        help_text="WhatsApp number for the floating chat button (digits only, no '+', "
+                  "e.g. 8801842168117 -- used as wa.me/<this value>). Leave blank to "
+                  "hide the button on the storefront and food frontend.",
+    )
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:

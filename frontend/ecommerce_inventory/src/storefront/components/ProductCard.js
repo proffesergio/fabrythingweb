@@ -114,13 +114,23 @@ export default function ProductCard({ product, showFlashBadge }) {
                 </Box>
 
                 {/* Image — flatter aspect ratio on mobile so the card doesn't run tall;
-                    unchanged on desktop. */}
-                <Box sx={{ position: 'relative', overflow: 'hidden' }}>
+                    unchanged on desktop. The aspect ratio lives on this wrapping Box
+                    (not the <img>) so the card's overall height is untouched; padding +
+                    object-fit: contain give partner photos (inconsistent aspect ratios,
+                    tight crops) breathing room instead of being edge-cropped by `cover`. */}
+                <Box sx={{
+                    position: 'relative',
+                    overflow: 'hidden',
+                    aspectRatio: { xs: '1 / 1', md: '3/4' },
+                    bgcolor: 'action.hover',
+                    p: { xs: 1.5, md: 2 },
+                }}>
                     <CardMedia
                         component="img"
                         sx={{
-                            aspectRatio: { xs: '1 / 1', md: '3/4' },
-                            objectFit: 'cover',
+                            width: '100%',
+                            height: '100%',
+                            objectFit: 'contain',
                             transition: 'transform 0.4s ease',
                             '&:hover': { transform: 'scale(1.05)' },
                         }}

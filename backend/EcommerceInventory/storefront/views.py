@@ -18,7 +18,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from accounts.models import UserShippingAddress, Users
 from catalog.category_tree import descendant_category_ids
 from catalog.models import Categories, ProductQuestions, ProductReviews, Products, ProductVariant
-from core.helpers import CommonListAPIMixin, CustomPageNumberPagination, renderResponse
+from core.helpers import CommonListAPIMixin, CustomPageNumberPagination, renderResponse, resolves_to_orderable_field
 from core.models import StoreConfiguration
 from orders.models import Order, OrderItem
 from orders.services import place_cod_order
@@ -77,6 +77,10 @@ class StoreConfigView(APIView):
                 # frontend must treat '' as "no Messenger button", not a
                 # broken link.
                 'messenger_page_id': cfg.messenger_page_id,
+                # Same rule for the floating WhatsApp chat button (both the
+                # storefront and the food frontend read this from here) --
+                # blank means "hide the button", not a broken wa.me link.
+                'whatsapp_chat_number': cfg.whatsapp_chat_number,
             },
             message='Store configuration',
         )
@@ -156,7 +160,15 @@ class PublicProductListView(generics.ListAPIView):
             'newest': '-created_at',
             'name': 'name',
         }
-        return queryset.order_by(valid_orderings.get(ordering, ordering))
+        resolved_ordering = valid_orderings.get(ordering, ordering)
+        # `resolved_ordering` can still be an unrecognised/garbage raw value
+        # when `ordering` isn't one of the friendly aliases above (a typo, or
+        # `?ordering=;DROP ...`) -- order_by() would raise FieldError on
+        # that and 500 the whole shop page. Fall back to the default rather
+        # than trust client input here.
+        if not resolves_to_orderable_field(queryset, resolved_ordering):
+            resolved_ordering = '-created_at'
+        return queryset.order_by(resolved_ordering)
 
     @CommonListAPIMixin.common_list_decorator(StorefrontProductListSerializer)
     def list(self, request, *args, **kwargs):

@@ -18,6 +18,7 @@ import NoticeMarquee from '../components/NoticeMarquee';
 import FoodBottomNav from '../components/FoodBottomNav';
 import { useFoodTheme } from '../context/FoodThemeContext';
 import BrandLogo from '../../components/BrandLogo';
+import WhatsAppButton from '../../components/WhatsAppButton';
 
 export default function FoodLayout() {
   const count = useSelector(selectFoodCount);
@@ -28,6 +29,18 @@ export default function FoodLayout() {
   const { mode, toggleMode } = useFoodTheme();
   const isDark = mode === 'dark';
   const onCartPages = pathname.includes('/food/cart') || pathname.includes('/food/checkout');
+  // The floating WhatsApp button must clear whichever fixed furniture is
+  // currently on screen: the phone tab bar (FoodBottomNav, ~60px, xs only)
+  // always, plus the sticky "view bag" bar (~60px, all breakpoints) when it
+  // is showing. Both already know this same condition -- see the
+  // AnimatePresence block below and FoodBottomNav's own `display` toggle.
+  const cartBarShown = count > 0 && !onCartPages;
+  const whatsappBottom = {
+    xs: cartBarShown
+      ? 'calc(env(safe-area-inset-bottom) + 144px)'
+      : 'calc(env(safe-area-inset-bottom) + 72px)',
+    md: cartBarShown ? 84 : 24,
+  };
 
   return (
     <Box sx={{
@@ -174,6 +187,7 @@ export default function FoodLayout() {
 
       <LocationPicker />
       <FoodBottomNav />
+      <WhatsAppButton bottom={whatsappBottom} />
 
 
       {/* Sticky cart bar — the food-app hallmark */}
