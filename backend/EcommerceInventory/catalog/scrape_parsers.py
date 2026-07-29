@@ -326,6 +326,19 @@ _GENDER_MAP = {
 _MATERIAL_LABELS = {"fabric type", "fabric", "material"}
 _DASH_SPLIT_RE = re.compile(r"\s[–—-]\s")  # " - ", " -- ", " -- "
 
+# fabrilife.com's own public, search-only Algolia key (read straight from the
+# page's own JS: ``algoliasearch('2UIXGXYA5O', ...)``). Kept here rather than
+# in tools/scrape/scrape_fabrilife.py (which reads these back from this
+# module) so the runtime size-chart backfill command
+# (catalog.services_size_chart_backfill) and the offline one-time scraper
+# can't drift onto two different keys/index names.
+FABRILIFE_ALGOLIA_APP_ID = "2UIXGXYA5O"
+FABRILIFE_ALGOLIA_SEARCH_KEY = "bfcfa7b10e2c9220df5d1d639d485218"
+FABRILIFE_ALGOLIA_INDEX = "products"
+FABRILIFE_ALGOLIA_URL = (
+    f"https://{FABRILIFE_ALGOLIA_APP_ID}-dsn.algolia.net/1/indexes/{FABRILIFE_ALGOLIA_INDEX}/query"
+)
+
 
 def _fabrilife_base_url(soup):
     tag = soup.find("meta", attrs={"property": "og:url"})
@@ -361,6 +374,65 @@ def _extract_fabrilife_prices(soup):
 
 def _extract_fabrilife_sizes(soup):
     return [el.get_text(strip=True) for el in soup.select(".size-selector") if el.get_text(strip=True)]
+
+
+_HEADER_PAREN_RE = re.compile(r"\s*\([^)]*\)")
+
+
+def _slugify_size_chart_header(text):
+    """"Chest (round)" -> "chest", "Length" -> "length". Drops a parenthetical
+    qualifier rather than keeping it in the key, matching the plain
+    ``{"chest": 36, "length": 27}`` shape documented on
+    ``catalog.models.Products.size_chart``."""
+    return _HEADER_PAREN_RE.sub("", text).strip().lower().replace(" ", "_")
+
+
+def _extract_fabrilife_size_chart(soup):
+    """Parse the "Size chart - In inches (...)" table into
+    ``{"M": {"chest": 36.0, "length": 30.0, "sleeve": 21.0}, ...}``.
+
+    Only the INCH tab-pane (``id`` starting ``sizechart-inch``) is read --
+    the site also pre-renders a CM table (``sizechart-cm-*``) with the same
+    values times 2.54, but that is a second, separately-maintained source
+    that could in principle drift out of sync with the INCH one. The
+    storefront instead derives CM from these INCH values at render time, so
+    the CM table on the source page is deliberately ignored here.
+
+    Returns ``{}`` when the page has no size chart at all (most Fabrilife
+    products besides Tops/Kurti don't carry measurements)."""
+    table = None
+    for pane in soup.select(".tab-pane"):
+        pane_id = pane.get("id") or ""
+        if pane_id.startswith("sizechart-inch"):
+            table = pane.find("table")
+            break
+    if table is None:
+        return {}
+
+    header_cells = table.select("thead th")
+    if len(header_cells) < 2:
+        return {}
+    size_label, *measurement_labels = [th.get_text(strip=True) for th in header_cells]
+    if size_label.lower() != "size":
+        return {}
+    measurement_keys = [_slugify_size_chart_header(h) for h in measurement_labels]
+
+    chart = {}
+    for row in table.select("tbody tr"):
+        cells = row.find_all("td")
+        if not cells:
+            continue
+        size = cells[0].get_text(strip=True)
+        if not size:
+            continue
+        measurements = {}
+        for key, cell in zip(measurement_keys, cells[1:]):
+            value = parse_bdt_price(cell.get_text(strip=True))
+            if value is not None:
+                measurements[key] = value
+        if measurements:
+            chart[size] = measurements
+    return chart
 
 
 def _extract_fabrilife_images(soup, base_url):
@@ -419,8 +491,9 @@ def parse_fabrilife_product(html):
     """Parse a single Fabrilife product page into a plain dict with the same
     keys as ``parse_opencart_product`` (name, price, discount_price,
     description, specifications, brand, images) plus ``gender``
-    (``"MEN"``/``"WOMEN"``/``"KIDS"``), ``sizes`` (list) and ``material``
-    (``""`` when the description doesn't state it)."""
+    (``"MEN"``/``"WOMEN"``/``"KIDS"``), ``sizes`` (list), ``material``
+    (``""`` when the description doesn't state it) and ``size_chart``
+    (``{}`` when the page has none -- see ``_extract_fabrilife_size_chart``)."""
     soup = BeautifulSoup(html, "html.parser")
     base_url = _fabrilife_base_url(soup)
 
@@ -442,7 +515,64 @@ def parse_fabrilife_product(html):
         "gender": _extract_fabrilife_gender(html),
         "sizes": _extract_fabrilife_sizes(soup),
         "material": material,
+        "size_chart": _extract_fabrilife_size_chart(soup),
     }
+
+
+def parse_fabrilife_algolia_size_chart(raw):
+    """Parse the ``size_chart`` field of a fabrilife.com Algolia ``products``
+    search hit into the same shape ``_extract_fabrilife_size_chart`` produces
+    from the live page's HTML table: ``{"M": {"chest": 36.0, "length": 30.0,
+    "sleeve": 21.0}, ...}``.
+
+    Confirmed live (2026-07-29) against a query for "Womens Premium Tops -
+    Estrella": the hit itself carries a ``size_chart`` field, a JSON-encoded
+    *string* shaped like
+    ``[{"title": "...", "unit_of_measurement": "inch", "chart": {"M":
+    {"chest (round)": "36", "length": "30", "sleeve": "21"}, ...}}]`` --
+    fabrilife.com's own structured data behind the table, not something we
+    have to re-derive by re-parsing rendered HTML. This is what
+    ``catalog.services_size_chart_backfill`` reads: one Algolia search
+    request both locates the product and returns its chart, no second
+    fetch of the product page needed.
+
+    ``raw`` may be that JSON string, or an already-decoded list (tests pass
+    the latter). Only the ``"inch"`` entry is used -- CM is derived from it
+    at render time (x 2.54), same rule as the HTML-table path. Returns
+    ``{}`` for anything that doesn't parse into the expected shape (missing
+    field, malformed JSON, no "inch" entry) -- a product with no chart must
+    degrade to "no chart" rather than raise."""
+    if not raw:
+        return {}
+    data = raw
+    if isinstance(raw, str):
+        try:
+            data = json.loads(raw)
+        except ValueError:
+            return {}
+    if not isinstance(data, list):
+        return {}
+
+    for entry in data:
+        if not isinstance(entry, dict):
+            continue
+        unit = str(entry.get("unit_of_measurement", "")).strip().lower()
+        chart = entry.get("chart")
+        if unit != "inch" or not isinstance(chart, dict):
+            continue
+        result = {}
+        for size, measurements in chart.items():
+            if not isinstance(measurements, dict):
+                continue
+            parsed = {}
+            for key, val in measurements.items():
+                num = parse_bdt_price(str(val))
+                if num is not None:
+                    parsed[_slugify_size_chart_header(key)] = num
+            if parsed:
+                result[size] = parsed
+        return result
+    return {}
 
 
 def parse_fabrilife_listing(html, base_url):

@@ -43,15 +43,16 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[2]))  # Ecommerc
 
 import requests  # noqa: E402
 
-from catalog.scrape_parsers import parse_fabrilife_listing, parse_fabrilife_product  # noqa: E402
+from catalog.scrape_parsers import (  # noqa: E402
+    FABRILIFE_ALGOLIA_APP_ID as ALGOLIA_APP_ID,
+    FABRILIFE_ALGOLIA_SEARCH_KEY as ALGOLIA_SEARCH_KEY,
+    FABRILIFE_ALGOLIA_URL as ALGOLIA_URL,
+    parse_fabrilife_listing,
+    parse_fabrilife_product,
+)
 from tools.scrape.common import UA, polite_get, write_fixture  # noqa: E402
 
 BASE_URL = "https://fabrilife.com/"
-
-ALGOLIA_APP_ID = "2UIXGXYA5O"
-ALGOLIA_SEARCH_KEY = "bfcfa7b10e2c9220df5d1d639d485218"  # public search-only key, read from the page's own JS
-ALGOLIA_INDEX = "products"
-ALGOLIA_URL = f"https://{ALGOLIA_APP_ID}-dsn.algolia.net/1/indexes/{ALGOLIA_INDEX}/query"
 
 # taxonomy slug (catalog.management.commands.seed_store_catalog.TAXONOMY) ->
 # fabrilife.com facet category name(s) (OR'd together within a group).
@@ -118,6 +119,7 @@ def scrape(limit):
                 "gender": p.get("gender") or "",
                 "sizes": p.get("sizes") or [],
                 "material": p.get("material") or "",
+                "size_chart": p.get("size_chart") or {},
                 # No source_url: fabrilife.com is a one-time seed source, not
                 # a reseller partner -- it must not be enrolled in price sync.
             })

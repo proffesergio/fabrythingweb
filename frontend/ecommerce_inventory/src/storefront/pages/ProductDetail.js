@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import {
     Box, Container, Grid, Typography, Button, Rating, Chip, Divider,
     Tab, Tabs, IconButton, Dialog, DialogTitle, DialogContent,
-    Table, TableBody, TableRow, TableCell, Skeleton, Breadcrumbs,
+    Table, TableHead, TableBody, TableRow, TableCell, Skeleton, Breadcrumbs,
 } from '@mui/material';
 import { ShoppingCart, Add, Remove, NavigateNext, LocalShipping } from '@mui/icons-material';
 import { useParams, Link } from 'react-router-dom';
@@ -19,6 +19,7 @@ export default function ProductDetail() {
     const [quantity, setQuantity] = useState(1);
     const [tab, setTab] = useState(0);
     const [sizeChartOpen, setSizeChartOpen] = useState(false);
+    const [sizeChartUnit, setSizeChartUnit] = useState('inch');
     const { callApi, loading } = useApi();
     const dispatch = useDispatch();
 
@@ -75,6 +76,20 @@ export default function ProductDetail() {
     const specs = product.specifications && typeof product.specifications === 'object' ? product.specifications : {};
     const highlights = Array.isArray(product.highlights) ? product.highlights : [];
     const sizeChart = product.size_chart && typeof product.size_chart === 'object' ? product.size_chart : {};
+    // Fashion-only, and never an empty table: a size chart is only shown at
+    // all when there is at least one size with at least one measurement --
+    // most Fabrilife products (and every non-fashion product) have none.
+    const sizeChartSizes = Object.keys(sizeChart).filter(
+        size => sizeChart[size] && Object.keys(sizeChart[size]).length > 0
+    );
+    const sizeChartMeasurementKeys = sizeChartSizes.length
+        ? [...new Set(sizeChartSizes.flatMap(size => Object.keys(sizeChart[size])))]
+        : [];
+    const hasSizeChart = sizeChartSizes.length > 0 && sizeChartMeasurementKeys.length > 0;
+    // The source data is in inches (see catalog.models.Products.size_chart);
+    // CM is a straight unit conversion computed here rather than sourced
+    // separately, so it can never drift out of sync with the inch values.
+    const inchToCm = (value) => Math.round(value * 2.54 * 10) / 10;
     // `effective_shipping_fee` is always a number from the storefront API --
     // this product's own override, or the store's flat rate when it has none
     // -- so the customer is never shown nothing here. `free_shipping` is the
@@ -243,7 +258,7 @@ export default function ProductDetail() {
                         <Box sx={{ mb: 3 }}>
                             <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
                                 <Typography variant="subtitle2" fontWeight={700}>Select Size</Typography>
-                                {Object.keys(sizeChart).length > 0 && (
+                                {hasSizeChart && (
                                     <Button size="small" onClick={() => setSizeChartOpen(true)}>Size Chart</Button>
                                 )}
                             </Box>
@@ -391,32 +406,53 @@ export default function ProductDetail() {
                 </Box>
             )}
 
-            {/* Size Chart Dialog */}
-            <Dialog open={sizeChartOpen} onClose={() => setSizeChartOpen(false)} maxWidth="sm" fullWidth>
-                <DialogTitle>Size Chart</DialogTitle>
-                <DialogContent>
-                    <Table size="small">
-                        <TableBody>
-                            <TableRow>
-                                <TableCell sx={{ fontWeight: 700 }}>Size</TableCell>
-                                {Object.keys(sizeChart).length > 0 &&
-                                    Object.keys(Object.values(sizeChart)[0] || {}).map(key => (
-                                        <TableCell key={key} sx={{ fontWeight: 700, textTransform: 'capitalize' }}>{key}</TableCell>
-                                    ))
-                                }
-                            </TableRow>
-                            {Object.entries(sizeChart).map(([size, measurements]) => (
-                                <TableRow key={size}>
-                                    <TableCell sx={{ fontWeight: 600 }}>{size}</TableCell>
-                                    {Object.values(measurements).map((val, i) => (
-                                        <TableCell key={i}>{val}"</TableCell>
+            {/* Size Chart Dialog -- only ever mounted with content when there is
+                real data (hasSizeChart), so it can never render an empty table. */}
+            {hasSizeChart && (
+                <Dialog open={sizeChartOpen} onClose={() => setSizeChartOpen(false)} maxWidth="xs" fullWidth>
+                    <DialogTitle sx={{ pb: 0.5 }}>
+                        Size chart
+                        <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 400 }}>
+                            In {sizeChartUnit === 'cm' ? 'centimeters' : 'inches'} (Expected Deviation &lt; 3%)
+                        </Typography>
+                    </DialogTitle>
+                    <DialogContent>
+                        <Tabs
+                            value={sizeChartUnit}
+                            onChange={(_, v) => setSizeChartUnit(v)}
+                            sx={{ mb: 2, minHeight: 36 }}
+                        >
+                            <Tab value="inch" label="INCH" sx={{ minHeight: 36, py: 0.5 }} />
+                            <Tab value="cm" label="CM" sx={{ minHeight: 36, py: 0.5 }} />
+                        </Tabs>
+                        <Table size="small">
+                            <TableHead>
+                                <TableRow>
+                                    <TableCell sx={{ fontWeight: 700 }}>Size</TableCell>
+                                    {sizeChartMeasurementKeys.map(key => (
+                                        <TableCell key={key} sx={{ fontWeight: 700, textTransform: 'capitalize' }}>
+                                            {key.replace(/_/g, ' ')}
+                                        </TableCell>
                                     ))}
                                 </TableRow>
-                            ))}
-                        </TableBody>
-                    </Table>
-                </DialogContent>
-            </Dialog>
+                            </TableHead>
+                            <TableBody>
+                                {sizeChartSizes.map(size => (
+                                    <TableRow key={size}>
+                                        <TableCell sx={{ fontWeight: 600 }}>{size}</TableCell>
+                                        {sizeChartMeasurementKeys.map(key => {
+                                            const raw = sizeChart[size]?.[key];
+                                            if (raw == null) return <TableCell key={key}>-</TableCell>;
+                                            const value = sizeChartUnit === 'cm' ? inchToCm(raw) : raw;
+                                            return <TableCell key={key}>{value}{sizeChartUnit === 'cm' ? ' cm' : '"'}</TableCell>;
+                                        })}
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    </DialogContent>
+                </Dialog>
+            )}
         </Container>
     );
 }
