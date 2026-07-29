@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Outlet, Link, useNavigate } from 'react-router-dom';
+import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import {
     AppBar, Toolbar, Typography, IconButton, Badge, Box, Container,
     Drawer,
@@ -69,12 +69,26 @@ function FoodNavBadge() {
     );
 }
 
+// Maps a storefront route to the bottom-nav tab it belongs to. Routes that
+// don't belong to any tab (e.g. /checkout) return false, which is not a valid
+// `value` for any BottomNavigationAction — so BottomNavigation highlights
+// nothing rather than defaulting to a tab. Exported so tests can assert the
+// mapping directly without rendering the whole layout.
+export function getActiveBottomNavTab(pathname) {
+    if (pathname === '/') return 'home';
+    if (pathname === '/shop' || pathname.startsWith('/shop/') || pathname.startsWith('/product/')) return 'shop';
+    if (pathname === '/cart' || pathname.startsWith('/cart/')) return 'cart';
+    if (pathname === '/account' || pathname.startsWith('/account/')) return 'account';
+    return false;
+}
+
 export default function StorefrontLayout({ toggleDarkMode, darkMode }) {
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
     const [searchOpen, setSearchOpen]         = useState(false);
     const [categories, setCategories]         = useState([]);
     const cartItemCount = useSelector(selectCartItemCount);
     const navigate      = useNavigate();
+    const location      = useLocation();
     const theme         = useTheme();
     const isMobile      = useMediaQuery(theme.breakpoints.down('md'));
     const isLoggedIn    = isAuthenticated();
@@ -82,6 +96,8 @@ export default function StorefrontLayout({ toggleDarkMode, darkMode }) {
 
     // Header shrinks / gains a shadow once the page scrolls past ~40px.
     const scrolled = useScrollTrigger({ disableHysteresis: true, threshold: 40 });
+
+    const activeBottomNavTab = getActiveBottomNavTab(location.pathname);
 
     useEffect(() => {
         callApi({ url: 'store/categories/' }).then(res => {
@@ -445,13 +461,13 @@ export default function StorefrontLayout({ toggleDarkMode, darkMode }) {
                     {/* Mobile Bottom Nav */}
                     {isMobile && (
                         <Paper sx={{ position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 1200 }} elevation={3}>
-                            <BottomNavigation showLabels>
-                                <BottomNavigationAction label="Home"    icon={<HomeIcon />}    onClick={() => navigate('/')} />
-                                <BottomNavigationAction label="Shop"    icon={<Category />}    onClick={() => navigate('/shop')} />
-                                <BottomNavigationAction label="Cart"
+                            <BottomNavigation showLabels value={activeBottomNavTab} onChange={() => {}}>
+                                <BottomNavigationAction value="home" label="Home"    icon={<HomeIcon />}    onClick={() => navigate('/')} />
+                                <BottomNavigationAction value="shop" label="Shop"    icon={<Category />}    onClick={() => navigate('/shop')} />
+                                <BottomNavigationAction value="cart" label="Cart"
                                     icon={<Badge badgeContent={cartItemCount} color="secondary"><ShoppingCart /></Badge>}
                                     onClick={() => navigate('/cart')} />
-                                <BottomNavigationAction label="Account" icon={<AccountCircle />}
+                                <BottomNavigationAction value="account" label="Account" icon={<AccountCircle />}
                                     onClick={() => navigate(isLoggedIn ? '/account' : '/auth/login')} />
                             </BottomNavigation>
                         </Paper>
