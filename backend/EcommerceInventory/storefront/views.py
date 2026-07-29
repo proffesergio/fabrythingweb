@@ -73,6 +73,10 @@ class StoreConfigView(APIView):
                     float(cfg.free_shipping_threshold) if cfg.free_shipping_threshold is not None else None
                 ),
                 'support_phone': cfg.support_phone,
+                # Blank until the owner sets it in the admin panel — the
+                # frontend must treat '' as "no Messenger button", not a
+                # broken link.
+                'messenger_page_id': cfg.messenger_page_id,
             },
             message='Store configuration',
         )
