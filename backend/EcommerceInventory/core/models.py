@@ -113,31 +113,49 @@ class StoreConfiguration(models.Model):
             cache.set(CACHE_KEY, obj, timeout=300)
         return obj
 
-    def shipping_for(self, subtotal, product_shipping_fees=None) -> Decimal:
+    def shipping_for(self, subtotal, product_shipping_fees=None, free_shipping_flags=None) -> Decimal:
         """Resolve the shipping charge for a given order subtotal.
 
         ``product_shipping_fees`` is an optional iterable with one entry per
         cart line (Decimal/float/None) -- ``catalog.models.Products.shipping_fee``
-        for the line's product. This is the single place the per-product
-        shipping rule is implemented; do not duplicate it in a view.
+        for the line's product. ``free_shipping_flags`` is an optional,
+        parallel iterable of booleans -- ``catalog.models.Products.free_shipping``
+        for the same line, marking it as an explicit free-shipping promo item
+        (distinct from ``shipping_fee == 0``, which is still just a candidate
+        in the max() below and only rarely wins). This is the single place
+        the per-product shipping rule is implemented; do not duplicate it in
+        a view.
 
-        Rule: shipping = max(fixed_shipping_rate, every non-null per-product
-        fee in the cart) -- it's one delivery trip, so the bulkiest/costliest
-        item to ship sets the price, and the flat rate is always the floor
-        (an item with no override, or an explicit 0, never pulls the charge
-        *below* the store rate on its own -- see the worked examples in
-        docs/SHIPPING_FEES.md). Free-shipping-threshold, when it applies,
-        overrides all of this to 0 -- it is checked last and wins.
+        Rule, in order:
+        1. Free-shipping-threshold, when the subtotal qualifies, wins over
+           everything below and returns 0 immediately.
+        2. If every cart line is a ``free_shipping`` promo item, shipping is 0.
+        3. Otherwise shipping = max(fixed_shipping_rate, every non-null
+           per-product fee among the *non-promo* lines) -- it's one delivery
+           trip, so the bulkiest/costliest non-promo item sets the price, the
+           flat rate is always the floor, and promo lines are excluded from
+           the max() entirely: a free-shipping shirt must not make an
+           expensive item ship free, and must not undercut the flat rate
+           either. See the worked examples in docs/SHIPPING_FEES.md.
         """
         subtotal = Decimal(str(subtotal))
         if self.free_shipping_threshold is not None and subtotal >= self.free_shipping_threshold:
             return Decimal("0.00")
 
+        product_shipping_fees = list(product_shipping_fees or [])
+        free_shipping_flags = list(free_shipping_flags or [])
+        if len(free_shipping_flags) < len(product_shipping_fees):
+            free_shipping_flags += [False] * (len(product_shipping_fees) - len(free_shipping_flags))
+
+        if product_shipping_fees and all(free_shipping_flags):
+            return Decimal("0.00")
+
         candidates = [self.fixed_shipping_rate]
-        if product_shipping_fees:
-            candidates += [
-                Decimal(str(fee)) for fee in product_shipping_fees if fee is not None
-            ]
+        for fee, is_promo in zip(product_shipping_fees, free_shipping_flags):
+            if is_promo:
+                continue
+            if fee is not None:
+                candidates.append(Decimal(str(fee)))
         return max(candidates)
 
 

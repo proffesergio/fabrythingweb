@@ -228,6 +228,9 @@ class AdminProductQuickUpdateView(APIView):
         free. Order-level shipping is computed from this field in exactly one
         place, core.models.StoreConfiguration.shipping_for; nothing here
         recomputes it.
+      - free_shipping (bool). The explicit "free shipping promo" flag --
+        distinct from shipping_fee == 0 (see the model field's docstring in
+        catalog/models.py and core.models.StoreConfiguration.shipping_for).
       - stock_quantity -- lives on ProductVariant, not Products. A product
         with exactly one variant is updated directly. A product with several
         variants requires an explicit `variant_id` in the body; without one
@@ -315,6 +318,17 @@ class AdminProductQuickUpdateView(APIView):
                     if new_shipping_fee < 0:
                         errors['shipping_fee'] = ['Cannot be negative.']
 
+        # --- free_shipping (explicit promo flag) --------------------------
+        # Distinct from shipping_fee == 0 -- see the model field's docstring.
+        new_free_shipping = product.free_shipping
+        free_shipping_provided = 'free_shipping' in data
+        if free_shipping_provided:
+            raw = data.get('free_shipping')
+            if isinstance(raw, bool):
+                new_free_shipping = raw
+            else:
+                errors['free_shipping'] = ['Must be true or false.']
+
         # --- stock_quantity (lives on ProductVariant) ---------------------
         target_variant = None
         new_stock_quantity = None
@@ -359,6 +373,9 @@ class AdminProductQuickUpdateView(APIView):
         if shipping_fee_provided:
             product.shipping_fee = new_shipping_fee
             update_fields.append('shipping_fee')
+        if free_shipping_provided:
+            product.free_shipping = new_free_shipping
+            update_fields.append('free_shipping')
 
         if update_fields:
             update_fields.append('updated_at')
@@ -382,6 +399,7 @@ class AdminProductQuickUpdateView(APIView):
             "discount_price": product.discount_price,
             "status": product.status,
             "shipping_fee": float(product.shipping_fee) if product.shipping_fee is not None else None,
+            "free_shipping": product.free_shipping,
             "variants": variants,
         }
         return renderResponse(data=response_data, message='Product updated')
@@ -402,6 +420,11 @@ class AdminBulkShippingFeeView(APIView):
     means the *whole* subtree, not just its direct products, and can't drift
     from those filters.
 
+    ``free_shipping`` (bool) can be sent alongside or instead of
+    ``shipping_fee`` -- e.g. to promo a whole category as free-shipping
+    without touching its per-product fee. At least one of the two must be
+    present.
+
     Same authorization as quick-update (isPlatformScope) and the same
     field_errors validation shape. Negative fees are rejected. The match is
     capped at MAX_BATCH rows so a fat-fingered top-level category can't silently
@@ -420,9 +443,12 @@ class AdminBulkShippingFeeView(APIView):
         errors = {}
 
         shipping_fee = None
-        if 'shipping_fee' not in data:
-            errors['shipping_fee'] = ['This field is required.']
-        else:
+        shipping_fee_provided = 'shipping_fee' in data
+        free_shipping_provided = 'free_shipping' in data
+
+        if not shipping_fee_provided and not free_shipping_provided:
+            errors['shipping_fee'] = ['Provide shipping_fee and/or free_shipping.']
+        elif shipping_fee_provided:
             raw = data.get('shipping_fee')
             if raw is None or raw == '':
                 shipping_fee = None
@@ -434,6 +460,14 @@ class AdminBulkShippingFeeView(APIView):
                 else:
                     if shipping_fee < 0:
                         errors['shipping_fee'] = ['Cannot be negative.']
+
+        free_shipping = None
+        if free_shipping_provided:
+            raw = data.get('free_shipping')
+            if isinstance(raw, bool):
+                free_shipping = raw
+            else:
+                errors['free_shipping'] = ['Must be true or false.']
 
         product_ids = data.get('product_ids')
         category_param = data.get('category')
@@ -469,10 +503,19 @@ class AdminBulkShippingFeeView(APIView):
                 ]},
                 message='Validation error', status=400)
 
-        updated = queryset.update(shipping_fee=shipping_fee)
-        return renderResponse(
-            data={'updated': updated, 'shipping_fee': shipping_fee},
-            message='Shipping fee updated')
+        update_kwargs = {}
+        if shipping_fee_provided:
+            update_kwargs['shipping_fee'] = shipping_fee
+        if free_shipping_provided:
+            update_kwargs['free_shipping'] = free_shipping
+
+        updated = queryset.update(**update_kwargs)
+        response_data = {'updated': updated}
+        if shipping_fee_provided:
+            response_data['shipping_fee'] = shipping_fee
+        if free_shipping_provided:
+            response_data['free_shipping'] = free_shipping
+        return renderResponse(data=response_data, message='Shipping fee updated')
 
 
 class UpdateProductQuestionsView(generics.UpdateAPIView):

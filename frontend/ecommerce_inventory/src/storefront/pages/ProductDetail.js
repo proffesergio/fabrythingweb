@@ -77,9 +77,13 @@ export default function ProductDetail() {
     const sizeChart = product.size_chart && typeof product.size_chart === 'object' ? product.size_chart : {};
     // `effective_shipping_fee` is always a number from the storefront API --
     // this product's own override, or the store's flat rate when it has none
-    // -- so the customer is never shown nothing here.
+    // -- so the customer is never shown nothing here. `free_shipping` is the
+    // separate, explicit promo flag (distinct from shipping_fee == 0, see
+    // docs/SHIPPING_FEES.md); either one flips this box into its "Free
+    // delivery" state, which always takes precedence over the "Delivery: ৳X"
+    // text -- the two never show together, since it's the same box.
     const shippingFee = product.effective_shipping_fee;
-    const freeDelivery = shippingFee === 0;
+    const freeDelivery = !!product.free_shipping || shippingFee === 0;
 
     const handleAddToCart = () => {
         if (!selectedVariant || !inStock) return;
@@ -195,7 +199,7 @@ export default function ProductDetail() {
                     {/* Delivery fee -- more prominent than the card's quiet caption, and
                         always shown (falls back to the store's flat rate) so the customer
                         knows the shipping cost before they add to cart. */}
-                    {shippingFee != null && (
+                    {(shippingFee != null || freeDelivery) && (
                         <Box sx={{
                             display: 'flex', alignItems: 'center', gap: 1, mb: 2,
                             px: 1.5, py: 1, borderRadius: 1,

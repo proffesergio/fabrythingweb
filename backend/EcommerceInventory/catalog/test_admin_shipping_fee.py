@@ -92,6 +92,34 @@ class QuickUpdateShippingFeeTests(ShippingFeeTestBase):
         self.product.refresh_from_db()
         self.assertIsNone(self.product.shipping_fee)
 
+    def test_sets_free_shipping_promo_flag(self):
+        res = self.patch({"free_shipping": True})
+        self.assertEqual(res.status_code, 200, res.data)
+        self.product.refresh_from_db()
+        self.assertTrue(self.product.free_shipping)
+        self.assertTrue(res.data["data"]["free_shipping"])
+
+    def test_clears_free_shipping_promo_flag(self):
+        self.product.free_shipping = True
+        self.product.save(update_fields=["free_shipping"])
+        res = self.patch({"free_shipping": False})
+        self.assertEqual(res.status_code, 200, res.data)
+        self.product.refresh_from_db()
+        self.assertFalse(self.product.free_shipping)
+
+    def test_non_boolean_free_shipping_rejected(self):
+        res = self.patch({"free_shipping": "yes"})
+        self.assertEqual(res.status_code, 400)
+        self.assertIn("free_shipping", res.data["field_errors"])
+        self.product.refresh_from_db()
+        self.assertFalse(self.product.free_shipping)
+
+    def test_free_shipping_non_platform_user_forbidden(self):
+        res = self.patch({"free_shipping": True}, user=self.staff)
+        self.assertEqual(res.status_code, 403)
+        self.product.refresh_from_db()
+        self.assertFalse(self.product.free_shipping)
+
 
 class BulkShippingFeeTests(ShippingFeeTestBase):
     def setUp(self):
@@ -183,3 +211,57 @@ class BulkShippingFeeTests(ShippingFeeTestBase):
         self.assertEqual(res.status_code, 403)
         self.p1.refresh_from_db()
         self.assertIsNone(self.p1.shipping_fee)
+
+    def test_sets_free_shipping_on_explicit_product_ids(self):
+        res = self.bulk({
+            "shipping_fee": None, "free_shipping": True,
+            "product_ids": [self.p1.id, self.p2.id],
+        })
+        self.assertEqual(res.status_code, 200, res.data)
+        self.assertEqual(res.data["data"]["updated"], 2)
+        self.p1.refresh_from_db()
+        self.p2.refresh_from_db()
+        self.p3.refresh_from_db()
+        self.assertTrue(self.p1.free_shipping)
+        self.assertTrue(self.p2.free_shipping)
+        self.assertFalse(self.p3.free_shipping)
+
+    def test_sets_free_shipping_on_whole_category_subtree(self):
+        child = Categories.objects.create(name="Child2", slug="sfa-child2", parent_id=self.cat, description="")
+        leaf_product = make_product(child, self.owner, "sfa-leaf2")
+
+        res = self.bulk({"free_shipping": True, "category": self.cat.slug})
+        self.assertEqual(res.status_code, 200, res.data)
+        # p1, p2 (direct) + leaf_product (grandchild) = 3 rows, not p3 (other_cat).
+        self.assertEqual(res.data["data"]["updated"], 3)
+        leaf_product.refresh_from_db()
+        self.p3.refresh_from_db()
+        self.assertTrue(leaf_product.free_shipping)
+        self.assertFalse(self.p3.free_shipping)
+
+    def test_free_shipping_alone_without_shipping_fee_key_is_allowed(self):
+        # The owner should be able to promo a category as free-shipping
+        # without also having to specify a numeric shipping_fee.
+        res = self.bulk({"free_shipping": True, "product_ids": [self.p1.id]})
+        self.assertEqual(res.status_code, 200, res.data)
+        self.p1.refresh_from_db()
+        self.assertTrue(self.p1.free_shipping)
+        self.assertIsNone(self.p1.shipping_fee)
+
+    def test_non_boolean_free_shipping_rejected_in_bulk(self):
+        res = self.bulk({"free_shipping": "yes", "product_ids": [self.p1.id]})
+        self.assertEqual(res.status_code, 400)
+        self.assertIn("free_shipping", res.data["field_errors"])
+        self.p1.refresh_from_db()
+        self.assertFalse(self.p1.free_shipping)
+
+    def test_neither_shipping_fee_nor_free_shipping_rejected(self):
+        res = self.bulk({"product_ids": [self.p1.id]})
+        self.assertEqual(res.status_code, 400)
+        self.assertIn("shipping_fee", res.data["field_errors"])
+
+    def test_free_shipping_non_platform_user_forbidden(self):
+        res = self.bulk({"free_shipping": True, "product_ids": [self.p1.id]}, user=self.staff)
+        self.assertEqual(res.status_code, 403)
+        self.p1.refresh_from_db()
+        self.assertFalse(self.p1.free_shipping)

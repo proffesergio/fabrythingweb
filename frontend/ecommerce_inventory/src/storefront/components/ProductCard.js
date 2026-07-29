@@ -20,9 +20,15 @@ export default function ProductCard({ product, showFlashBadge }) {
     // `effective_shipping_fee` is always a number from the storefront API --
     // the product's own override, or the store's flat rate when it has none
     // -- so the customer is never shown nothing (see ProductDetail for the
-    // more prominent version of the same rule).
+    // more prominent version of the same rule). `free_shipping` is the
+    // separate, explicit promo flag (distinct from shipping_fee == 0, see
+    // docs/SHIPPING_FEES.md) -- it always wins the "Free delivery" text, and
+    // that text always takes precedence over the delivery-fee caption: the
+    // two are never shown together.
     const shippingFee = product.effective_shipping_fee;
-    const shippingText = shippingFee === 0
+    const isFreeShippingPromo = !!product.free_shipping;
+    const showFreeDelivery = isFreeShippingPromo || shippingFee === 0;
+    const shippingText = showFreeDelivery
         ? 'Free delivery'
         : (shippingFee != null ? `+৳${shippingFee.toLocaleString()} delivery` : null);
 
@@ -189,13 +195,21 @@ export default function ProductCard({ product, showFlashBadge }) {
                             </Typography>
                         )}
                     </Box>
-                    {/* Quiet by design -- one compact line, no icon, no extra
-                        margin -- so the card doesn't grow past the height the
-                        mobile fix deliberately bought back. */}
+                    {/* One compact line, no extra margin -- so the card
+                        doesn't grow past the height the mobile fix
+                        deliberately bought back. "Free delivery" is a genuine
+                        selling point (bold, brand-green) rather than the
+                        quiet grey caption used for a plain resolved fee --
+                        and it's the same line, so it can never appear
+                        alongside the "+৳X delivery" text. */}
                     {shippingText && (
                         <Typography
                             variant="caption"
-                            sx={{ color: 'text.secondary', fontSize: '0.62rem', lineHeight: 1.2 }}
+                            sx={{
+                                color: showFreeDelivery ? 'success.main' : 'text.secondary',
+                                fontWeight: showFreeDelivery ? 700 : 400,
+                                fontSize: '0.62rem', lineHeight: 1.2,
+                            }}
                         >
                             {shippingText}
                         </Typography>

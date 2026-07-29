@@ -124,3 +124,79 @@ class ShippingForFreeThresholdStillWinsTests(TestCase):
     def test_below_threshold_with_product_fee_uses_the_max_rule(self):
         shipping = self.cfg.shipping_for(Decimal("1000"), [Decimal("250")])
         self.assertEqual(shipping, Decimal("250"))
+
+
+class ShippingForFreeShippingPromoTests(TestCase):
+    """New: Products.free_shipping, an explicit "free shipping promo" flag --
+    distinct from shipping_fee == 0 (which is still just a candidate in the
+    max() below and only rarely wins, since the flat rate is the floor).
+    Passed to shipping_for as free_shipping_flags, parallel to
+    product_shipping_fees, one entry per cart line.
+    """
+
+    def setUp(self):
+        self.cfg = StoreConfiguration.get_solo()
+        self.cfg.fixed_shipping_rate = Decimal("60.00")
+        self.cfg.free_shipping_threshold = None
+        self.cfg.save()
+
+    def test_single_free_shipping_product_ships_free(self):
+        shipping = self.cfg.shipping_for(
+            Decimal("500"), [None], free_shipping_flags=[True]
+        )
+        self.assertEqual(shipping, Decimal("0.00"))
+
+    def test_two_free_shipping_products_ship_free(self):
+        shipping = self.cfg.shipping_for(
+            Decimal("1000"), [None, None], free_shipping_flags=[True, True]
+        )
+        self.assertEqual(shipping, Decimal("0.00"))
+
+    def test_mixed_cart_excludes_promo_item_but_keeps_the_other_fee(self):
+        # A free-shipping shirt + a monitor with a 250 fee -> 250, not 0 (the
+        # promo shirt must not drag an expensive item's shipping down to free).
+        shipping = self.cfg.shipping_for(
+            Decimal("2000"), [None, Decimal("250")], free_shipping_flags=[True, False]
+        )
+        self.assertEqual(shipping, Decimal("250"))
+
+    def test_mixed_cart_with_no_other_fee_falls_back_to_flat_rate(self):
+        # A free-shipping shirt + a normal product with no fee -> the flat
+        # rate (60), not 0 -- the promo item is excluded from the max(), it
+        # doesn't zero the whole order.
+        shipping = self.cfg.shipping_for(
+            Decimal("500"), [None, None], free_shipping_flags=[True, False]
+        )
+        self.assertEqual(shipping, Decimal("60.00"))
+
+    def test_no_promo_items_is_unchanged(self):
+        shipping = self.cfg.shipping_for(
+            Decimal("500"), [None, Decimal("250")], free_shipping_flags=[False, False]
+        )
+        self.assertEqual(shipping, Decimal("250"))
+
+    def test_promo_item_with_its_own_zero_fee_is_still_governed_by_the_all_free_rule(self):
+        shipping = self.cfg.shipping_for(
+            Decimal("500"), [Decimal("0")], free_shipping_flags=[True]
+        )
+        self.assertEqual(shipping, Decimal("0.00"))
+
+    def test_omitting_free_shipping_flags_entirely_behaves_like_no_promo_items(self):
+        # Callers (e.g. legacy call sites) that never pass free_shipping_flags
+        # must see exactly today's behaviour.
+        shipping = self.cfg.shipping_for(Decimal("500"), [Decimal("30"), Decimal("250")])
+        self.assertEqual(shipping, Decimal("250"))
+
+
+class ShippingForFreeShippingPromoThresholdTests(TestCase):
+    def setUp(self):
+        self.cfg = StoreConfiguration.get_solo()
+        self.cfg.fixed_shipping_rate = Decimal("60.00")
+        self.cfg.free_shipping_threshold = Decimal("2000.00")
+        self.cfg.save()
+
+    def test_threshold_still_wins_over_a_mixed_promo_cart(self):
+        shipping = self.cfg.shipping_for(
+            Decimal("2500"), [None, Decimal("250")], free_shipping_flags=[True, False]
+        )
+        self.assertEqual(shipping, Decimal("0.00"))

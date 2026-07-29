@@ -80,6 +80,19 @@ class Products(models.Model):
         help_text="Per-product shipping fee. Leave blank to use the store's "
                   "flat rate; 0 means this product ships free.",
     )
+    # Explicit "free shipping promo" flag -- distinct from shipping_fee=0.
+    # shipping_fee=0 is still just a candidate in shipping_for()'s max(), so
+    # the flat rate floor can (and usually does) override it; free_shipping
+    # actually waives this product's shipping outright. A cart made up
+    # entirely of free_shipping products ships free; in a mixed cart the
+    # promo items are excluded from the max() rather than the whole order
+    # going free or the promo item dragging the charge down (see
+    # core.models.StoreConfiguration.shipping_for). Defaults False so every
+    # existing product is unaffected until an admin opts it in.
+    free_shipping=models.BooleanField(
+        default=False,
+        help_text="Mark this product as an explicit free-shipping promo item.",
+    )
     weight=models.FloatField(blank=True,null=True)
     dimensions=models.CharField(default='0x0x0',max_length=255,blank=True)
     uom=models.CharField(max_length=255,default='PCS',blank=True)

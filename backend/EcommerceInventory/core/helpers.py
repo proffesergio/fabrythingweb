@@ -37,7 +37,14 @@ def checkisFileField(field):
     return field in ['image','file','path','video','audio','profile_pic']
 
 def getExludeFields():
-    return ['id','created_at','updated_at','domain_user_id','added_by_user_id','created_by_user_id','updated_by_user_id','is_staff','is_superuser','is_active','plan_type','last_login','last_device','date_joined','last_ip','domain_name']
+    # `free_shipping` (catalog.models.Products): a BooleanField with
+    # default=False is, per DynamicFormController's reflection below, treated
+    # as *required* on every generic create/update POST (not field.null and
+    # field.default is not None) -- exactly the trap `is_active` is already
+    # excluded for. It's set from ManageProducts.js's quick-update/bulk
+    # endpoints instead, not the generic product add/edit form, so it's
+    # excluded here the same way.
+    return ['id','created_at','updated_at','domain_user_id','added_by_user_id','created_by_user_id','updated_by_user_id','is_staff','is_superuser','is_active','plan_type','last_login','last_device','date_joined','last_ip','domain_name','free_shipping']
 
 def getDynamicFormFields(model_instance,domain_user_id,skip_related=[],skip_fields=[]):
     fields={'text':[],'select':[],'checkbox':[],'radio':[],'textarea':[],'json':[],'file':[]}

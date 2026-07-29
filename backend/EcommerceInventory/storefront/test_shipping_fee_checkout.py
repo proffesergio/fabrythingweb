@@ -7,6 +7,7 @@ not just the unit-level shipping_for tests in core/test_shipping.py.
 """
 from decimal import Decimal
 
+from django.core.cache import cache
 from django.test import TestCase
 from rest_framework.test import APIClient
 
@@ -16,11 +17,11 @@ from core.models import StoreConfiguration
 from orders.models import Order
 
 
-def make_product(name, slug, sku, price, shipping_fee=None, category=None):
+def make_product(name, slug, sku, price, shipping_fee=None, category=None, free_shipping=False):
     product = Products.objects.create(
         name=name, slug=slug, sku=sku, category_id=category, status="ACTIVE",
         description="", initial_buying_price=price, initial_selling_price=price,
-        shipping_fee=shipping_fee,
+        shipping_fee=shipping_fee, free_shipping=free_shipping,
     )
     variant = ProductVariant.objects.create(
         product=product, sku=f"{sku}-DEF", price=Decimal(str(price)), stock_quantity=50,
@@ -30,6 +31,13 @@ def make_product(name, slug, sku, price, shipping_fee=None, category=None):
 
 class CheckoutShippingFeeTestBase(TestCase):
     def setUp(self):
+        # POST /api/store/orders/ is throttled (orders.create, see
+        # storefront/views.py); ScopedRateThrottle's counter lives in the
+        # process-wide cache, so without clearing it here this file's growing
+        # number of real checkout calls can exhaust the quota for -- or be
+        # exhausted by -- other test files that also place orders in the same
+        # `manage.py test` run (e.g. storefront/test_whatsapp_alerts.py).
+        cache.clear()
         self.client = APIClient()
         self.cat = Categories.objects.create(name="Elec", slug="sf-elec", description="")
         cfg = StoreConfiguration.get_solo()
@@ -114,3 +122,76 @@ class FreeShippingThresholdStillHonouredTests(CheckoutShippingFeeTestBase):
         res = self.place_order([{"variant_id": v.id, "quantity": 1}])
         self.assertEqual(res.status_code, 201, res.content)
         self.assertEqual(res.json()["data"]["shipping_amount"], 250.0)
+
+
+class FreeShippingPromoCheckoutTests(CheckoutShippingFeeTestBase):
+    """Products.free_shipping flowing through the real COD checkout."""
+
+    def test_single_free_shipping_product_ships_free(self):
+        p, v = make_product("Promo Shirt", "sf-promo1", "SF-PROMO1", 500,
+                            free_shipping=True, category=self.cat)
+
+        res = self.place_order([{"variant_id": v.id, "quantity": 1}])
+        self.assertEqual(res.status_code, 201, res.content)
+        self.assertEqual(res.json()["data"]["shipping_amount"], 0.0)
+
+    def test_two_free_shipping_products_ship_free(self):
+        p1, v1 = make_product("Promo A", "sf-promoa", "SF-PROMOA", 300,
+                              free_shipping=True, category=self.cat)
+        p2, v2 = make_product("Promo B", "sf-promob", "SF-PROMOB", 400,
+                              free_shipping=True, category=self.cat)
+
+        res = self.place_order([
+            {"variant_id": v1.id, "quantity": 1},
+            {"variant_id": v2.id, "quantity": 1},
+        ])
+        self.assertEqual(res.status_code, 201, res.content)
+        self.assertEqual(res.json()["data"]["shipping_amount"], 0.0)
+
+    def test_mixed_cart_promo_shirt_plus_monitor_charges_monitor_fee(self):
+        # A free-shipping shirt must not make a costly monitor ship for free.
+        shirt, shirt_v = make_product(
+            "Promo Shirt", "sf-promo-shirt", "SF-PROMO-SHIRT", 500,
+            free_shipping=True, category=self.cat)
+        monitor, monitor_v = make_product(
+            "Monitor", "sf-promo-mon", "SF-PROMO-MON", 15000,
+            shipping_fee=Decimal("250"), category=self.cat)
+
+        res = self.place_order([
+            {"variant_id": shirt_v.id, "quantity": 1},
+            {"variant_id": monitor_v.id, "quantity": 1},
+        ])
+        self.assertEqual(res.status_code, 201, res.content)
+        self.assertEqual(res.json()["data"]["shipping_amount"], 250.0)
+
+    def test_mixed_cart_promo_shirt_plus_plain_product_uses_flat_rate(self):
+        # The promo item must not undercut the flat rate either -- excluded
+        # from the max(), not zeroing the order.
+        shirt, shirt_v = make_product(
+            "Promo Shirt", "sf-promo-shirt2", "SF-PROMO-SHIRT2", 500,
+            free_shipping=True, category=self.cat)
+        plain, plain_v = make_product(
+            "Plain", "sf-promo-plain", "SF-PROMO-PLAIN", 300, category=self.cat)
+
+        res = self.place_order([
+            {"variant_id": shirt_v.id, "quantity": 1},
+            {"variant_id": plain_v.id, "quantity": 1},
+        ])
+        self.assertEqual(res.status_code, 201, res.content)
+        self.assertEqual(res.json()["data"]["shipping_amount"], 60.0)
+
+
+class FreeShippingPromoThresholdTests(CheckoutShippingFeeTestBase):
+    def setUp(self):
+        super().setUp()
+        cfg = StoreConfiguration.get_solo()
+        cfg.free_shipping_threshold = Decimal("1000.00")
+        cfg.save()
+
+    def test_subtotal_over_threshold_wins_regardless_of_promo_flag(self):
+        p, v = make_product("Bulky Promo", "sf-promo-bulky", "SF-PROMO-BULKY", 5000,
+                            free_shipping=True, category=self.cat)
+
+        res = self.place_order([{"variant_id": v.id, "quantity": 1}])
+        self.assertEqual(res.status_code, 201, res.content)
+        self.assertEqual(res.json()["data"]["shipping_amount"], 0.0)

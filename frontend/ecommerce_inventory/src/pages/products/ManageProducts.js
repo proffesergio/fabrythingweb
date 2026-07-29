@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-    Box, Breadcrumbs, Button, Checkbox, Chip, IconButton, LinearProgress, Table, TableBody, TableCell,
+    Box, Breadcrumbs, Button, Checkbox, Chip, FormControlLabel, IconButton, LinearProgress, Table, TableBody, TableCell,
     TableContainer, TableHead, TableRow, Paper, TextField, Typography, Stack, Avatar,
     InputAdornment, Pagination, Tooltip, Dialog, DialogContent, DialogActions, DialogTitle,
     Divider, MenuItem, Switch, CircularProgress, Alert,
@@ -44,6 +44,9 @@ const draftFromProduct = (p) => ({
     // flat rate -- must render as blank, the same as discount_price's "no
     // discount" state, not as "0" (0 is a real, distinct "ships free" value).
     shipping_fee: p.shipping_fee === null || p.shipping_fee === undefined ? "" : String(p.shipping_fee),
+    // Explicit "free shipping promo" flag -- distinct from shipping_fee: 0.
+    // See docs/SHIPPING_FEES.md. Always a real boolean, never blank.
+    free_shipping: !!p.free_shipping,
     saved: true, // no unsaved changes yet
 });
 
@@ -73,6 +76,11 @@ const ManageProducts = ({ onProductSelected }) => {
     const [selectedIds, setSelectedIds] = useState(new Set());
     const [bulkOpen, setBulkOpen] = useState(false);
     const [bulkFee, setBulkFee] = useState("");
+    // "" = don't change the promo flag; "true"/"false" = set it explicitly.
+    // A tri-state select, not a checkbox, because a bulk selection can mix
+    // products that are already promo'd and ones that aren't -- there's no
+    // single "current" state to show a checkbox against.
+    const [bulkFreeShipping, setBulkFreeShipping] = useState("");
     const [bulkSaving, setBulkSaving] = useState(false);
     const [bulkCategoryCount, setBulkCategoryCount] = useState(null);
     const [bulkCategoryCountLoading, setBulkCategoryCountLoading] = useState(false);
@@ -159,7 +167,8 @@ const ManageProducts = ({ onProductSelected }) => {
         const stockChanged = stockEditable && Number(d.stock_quantity) !== (product.total_stock ?? 0);
         const draftShippingFee = d.shipping_fee === "" ? null : Number(d.shipping_fee);
         const shippingChanged = draftShippingFee !== currentShippingFee(product);
-        return priceChanged || discountChanged || stockChanged || shippingChanged;
+        const freeShippingChanged = !!d.free_shipping !== !!product.free_shipping;
+        return priceChanged || discountChanged || stockChanged || shippingChanged || freeShippingChanged;
     };
 
     // Applies a server-confirmed product onto local state, keeping the table
@@ -187,6 +196,9 @@ const ManageProducts = ({ onProductSelected }) => {
         if (draftShippingFee !== currentShippingFee(product)) {
             body.shipping_fee = draftShippingFee;
         }
+        if (!!draft.free_shipping !== !!product.free_shipping) {
+            body.free_shipping = !!draft.free_shipping;
+        }
         if (Object.keys(body).length === 0) return;
 
         setSavingIds((prev) => ({ ...prev, [product.id]: true }));
@@ -210,6 +222,7 @@ const ManageProducts = ({ onProductSelected }) => {
                 discount_price: data.discount_price,
                 status: data.status,
                 shipping_fee: data.shipping_fee,
+                free_shipping: !!data.free_shipping,
                 total_stock: totalStock,
                 variant_count: data.variants?.length ?? product.variant_count,
             });
@@ -220,6 +233,7 @@ const ManageProducts = ({ onProductSelected }) => {
                     discount_price: data.discount_price === null ? "" : String(data.discount_price),
                     stock_quantity: String(totalStock),
                     shipping_fee: data.shipping_fee === null || data.shipping_fee === undefined ? "" : String(data.shipping_fee),
+                    free_shipping: !!data.free_shipping,
                     saved: true,
                 },
             }));
@@ -275,6 +289,7 @@ const ManageProducts = ({ onProductSelected }) => {
 
     const openBulkDialog = async () => {
         setBulkFee("");
+        setBulkFreeShipping("");
         setBulkOpen(true);
         setBulkCategoryCount(null);
         // Only need a fresh count when the dialog will actually target the
@@ -300,6 +315,9 @@ const ManageProducts = ({ onProductSelected }) => {
     const handleBulkApply = async () => {
         if (!bulkScope) return;
         const body = { shipping_fee: bulkFee === "" ? null : Number(bulkFee) };
+        if (bulkFreeShipping !== "") {
+            body.free_shipping = bulkFreeShipping === "true";
+        }
         if (bulkScope === "selection") {
             body.product_ids = Array.from(selectedIds);
         } else {
@@ -447,9 +465,13 @@ const ManageProducts = ({ onProductSelected }) => {
                                                 <Typography variant="body2" color="text.secondary">{p.discount_price ? `৳${p.discount_price}` : "—"}</Typography>
                                             </TableCell>
                                             <TableCell align="right">
-                                                <Typography variant="body2" color="text.secondary">
-                                                    {p.shipping_fee !== null && p.shipping_fee !== undefined ? `৳${p.shipping_fee}` : "store rate"}
-                                                </Typography>
+                                                {p.free_shipping ? (
+                                                    <Chip size="small" color="success" label="Free" />
+                                                ) : (
+                                                    <Typography variant="body2" color="text.secondary">
+                                                        {p.shipping_fee !== null && p.shipping_fee !== undefined ? `৳${p.shipping_fee}` : "store rate"}
+                                                    </Typography>
+                                                )}
                                             </TableCell>
                                             <TableCell align="right">{p.total_stock ?? "—"}</TableCell>
                                             <TableCell align="center">
@@ -481,7 +503,7 @@ const ManageProducts = ({ onProductSelected }) => {
                                             </TableCell>
                                             <TableCell align="right">
                                                 <TextField
-                                                    size="small" type="number" disabled={saving} value={draft.shipping_fee}
+                                                    size="small" type="number" disabled={saving || draft.free_shipping} value={draft.shipping_fee}
                                                     onChange={(e) => setDraftField(p.id, "shipping_fee", e.target.value)}
                                                     error={!!errors.shipping_fee}
                                                     helperText={errors.shipping_fee?.[0]}
@@ -489,6 +511,19 @@ const ManageProducts = ({ onProductSelected }) => {
                                                     InputProps={{ startAdornment: <InputAdornment position="start">৳</InputAdornment> }}
                                                     sx={{ width: 120 }}
                                                 />
+                                                <Tooltip title="Free-shipping promo -- waives this product's shipping outright, distinct from a 0 fee (docs/SHIPPING_FEES.md)">
+                                                    <FormControlLabel
+                                                        sx={{ mr: 0, mt: 0.25 }}
+                                                        control={
+                                                            <Checkbox
+                                                                size="small" disabled={saving} checked={!!draft.free_shipping}
+                                                                onChange={(e) => setDraftField(p.id, "free_shipping", e.target.checked)}
+                                                                inputProps={{ "aria-label": `Free shipping for ${p.name}` }}
+                                                            />
+                                                        }
+                                                        label={<Typography variant="caption">Free shipping</Typography>}
+                                                    />
+                                                </Tooltip>
                                             </TableCell>
                                             <TableCell align="right">
                                                 {stockEditable ? (
@@ -603,6 +638,16 @@ const ManageProducts = ({ onProductSelected }) => {
                         disabled={bulkSaving}
                         helperText="Leave blank to reset to the store's flat rate; 0 means free delivery."
                     />
+                    <TextField
+                        select fullWidth size="small" label="Free shipping promo" sx={{ mt: 2 }}
+                        value={bulkFreeShipping} onChange={(e) => setBulkFreeShipping(e.target.value)}
+                        disabled={bulkSaving}
+                        helperText="A mixed selection has no single current value, so this only changes what you pick here."
+                    >
+                        <MenuItem value="">Don't change</MenuItem>
+                        <MenuItem value="true">Mark as free-shipping promo</MenuItem>
+                        <MenuItem value="false">Remove free-shipping promo</MenuItem>
+                    </TextField>
                 </DialogContent>
                 <DialogActions>
                     <Button onClick={() => setBulkOpen(false)} disabled={bulkSaving}>Cancel</Button>

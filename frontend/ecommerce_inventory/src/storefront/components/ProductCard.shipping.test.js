@@ -37,3 +37,22 @@ test('renders no delivery line at all when the field is entirely absent', () => 
   renderCard({ ...baseProduct });
   expect(screen.queryByText(/delivery/i)).not.toBeInTheDocument();
 });
+
+// free_shipping is the explicit per-product promo flag (distinct from
+// shipping_fee == 0) -- see docs/SHIPPING_FEES.md.
+test('shows "Free delivery" when free_shipping is true, even with a nonzero effective_shipping_fee', () => {
+  renderCard({ ...baseProduct, free_shipping: true, effective_shipping_fee: 60 });
+  expect(screen.getByText('Free delivery')).toBeInTheDocument();
+});
+
+test('never shows both "Free delivery" and the delivery-fee text at once', () => {
+  renderCard({ ...baseProduct, free_shipping: true, effective_shipping_fee: 250 });
+  expect(screen.getByText('Free delivery')).toBeInTheDocument();
+  expect(screen.queryByText(/^\+৳/)).not.toBeInTheDocument();
+});
+
+test('a non-promo product with no fee still shows the store flat rate, not "Free delivery"', () => {
+  renderCard({ ...baseProduct, free_shipping: false, effective_shipping_fee: 60 });
+  expect(screen.getByText('+৳60 delivery')).toBeInTheDocument();
+  expect(screen.queryByText('Free delivery')).not.toBeInTheDocument();
+});
