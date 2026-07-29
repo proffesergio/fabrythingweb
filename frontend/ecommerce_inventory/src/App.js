@@ -15,6 +15,7 @@ import 'react-toastify/dist/ReactToastify.css';
 import './style/style.css';
 import ManageCategories from './pages/category/ManageCategories';
 import ManageProducts from './pages/products/ManageProducts';
+import ImportProducts from './pages/products/ImportProducts';
 import Error404Page from './pages/Error404Page';
 import ManageWarhouse from './pages/warehouse/ManageWarehouse';
 import ManageUsers from './pages/users/ManageUsers';
@@ -205,6 +206,7 @@ function App() {
           {path:"form/:formName/:id",element:<ProtectedRoute element={<DynamicForm/>}/>},
           {path:"manage/category",element:<ProtectedRoute element={<ManageCategories/>}/>},
           {path:"manage/product",element:<ProtectedRoute element={<ManageProducts/>}/>},
+          {path:"manage/product-import",element:<ProtectedRoute element={<ImportProducts/>}/>},
           {path:"manage/warehouse",element:<ProtectedRoute element={<ManageWarhouse/>}/>},
           {path:"manage/users",element:<ProtectedRoute element={<ManageUsers/>}/>},
           {path:"manage/moduleurls",element:<ProtectedRoute element={<ManageModuleUrls/>}/>},

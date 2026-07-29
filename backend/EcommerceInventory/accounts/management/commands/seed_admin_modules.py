@@ -40,6 +40,13 @@ MODULES = [
         'display_order': 3,
         'parent': 'Products',
     },
+    {
+        'module_name': 'Import Products',
+        'module_icon': 'CloudDownload',
+        'module_url': '/manage/product-import',
+        'display_order': 4,
+        'parent': 'Products',
+    },
     # Parent: Orders
     {
         'module_name': 'Orders',
