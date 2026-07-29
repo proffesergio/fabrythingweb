@@ -1,3 +1,4 @@
+from decimal import Decimal
 from unittest.mock import patch
 
 from django.test import TestCase
@@ -50,10 +51,15 @@ class PriceSyncTests(TestCase):
             product=self.p, sku="FS-9001-DEF", price=40000, stock_quantity=25)
 
     def test_updates_price_and_stamps_sync(self):
+        # Unified markup rule (catalog/pricing.py, defaults floor=50/3%):
+        # base_price becomes the partner's raw retail price (46000), and the
+        # selling/discount prices are apply_markup(46000)/apply_markup(44500)
+        # -- 3% of 46000 is 1380 (above the floor), 3% of 44500 is 1335.
         changes = sync_source_prices(fetcher=fake_fetcher)
         self.p.refresh_from_db()
-        self.assertEqual(self.p.initial_selling_price, 46000.0)
-        self.assertEqual(self.p.discount_price, 44500.0)
+        self.assertEqual(self.p.base_price, 46000.0)
+        self.assertEqual(self.p.initial_selling_price, 47380.0)
+        self.assertEqual(self.p.discount_price, 45835.0)
         self.assertEqual(self.p.source_price, 46000.0)
         self.assertIsNotNone(self.p.price_synced_at)
         self.assertEqual(len([c for c in changes if c["updated"]]), 1)
@@ -65,9 +71,9 @@ class PriceSyncTests(TestCase):
         # stale seed-time variant price -- shown one price, charged another.
         sync_source_prices(fetcher=fake_fetcher)
         self.variant.refresh_from_db()
-        self.assertEqual(self.variant.price, 46000)
-        self.assertEqual(self.variant.discount_price, 44500)
-        self.assertEqual(self.variant.effective_price, 44500)
+        self.assertEqual(self.variant.price, 47380.0)
+        self.assertEqual(self.variant.discount_price, 45835.0)
+        self.assertEqual(self.variant.effective_price, 45835.0)
 
     def test_dry_run_writes_nothing(self):
         sync_source_prices(fetcher=fake_fetcher, dry_run=True)
@@ -81,8 +87,30 @@ class PriceSyncTests(TestCase):
         self.assertEqual(self.variant.price, 40000)
         self.assertIsNone(self.variant.discount_price)
 
-    def test_markup_applied(self):
-        sync_source_prices(fetcher=fake_fetcher, markup_percent=10)
+    def test_markup_comes_from_the_unified_pricing_config_not_an_env_var(self):
+        # RESELLER_MARKUP_PERCENT is retired -- sync_source_prices no longer
+        # takes a markup_percent kwarg at all. The markup now always comes
+        # from catalog.pricing.apply_markup / StoreConfiguration.get_solo(),
+        # so changing the admin-editable config changes what this sync
+        # produces, with no env var involved.
+        #
+        # StoreConfiguration.get_solo() is process-cached (core.models
+        # CACHE_KEY), which outlives this test's DB transaction rollback --
+        # restore the defaults on cleanup so this doesn't leak a 10%/0-floor
+        # config into every test that runs after it.
+        from core.models import StoreConfiguration
+        cfg = StoreConfiguration.get_solo()
+
+        def _restore_defaults():
+            cfg.markup_percentage = Decimal("3.00")
+            cfg.markup_floor = Decimal("50.00")
+            cfg.save()
+        self.addCleanup(_restore_defaults)
+
+        cfg.markup_percentage = Decimal("10.00")
+        cfg.markup_floor = Decimal("0.00")
+        cfg.save()
+        sync_source_prices(fetcher=fake_fetcher)
         self.p.refresh_from_db()
         self.assertEqual(self.p.initial_selling_price, 50600.0)  # 46000 * 1.10
 

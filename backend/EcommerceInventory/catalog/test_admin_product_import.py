@@ -245,7 +245,12 @@ class ImportProductsTests(AdminProductImportTestBase):
         self.assertEqual(results[0]["status"], "imported")
 
         product = Products.objects.get(slug="new-phone")
-        self.assertEqual(product.initial_selling_price, 15000)
+        # Import goes through catalog.services_import.seed_product_entry,
+        # which stores the scraped price as base_price and derives the
+        # selling price via apply_markup (defaults floor=50/3%): 3% of
+        # 15000 is 450, above the floor.
+        self.assertEqual(product.base_price, 15000)
+        self.assertEqual(product.initial_selling_price, 15450.0)
         self.assertEqual(product.source_url, "https://potakait.com/new-phone")
         self.assertTrue(product.image)
         self.assertTrue(product.variants.filter(is_active=True).exists())

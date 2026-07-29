@@ -2,19 +2,28 @@
 
 Products with a source_url came from the partner computer stores
 (potakait.com / canvasit.com.bd -- see the 2026-07-27 spec: explicit reseller
-permission). Selling price mirrors their retail price plus an optional
-markup; dealer margin is the difference the owner negotiates offline.
+permission). The partner's live retail price becomes this product's
+``base_price``, and the selling price is re-derived from it through
+``catalog.pricing.apply_markup`` -- the same single markup rule every other
+price-setting path in the catalog uses (import, ``seed_store_catalog``, the
+``apply_pricing_markup`` backfill, the admin quick-update endpoint).
+
+This used to apply its own second markup here via a ``RESELLER_MARKUP_PERCENT``
+env var (``factor = 1 + markup_percent/100``). That is retired: once
+``apply_markup`` existed as the one platform-revenue rule, keeping this env-var
+factor around would have marked up partner products TWICE (once here, once
+wherever else applied the unified markup) -- exactly the double-markup bug
+this feature was built to avoid. See docs/PRICING_MARKUP.md.
 
 Only products with a non-empty source_url are ever touched here -- Fabrilife
 and hand-entered products are excluded by the queryset filter below, not by
 any per-product check, so there is no way for a blank source_url to slip
 through and get re-priced.
 """
-import os
-
 from django.utils import timezone
 
 from catalog.models import Products
+from catalog.pricing import apply_markup
 from catalog.scrape_parsers import parse_opencart_product
 
 
@@ -26,9 +35,10 @@ def _default_fetcher(url):
     return r.text
 
 
-def sync_source_prices(fetcher=None, dry_run=False, markup_percent=None):
-    """Re-fetch each source_url product's live partner page and mirror its
-    retail price (plus an optional markup) onto our product.
+def sync_source_prices(fetcher=None, dry_run=False):
+    """Re-fetch each source_url product's live partner page, treat its retail
+    price as the new ``base_price``, and re-derive the selling price (and
+    discount price, if any) through ``apply_markup``.
 
     Returns a list of dicts, one per product with a non-empty source_url:
     {"slug", "old_price", "new_price", "old_discount", "new_discount",
@@ -37,9 +47,6 @@ def sync_source_prices(fetcher=None, dry_run=False, markup_percent=None):
     stop the rest of the sync.
     """
     fetch = fetcher or _default_fetcher
-    if markup_percent is None:
-        markup_percent = float(os.environ.get("RESELLER_MARKUP_PERCENT", "0"))
-    factor = 1 + markup_percent / 100.0
     changes = []
     for p in Products.objects.exclude(source_url="").iterator():
         rec = {"slug": p.slug, "old_price": p.initial_selling_price,
@@ -54,16 +61,18 @@ def sync_source_prices(fetcher=None, dry_run=False, markup_percent=None):
         if not price:
             changes.append(rec)
             continue
-        new_price = round(price * factor, 2)
+        new_base = price
+        new_selling = apply_markup(new_base)
         disc = parsed.get("discount_price")
-        new_disc = round(disc * factor, 2) if disc else None
-        rec["new_price"], rec["new_discount"] = new_price, new_disc
+        new_discount = apply_markup(disc) if disc else None
+        rec["new_price"], rec["new_discount"] = new_selling, new_discount
         if not dry_run:
-            p.initial_selling_price = new_price
-            p.discount_price = new_disc
+            p.base_price = new_base
+            p.initial_selling_price = new_selling
+            p.discount_price = new_discount
             p.source_price = price
             p.price_synced_at = timezone.now()
-            p.save(update_fields=["initial_selling_price", "discount_price",
+            p.save(update_fields=["base_price", "initial_selling_price", "discount_price",
                                   "source_price", "price_synced_at", "updated_at"])
             # Checkout charges the VARIANT, not Products (orders/services.py
             # snapshots unit_price from ProductVariant.effective_price) -- so
@@ -73,7 +82,7 @@ def sync_source_prices(fetcher=None, dry_run=False, markup_percent=None):
             # here is correct. Only active variants: an inactive/retired SKU
             # is not sellable and re-pricing it is not observable anyway.
             p.variants.filter(is_active=True).update(
-                price=new_price, discount_price=new_disc)
+                price=new_selling, discount_price=new_discount)
         rec["updated"] = True
         changes.append(rec)
     return changes

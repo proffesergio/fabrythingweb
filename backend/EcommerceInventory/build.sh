@@ -125,3 +125,26 @@ else
   # log without needing shell access.
   python manage.py prune_orphan_logins || true
 fi
+
+# One-off: retroactively apply the platform-revenue markup (catalog/pricing.py
+# apply_markup: max(markup_floor, base_price * markup_percentage%), admin-tunable
+# on StoreConfiguration) to the ~194 products seeded/imported before this feature
+# existed and so carry no base_price yet. CHANGES WHAT CUSTOMERS ARE CHARGED, so
+# it is opt-in and two-stage exactly like PURGE_DEMO_CATALOG above — there is no
+# shell on Render's free plan:
+#   1. set APPLY_PRICING_MARKUP=report -> deploy, read the dry-run before/after
+#      price table (and total change) in the build log.
+#   2. set APPLY_PRICING_MARKUP=apply  -> deploy again to actually write the new
+#      prices and mirror them onto active ProductVariant rows.
+#   3. REMOVE the variable.
+# Idempotent: a product that already has base_price set (already migrated, or
+# priced by sync_source_prices/import since) is left completely alone, so an
+# accidental extra deploy with the variable still set changes nothing. See
+# docs/PRICING_MARKUP.md.
+if [ -n "$APPLY_PRICING_MARKUP" ]; then
+  echo "APPLY_PRICING_MARKUP=$APPLY_PRICING_MARKUP — pricing markup backfill:"
+  python manage.py apply_pricing_markup            # always print the dry run first
+  if [ "$APPLY_PRICING_MARKUP" = "apply" ]; then
+    python manage.py apply_pricing_markup --apply || echo "WARNING: pricing markup backfill failed (non-fatal)"
+  fi
+fi

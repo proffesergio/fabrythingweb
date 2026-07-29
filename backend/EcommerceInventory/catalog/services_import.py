@@ -20,6 +20,7 @@ from django.utils import timezone
 from django.utils.text import slugify
 
 from catalog.models import Products, ProductVariant
+from catalog.pricing import apply_markup
 
 SKU_PREFIX = "FS"
 
@@ -126,6 +127,12 @@ def seed_product_entry(entry, category, domain_user, added_by_user=None, *,
     except (TypeError, ValueError):
         disc = None
 
+    # `price`/`disc` are the SOURCE's raw pre-markup numbers -- they become
+    # base_price (recoverable forever) and the selling/discount prices are
+    # always derived from them through apply_markup, never mutated in place.
+    # See catalog/pricing.py: this is the one rule every price-setting path
+    # in the catalog (import, seed_store_catalog, sync_source_prices, the
+    # apply_pricing_markup backfill) goes through.
     defaults = {
         "name": name,
         "description": entry.get("description") or name,
@@ -136,8 +143,9 @@ def seed_product_entry(entry, category, domain_user, added_by_user=None, *,
         "available_sizes": entry.get("sizes") or [],
         "image": images,
         "initial_buying_price": round(price * 0.85),  # dealer-price placeholder
-        "initial_selling_price": price,
-        "discount_price": disc,
+        "base_price": price,
+        "initial_selling_price": apply_markup(price),
+        "discount_price": apply_markup(disc) if disc else None,
         "source_url": entry.get("source_url") or "",
         "source_price": price if entry.get("source_url") else None,
         "price_synced_at": timezone.now() if entry.get("source_url") else None,
@@ -168,19 +176,25 @@ def seed_product_entry(entry, category, domain_user, added_by_user=None, *,
             slug=slug, sku=f"{sku_prefix}-{sku_n_used}", **defaults)
         status = "created"
 
+    # Checkout charges ProductVariant.effective_price, not this Products row
+    # (orders/services.py), so the variant must carry the same marked-up
+    # number the product does. `disc or price` was the pre-markup "what the
+    # customer actually pays" value; mark that same value up so the two never
+    # disagree.
+    variant_price = apply_markup(disc if disc else price)
     sizes = entry.get("sizes") or [""]
     for size in sizes:
         variant, variant_created = ProductVariant.objects.get_or_create(
             product=product, size=size, color="",
             defaults={"sku": f"{product.sku}-{size or 'DEF'}",
-                      "price": disc or price, "stock_quantity": 25})
+                      "price": variant_price, "stock_quantity": 25})
         # get_or_create only applies `defaults` on creation, so a forced
         # re-seed never used to touch an existing variant's price -- checkout
         # charges the variant (effective_price), so the storefront would show
         # the new price while checkout kept charging the stale one. On
         # force, refresh it explicitly.
         if force and not variant_created:
-            variant.price = disc or price
+            variant.price = variant_price
             variant.save(update_fields=["price", "updated_at"])
 
     return {"status": status, "reason": None, "product": product,

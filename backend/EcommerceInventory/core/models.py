@@ -1,6 +1,7 @@
 from decimal import Decimal
 
 from django.core.cache import cache
+from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 
 CACHE_KEY = "store_config"
@@ -59,6 +60,28 @@ class StoreConfiguration(models.Model):
                   "e.g. 8801842168117 -- used as wa.me/<this value>). Leave blank to "
                   "hide the button on the storefront and food frontend.",
     )
+    # Platform-revenue markup on product prices -- see catalog/pricing.py for
+    # the rule (max(markup_floor, base_price * markup_percentage%), the same
+    # shape as food.pricing.commission_for). Admin-editable here rather than
+    # an env var so the owner can retune it without a redeploy, same reason
+    # DeliveryPricing lives in the database instead of settings.
+    #
+    # Defaults: floor=50, percentage=3%. The owner asked for "at least 50-100
+    # BDT" of margin on cheap items; at 3% the catalog's median ~3,200 BDT
+    # product earns ~96 BDT while the 50 BDT floor protects the ~99 BDT items
+    # a flat percentage would otherwise barely touch.
+    markup_percentage = models.DecimalField(
+        max_digits=5, decimal_places=2, default=Decimal("3.00"),
+        validators=[MinValueValidator(Decimal("0")), MaxValueValidator(Decimal("100"))],
+        help_text="Percentage markup applied to a product's base_price. Clamped to "
+                  "0-100 on save -- a mis-typed 500% would otherwise 6x every price.",
+    )
+    markup_floor = models.DecimalField(
+        max_digits=10, decimal_places=2, default=Decimal("50.00"),
+        validators=[MinValueValidator(Decimal("0"))],
+        help_text="Minimum taka markup applied to every product regardless of price, "
+                  "so a cheap item still carries a guaranteed minimum margin.",
+    )
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
@@ -70,6 +93,15 @@ class StoreConfiguration(models.Model):
 
     def save(self, *args, **kwargs):
         self.pk = 1  # enforce singleton
+        # Belt-and-braces clamp on top of the field validators above: the
+        # validators only fire when a caller goes through full_clean() (e.g.
+        # the admin form). Any other write path -- a script, a migration, a
+        # test -- still must not be able to silently 6x every price on the
+        # site with a mistyped percentage, so clamp unconditionally here too.
+        if self.markup_percentage is not None:
+            self.markup_percentage = max(Decimal("0"), min(Decimal("100"), Decimal(str(self.markup_percentage))))
+        if self.markup_floor is not None:
+            self.markup_floor = max(Decimal("0"), Decimal(str(self.markup_floor)))
         super().save(*args, **kwargs)
         cache.delete(CACHE_KEY)
 
