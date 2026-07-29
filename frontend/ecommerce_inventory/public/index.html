@@ -10,6 +10,12 @@
     <link rel="icon" type="image/png" href="%PUBLIC_URL%/favicon-dark.png" media="(prefers-color-scheme: dark)" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="theme-color" content="#000000" />
+    <!-- Proves to Meta that we own fabrything.com, which is what lets the
+         Facebook page / Business Suite attribute traffic and conversions to
+         this domain. Meta re-checks this tag periodically: removing it silently
+         un-verifies the domain, so leave it in place.
+         Verify at Business Settings > Brand Safety > Domains. -->
+    <meta name="facebook-domain-verification" content="8ukcq3khvo7f4a7ulli0mxo6lommla" />
     <meta
       name="description"
       content="Fabrything — online store for fashion, lifestyle, and more."
@@ -37,6 +43,30 @@
       Learn how to configure a non-root public URL by running `npm run build`.
     -->
     <title>Fabrything</title>
+    <!-- Meta Pixel. Wrapped in a hostname check so localhost/preview traffic
+         never lands in the real Pixel data — otherwise every `npm start` and
+         every Vercel preview build pollutes the numbers you make decisions on.
+         The Pixel ID is public by design (it is readable in any page source);
+         the Meta *access token* is NOT and must never appear in this repo. -->
+    <script>
+      (function () {
+        var h = window.location.hostname;
+        if (h === 'localhost' || h === '127.0.0.1' || h.endsWith('.vercel.app')) return;
+        !function(f,b,e,v,n,t,s)
+        {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+        n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+        if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+        n.queue=[];t=b.createElement(e);t.async=!0;
+        t.src=v;s=b.getElementsByTagName(e)[0];
+        s.parentNode.insertBefore(t,s)}(window, document,'script',
+        'https://connect.facebook.net/en_US/fbevents.js');
+        fbq('init', '442368228898246');
+        fbq('track', 'PageView');
+      })();
+    </script>
+    <noscript><img height="1" width="1" style="display:none"
+      src="https://www.facebook.com/tr?id=442368228898246&ev=PageView&noscript=1"
+      alt="" /></noscript>
   </head>
   <body>
     <noscript>You need to enable JavaScript to run this app.</noscript>
