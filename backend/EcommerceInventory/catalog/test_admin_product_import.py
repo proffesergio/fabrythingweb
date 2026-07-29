@@ -172,6 +172,36 @@ class BrowseCandidatesTests(AdminProductImportTestBase):
         self.assertEqual(data["listing_product_count"], 2)
         self.assertEqual(data["fetch_failures"], 2)
 
+    def test_gadget_and_tablet_categories_verified_for_both_opencart_sources(self):
+        # Neither site sells smartphones (only tablets + accessories), but
+        # both DO carry earbuds/headphones/speakers/power banks/smart
+        # watches/action cameras/phone accessories/tablets -- verified live
+        # 2026-07-29. These must be offered in the category dropdown, mapped
+        # to our taxonomy, distinct from the computer-hardware categories.
+        def fake_fetch(url):
+            return OPENCART_LISTING
+
+        with patch("catalog.services_scrape_import.polite_get", side_effect=fake_fetch):
+            potakait = self.browse({"source": "potakait", "category": "earbuds"}, self.owner)
+            canvasit = self.browse({"source": "canvasit", "category": "phone-tablet"}, self.owner)
+
+        self.assertEqual(potakait.status_code, 200, potakait.data)
+        self.assertEqual(canvasit.status_code, 200, canvasit.data)
+
+        potakait_paths = {c["path"]: c["our_category"] for c in potakait.data["data"]["categories"]}
+        canvasit_paths = {c["path"]: c["our_category"] for c in canvasit.data["data"]["categories"]}
+
+        self.assertEqual(potakait_paths["earbuds"], "gadgets-earbuds")
+        self.assertEqual(potakait_paths["headphones"], "gadgets-earbuds")
+        self.assertEqual(potakait_paths["tablet-pc"], "phones-tablets")
+        self.assertEqual(potakait_paths["gadgets"], "gadgets")
+        self.assertNotIn("phones-smartphones", potakait_paths.values())
+
+        self.assertEqual(canvasit_paths["phone-tablet"], "phones-tablets")
+        self.assertEqual(canvasit_paths["drones"], "gadgets-cameras")
+        self.assertEqual(canvasit_paths["gadget"], "gadgets")
+        self.assertNotIn("phones-smartphones", canvasit_paths.values())
+
     def test_browse_fabrilife_listing(self):
         def fake_fetch(url):
             return _fabrilife_product_page("Fab Tee", 990)

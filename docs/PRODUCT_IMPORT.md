@@ -4,7 +4,8 @@ A screen under **Products → Import Products** (`/admin/manage/product-import`)
 that lets an admin pull the latest listings from a reference site, pick the
 ones worth stocking, and add them straight into our catalog — without anyone
 running a scrape script by hand. Built to fill the (currently empty) Phones
-and Gadgets categories.
+and Gadgets categories — though note Phones → Smartphones specifically has no
+source yet; see "The verified category lists" below.
 
 ## How to use it
 
@@ -40,8 +41,8 @@ present is skipped, never duplicated or overwritten.
 
 | Source | Status | Browse by category | Search |
 | --- | --- | --- | --- |
-| potakait.com | Supported — partner store (explicit reseller permission) | Yes (7 verified categories, computer hardware only) | **No** — no working search endpoint exists (see below) |
-| canvasit.com.bd | Supported — partner store (explicit reseller permission) | Yes (7 verified categories, computer hardware only) | Yes |
+| potakait.com | Supported — partner store (explicit reseller permission) | Yes (16 verified categories: computer hardware + gadgets/tablets) | **No** — no working search endpoint exists (see below) |
+| canvasit.com.bd | Supported — partner store (explicit reseller permission) | Yes (17 verified categories: computer hardware + gadgets/tablets) | Yes |
 | fabrilife.com | Supported — one-time seed source, **not** a resale partner | Yes (fashion facet categories) | Yes |
 | Arogga.com | **Not yet** — shown in the source picker, disabled | — | — |
 
@@ -81,8 +82,10 @@ existing offline scrape tools (`tools/scrape/scrape_opencart.py` vs.
 potakait.com and canvasit.com.bd don't expose a machine-readable category
 tree `scrape_parsers` can fetch and parse, so the "category on site" dropdown
 is a hand-picked list — but every path in it below was checked with a real
-request against the live site (200, product grid parsed successfully) before
-being added, not guessed:
+request against the live site (200, product grid parsed successfully, a
+nonzero live product count) before being added, not guessed.
+
+**Computer hardware:**
 
 | | potakait.com | canvasit.com.bd | Maps to our category |
 | --- | --- | --- | --- |
@@ -98,15 +101,32 @@ Note **`router` is singular on both sites** — `routers` 404s on both; that
 typo already cost a whole scrape run once, so it's called out here
 deliberately.
 
-**Only computer-hardware categories are verified for potakait/canvasit
-today** — no working category path was found for phones, tablets, or
-wearables on either OpenCart theme, so guessing one (an earlier draft of this
-list had `smart-phone`/`tablet-pc`/`smart-watch`) would have shipped
-confident-looking dropdown options that silently 404 or return zero results,
-which is worse than not offering them. **To source phones/gadgets today, use
-canvasit's search box** (verified working) with a term like "phone" or
-"watch" — potakait has no search at all (see above), so it's category-browse
-only until a working phone/gadget category path is verified for it.
+**Gadgets & tablets** (verified 2026-07-29 — live product counts in
+parentheses; some potakait/canvasit categories intentionally map to the same
+target slug, e.g. both "Earbuds" and "Headphones" land in Gadgets → Earbuds &
+Headphones — that's expected, they're separate *source* categories feeding
+one *destination* category):
+
+| Maps to our category | potakait.com | canvasit.com.bd |
+| --- | --- | --- |
+| Gadgets → Earbuds & Headphones | `earbuds` (3), `headphones` (24) | `earbuds` (9), `headphone` (20) |
+| Gadgets → Speakers & Audio | `speaker-and-home-theater` (24) | `speaker` (19) |
+| Gadgets → Power Banks & Chargers | `power-bank` (5) | `power-bank` (7) |
+| Gadgets → Smart Watches | `smart-watches` (3) | `smart-watch` (3) |
+| Gadgets → Cameras & Drones | `action-camera` (4) | `action-camera` (4), `drones` (20) |
+| Gadgets → Cases & Protection | `mobile-phone-accessories` (2) | `mobile-phone-accessories` (2) |
+| Phones → Tablets | `tablet-pc` (4) | `phone-tablet` (20) |
+| Gadgets (top-level) | `gadgets` (24) | `gadget` (20) |
+
+**Phones → Smartphones has no source yet.** Neither partner store actually
+sells smartphones — potakait and canvasit only carry tablets and phone
+*accessories* (cases, chargers, cables), which is why `tablet-pc`/
+`phone-tablet` map to Phones → Tablets and there is no equivalent smartphone
+path in either list above. **The Phones → Smartphones category can't be
+stocked from this import tool today** — filling it needs either a new source
+site with a parser added to `catalog/scrape_parsers.py`, or manual entry
+through the normal "Add Product" form. This isn't a bug to work around; it's
+what these two reference sites actually sell.
 
 fabrilife's category list *is* live/authoritative — it's the same
 facet-category mapping `tools/scrape/scrape_fabrilife.py` already uses to

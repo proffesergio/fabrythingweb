@@ -62,23 +62,22 @@ _ALGOLIA_SEARCH_KEY = "bfcfa7b10e2c9220df5d1d639d485218"  # public search-only k
 _ALGOLIA_INDEX = "products"
 _ALGOLIA_URL = f"https://{_ALGOLIA_APP_ID}-dsn.algolia.net/1/indexes/{_ALGOLIA_INDEX}/query"
 
-# Category dropdown paths -- VERIFIED against the live sites (2026-07-28: real
-# GET requests, not guesses), each returning a 200 with a parseable product
-# grid. These are also the exact paths that produced the committed fixtures
+# Category dropdown paths -- VERIFIED against the live sites (2026-07-28/29:
+# real GET requests, not guesses), each returning a 200 with a parseable
+# product grid and a nonzero live product count. The computer-hardware paths
+# are also the exact ones that produced the committed fixtures
 # (catalog/fixtures/seed/potakait.json = 64 products, canvasit.json = 70).
 # `router` is singular on BOTH sites -- `routers` 404s; that typo already cost
 # a whole scrape run once.
 #
-# Only computer-hardware categories are verified for these two sites today.
-# potakait.com's markup gave no reliable path for phones/tablets/wearables,
-# and guessing here (as an earlier draft of this list did, with paths like
-# "smart-phone"/"tablet-pc"/"smart-watch") produced confident-looking options
-# that silently 404 or return zero results -- worse than not offering them.
-# canvasit.com.bd's search (see SOURCE_SEARCH_SUPPORTED below) covers the gap
-# for phones/gadgets there; potakait has no working search endpoint at all
-# (verified: every plausible search URL 404s and there's no <form> to read
-# one from), so phones/gadgets sourcing from potakait isn't available yet --
-# see docs/PRODUCT_IMPORT.md.
+# Gadget/tablet categories (earbuds, headphones, speakers, power banks,
+# smart watches, action cameras, phone accessories, tablets) are ALSO
+# verified now -- both sites carry them, just under different path spellings
+# than an earlier guessed draft of this list used ("smart-phone"/"tablet-pc"/
+# "smart-watch", none of which existed). One note that still stands: neither
+# partner store sells actual smartphones (only tablets + phone accessories),
+# so `phones-smartphones` has no working source path on either site -- see
+# docs/PRODUCT_IMPORT.md.
 OPENCART_CATEGORY_PATHS = {
     "potakait": [
         {"path": "laptops", "label": "Laptops", "our_category": "computers-laptops"},
@@ -88,6 +87,15 @@ OPENCART_CATEGORY_PATHS = {
         {"path": "keyboards", "label": "Keyboards", "our_category": "computers-keyboards-mice"},
         {"path": "printers", "label": "Printers", "our_category": "computers-printers-office"},
         {"path": "router", "label": "Routers", "our_category": "computers-networking"},
+        {"path": "earbuds", "label": "Earbuds", "our_category": "gadgets-earbuds"},
+        {"path": "headphones", "label": "Headphones", "our_category": "gadgets-earbuds"},
+        {"path": "speaker-and-home-theater", "label": "Speakers & Home Theater", "our_category": "gadgets-speakers"},
+        {"path": "power-bank", "label": "Power Banks", "our_category": "gadgets-power"},
+        {"path": "smart-watches", "label": "Smart Watches", "our_category": "gadgets-smart-watches"},
+        {"path": "action-camera", "label": "Action Cameras", "our_category": "gadgets-cameras"},
+        {"path": "mobile-phone-accessories", "label": "Phone Accessories", "our_category": "gadgets-cases"},
+        {"path": "tablet-pc", "label": "Tablets", "our_category": "phones-tablets"},
+        {"path": "gadgets", "label": "Gadgets (all)", "our_category": "gadgets"},
     ],
     "canvasit": [
         {"path": "laptop", "label": "Laptops", "our_category": "computers-laptops"},
@@ -97,6 +105,16 @@ OPENCART_CATEGORY_PATHS = {
         {"path": "keyboard", "label": "Keyboards", "our_category": "computers-keyboards-mice"},
         {"path": "printer", "label": "Printers", "our_category": "computers-printers-office"},
         {"path": "router", "label": "Routers", "our_category": "computers-networking"},
+        {"path": "earbuds", "label": "Earbuds", "our_category": "gadgets-earbuds"},
+        {"path": "headphone", "label": "Headphones", "our_category": "gadgets-earbuds"},
+        {"path": "speaker", "label": "Speakers", "our_category": "gadgets-speakers"},
+        {"path": "power-bank", "label": "Power Banks", "our_category": "gadgets-power"},
+        {"path": "smart-watch", "label": "Smart Watches", "our_category": "gadgets-smart-watches"},
+        {"path": "action-camera", "label": "Action Cameras", "our_category": "gadgets-cameras"},
+        {"path": "drones", "label": "Drones", "our_category": "gadgets-cameras"},
+        {"path": "mobile-phone-accessories", "label": "Phone Accessories", "our_category": "gadgets-cases"},
+        {"path": "phone-tablet", "label": "Phones & Tablets", "our_category": "phones-tablets"},
+        {"path": "gadget", "label": "Gadgets (all)", "our_category": "gadgets"},
     ],
 }
 

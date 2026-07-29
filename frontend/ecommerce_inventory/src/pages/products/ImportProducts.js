@@ -26,11 +26,11 @@ const SOURCES = [
 // picker before the first search; the browse response's own `categories`
 // list (returned by the server, which owns the authoritative copy) replaces
 // this the moment a search comes back. potakait/canvasit paths here are
-// VERIFIED against the live sites (2026-07-28 -- real requests, not
-// guesses); only computer-hardware categories are verified today (note
-// "router" is singular on both -- "routers" 404s). Phones/gadgets aren't
-// browsable by category on either OpenCart site yet -- on canvasit, use
-// search instead (it works); potakait has no working search endpoint at all.
+// VERIFIED against the live sites (2026-07-28/29 -- real requests, not
+// guesses; note "router" is singular on both -- "routers" 404s). Neither
+// site sells actual smartphones (only tablets + phone accessories), so
+// there's still no source path for our "phones-smartphones" category -- see
+// docs/PRODUCT_IMPORT.md.
 const FALLBACK_CATEGORIES = {
     potakait: [
         { path: "laptops", label: "Laptops" },
@@ -40,6 +40,15 @@ const FALLBACK_CATEGORIES = {
         { path: "keyboards", label: "Keyboards" },
         { path: "printers", label: "Printers" },
         { path: "router", label: "Routers" },
+        { path: "earbuds", label: "Earbuds" },
+        { path: "headphones", label: "Headphones" },
+        { path: "speaker-and-home-theater", label: "Speakers & Home Theater" },
+        { path: "power-bank", label: "Power Banks" },
+        { path: "smart-watches", label: "Smart Watches" },
+        { path: "action-camera", label: "Action Cameras" },
+        { path: "mobile-phone-accessories", label: "Phone Accessories" },
+        { path: "tablet-pc", label: "Tablets" },
+        { path: "gadgets", label: "Gadgets (all)" },
     ],
     canvasit: [
         { path: "laptop", label: "Laptops" },
@@ -49,6 +58,16 @@ const FALLBACK_CATEGORIES = {
         { path: "keyboard", label: "Keyboards" },
         { path: "printer", label: "Printers" },
         { path: "router", label: "Routers" },
+        { path: "earbuds", label: "Earbuds" },
+        { path: "headphone", label: "Headphones" },
+        { path: "speaker", label: "Speakers" },
+        { path: "power-bank", label: "Power Banks" },
+        { path: "smart-watch", label: "Smart Watches" },
+        { path: "action-camera", label: "Action Cameras" },
+        { path: "drones", label: "Drones" },
+        { path: "mobile-phone-accessories", label: "Phone Accessories" },
+        { path: "phone-tablet", label: "Phones & Tablets" },
+        { path: "gadget", label: "Gadgets (all)" },
     ],
     fabrilife: [
         { path: "men-tshirts", label: "Men's T-shirts" },
