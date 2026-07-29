@@ -104,7 +104,7 @@ class Products(models.Model):
     # Clothing-specific fields
     gender=models.CharField(max_length=10,choices=GENDER_CHOICES,default='UNISEX')
     available_sizes=models.JSONField(default=list,blank=True,help_text='List of available sizes, e.g. ["S","M","L","XL"]')
-    size_chart=models.JSONField(default=dict,blank=True,help_text='Size measurements in inches, e.g. {"S":{"chest":36,"length":27},"M":{"chest":38,"length":28}}')
+    size_chart=models.JSONField(default=dict,blank=True,help_text='Size measurements in inches, e.g. {"S":{"chest":36,"length":27},"M":{"chest":38,"length":28}}. Keys beyond chest/length (e.g. "sleeve") are fine -- the storefront renders whatever measurement keys are present, see catalog.scrape_parsers._extract_fabrilife_size_chart.')
     material=models.CharField(max_length=255,blank=True,default='',help_text='e.g. Cotton, Polyester, Silk')
     # SEO
     seo_title=models.CharField(max_length=255,blank=True,default='')

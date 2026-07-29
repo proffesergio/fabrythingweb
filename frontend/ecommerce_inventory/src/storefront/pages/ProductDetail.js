@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import {
     Box, Container, Grid, Typography, Button, Rating, Chip, Divider,
-    Tab, Tabs, IconButton, Dialog, DialogTitle, DialogContent,
-    Table, TableBody, TableRow, TableCell, Skeleton, Breadcrumbs,
+    Tab, Tabs, IconButton, Dialog, DialogTitle, DialogContent, Paper,
+    Table, TableHead, TableBody, TableRow, TableCell, Skeleton, Breadcrumbs,
 } from '@mui/material';
 import { ShoppingCart, Add, Remove, NavigateNext, LocalShipping } from '@mui/icons-material';
 import { useParams, Link } from 'react-router-dom';
@@ -19,6 +19,7 @@ export default function ProductDetail() {
     const [quantity, setQuantity] = useState(1);
     const [tab, setTab] = useState(0);
     const [sizeChartOpen, setSizeChartOpen] = useState(false);
+    const [sizeChartUnit, setSizeChartUnit] = useState('inch');
     const { callApi, loading } = useApi();
     const dispatch = useDispatch();
 
@@ -75,6 +76,20 @@ export default function ProductDetail() {
     const specs = product.specifications && typeof product.specifications === 'object' ? product.specifications : {};
     const highlights = Array.isArray(product.highlights) ? product.highlights : [];
     const sizeChart = product.size_chart && typeof product.size_chart === 'object' ? product.size_chart : {};
+    // Fashion-only, and never an empty table: a size chart is only shown at
+    // all when there is at least one size with at least one measurement --
+    // most Fabrilife products (and every non-fashion product) have none.
+    const sizeChartSizes = Object.keys(sizeChart).filter(
+        size => sizeChart[size] && Object.keys(sizeChart[size]).length > 0
+    );
+    const sizeChartMeasurementKeys = sizeChartSizes.length
+        ? [...new Set(sizeChartSizes.flatMap(size => Object.keys(sizeChart[size])))]
+        : [];
+    const hasSizeChart = sizeChartSizes.length > 0 && sizeChartMeasurementKeys.length > 0;
+    // The source data is in inches (see catalog.models.Products.size_chart);
+    // CM is a straight unit conversion computed here rather than sourced
+    // separately, so it can never drift out of sync with the inch values.
+    const inchToCm = (value) => Math.round(value * 2.54 * 10) / 10;
     // `effective_shipping_fee` is always a number from the storefront API --
     // this product's own override, or the store's flat rate when it has none
     // -- so the customer is never shown nothing here. `free_shipping` is the
@@ -122,16 +137,30 @@ export default function ProductDetail() {
                             not a theme surface token: the photos are shot on white, so a white
                             tile is what makes them read correctly, even in dark mode (a dark
                             tile would show an obvious white rectangle around the photo). */}
-                        <Box sx={{
-                            width: '100%', height: { xs: 400, md: 500 },
-                            borderRadius: 2, overflow: 'hidden', bgcolor: '#fff', mb: 1,
-                            p: { xs: 2, md: 3 },
-                        }}>
+                        <Paper
+                            variant="outlined"
+                            sx={{
+                                width: '100%', maxWidth: '100%', height: { xs: 400, md: 500 },
+                                // boxSizing must be explicit here: this Box has both a
+                                // percentage width AND padding, and the storefront route is
+                                // never wrapped in <CssBaseline /> (only the admin/food shells
+                                // are), so it does not inherit the browser-default-defeating
+                                // `border-box` reset. Under the browser's real default
+                                // (content-box), the padding below is added ON TOP of the
+                                // 100% width, so this tile silently renders wider than its
+                                // Grid column and its opaque #fff background paints over the
+                                // start of the details column's text -- that was the reported
+                                // "image overlapping the product details" bug (brand/title/
+                                // price clipped on the left edge). Do not remove this.
+                                boxSizing: 'border-box',
+                                borderRadius: 2, overflow: 'hidden', bgcolor: '#fff', mb: 1.5,
+                                p: { xs: 2, md: 3 },
+                            }}>
                             {images.length > 0 ? (
                                 <img
                                     src={images[selectedImage]}
                                     alt={product.name}
-                                    style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+                                    style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block' }}
                                     onError={(e) => { e.target.src = 'https://via.placeholder.com/500x600?text=No+Image'; }}
                                 />
                             ) : (
@@ -139,9 +168,9 @@ export default function ProductDetail() {
                                     <Typography color="text.secondary">No Image</Typography>
                                 </Box>
                             )}
-                        </Box>
+                        </Paper>
                         {images.length > 1 && (
-                            <Box sx={{ display: 'flex', gap: 1, overflowX: 'auto' }}>
+                            <Box sx={{ display: 'flex', gap: 1, overflowX: 'auto', pb: 0.5 }}>
                                 {images.map((img, i) => (
                                     <Box
                                         key={i}
@@ -149,9 +178,15 @@ export default function ProductDetail() {
                                         sx={{
                                             width: 64, height: 64, borderRadius: 1, overflow: 'hidden',
                                             cursor: 'pointer', flexShrink: 0,
+                                            // Same content-box trap as the main image tile above:
+                                            // a fixed width plus padding needs an explicit
+                                            // border-box or it renders larger than 64px.
+                                            boxSizing: 'border-box',
                                             bgcolor: '#fff', p: 0.5,
-                                            border: selectedImage === i ? '2px solid' : '2px solid transparent',
-                                            borderColor: selectedImage === i ? 'secondary.main' : 'transparent',
+                                            transition: 'border-color 120ms, transform 120ms',
+                                            '&:hover': { transform: 'translateY(-1px)' },
+                                            border: '2px solid',
+                                            borderColor: selectedImage === i ? 'secondary.main' : 'divider',
                                         }}
                                     >
                                         <img src={img} alt="" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
@@ -165,11 +200,21 @@ export default function ProductDetail() {
                 {/* Product Info */}
                 <Grid item xs={12} md={6}>
                     {product.brand && (
-                        <Typography variant="body2" color="text.secondary" sx={{ textTransform: 'uppercase', letterSpacing: 1 }}>
+                        <Typography
+                            variant="overline"
+                            color="secondary.main"
+                            sx={{ fontWeight: 700, letterSpacing: 1.2, lineHeight: 1.2, display: 'block' }}
+                        >
                             {product.brand}
                         </Typography>
                     )}
-                    <Typography variant="h4" sx={{ fontWeight: 700, mb: 1 }}>{product.name}</Typography>
+                    <Typography
+                        variant="h4"
+                        component="h1"
+                        sx={{ fontWeight: 700, mb: 1, fontSize: { xs: '1.5rem', sm: '1.75rem', md: '2rem' }, lineHeight: 1.25 }}
+                    >
+                        {product.name}
+                    </Typography>
 
                     {/* Rating */}
                     {product.average_rating > 0 && (
@@ -182,8 +227,11 @@ export default function ProductDetail() {
                     )}
 
                     {/* Price */}
-                    <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 2, mb: 3 }}>
-                        <Typography variant="h4" sx={{ fontWeight: 800, color: hasDiscount ? 'secondary.main' : 'text.primary' }}>
+                    <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 2, mb: 3, flexWrap: 'wrap' }}>
+                        <Typography
+                            variant="h4"
+                            sx={{ fontWeight: 800, fontSize: { xs: '1.6rem', md: '2rem' }, color: hasDiscount ? 'secondary.main' : 'text.primary' }}
+                        >
                             ৳{price?.toLocaleString()}
                         </Typography>
                         {hasDiscount && (
@@ -227,7 +275,7 @@ export default function ProductDetail() {
                         <Box sx={{ mb: 3 }}>
                             <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
                                 <Typography variant="subtitle2" fontWeight={700}>Select Size</Typography>
-                                {Object.keys(sizeChart).length > 0 && (
+                                {hasSizeChart && (
                                     <Button size="small" onClick={() => setSizeChartOpen(true)}>Size Chart</Button>
                                 )}
                             </Box>
@@ -238,7 +286,7 @@ export default function ProductDetail() {
                                         variant={selectedSize === size ? 'contained' : 'outlined'}
                                         color={selectedSize === size ? 'primary' : 'inherit'}
                                         onClick={() => setSelectedSize(size)}
-                                        sx={{ minWidth: 48 }}
+                                        sx={{ minWidth: 48, height: 40, fontWeight: 600 }}
                                     >
                                         {size}
                                     </Button>
@@ -250,10 +298,19 @@ export default function ProductDetail() {
                     {/* Quantity */}
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
                         <Typography variant="subtitle2" fontWeight={700}>Quantity</Typography>
-                        <Box sx={{ display: 'flex', alignItems: 'center', border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
-                            <IconButton size="small" onClick={() => setQuantity(q => Math.max(1, q - 1))}><Remove /></IconButton>
-                            <Typography sx={{ px: 2, minWidth: 30, textAlign: 'center' }}>{quantity}</Typography>
-                            <IconButton size="small" onClick={() => setQuantity(q => q + 1)}><Add /></IconButton>
+                        <Box sx={{
+                            display: 'flex', alignItems: 'center', border: '1px solid',
+                            borderColor: 'divider', borderRadius: 1.5, overflow: 'hidden',
+                        }}>
+                            <IconButton
+                                size="small" onClick={() => setQuantity(q => Math.max(1, q - 1))}
+                                disabled={quantity <= 1}
+                                sx={{ borderRadius: 0 }}
+                            ><Remove fontSize="small" /></IconButton>
+                            <Typography sx={{ px: 2.5, minWidth: 32, textAlign: 'center', fontWeight: 600 }}>{quantity}</Typography>
+                            <IconButton size="small" onClick={() => setQuantity(q => q + 1)} sx={{ borderRadius: 0 }}>
+                                <Add fontSize="small" />
+                            </IconButton>
                         </Box>
                     </Box>
 
@@ -290,9 +347,14 @@ export default function ProductDetail() {
                     </Button>
 
                     {/* Description */}
-                    <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                        {product.description}
-                    </Typography>
+                    {product.description && (
+                        <Box sx={{ mb: 2 }}>
+                            <Typography variant="subtitle2" fontWeight={700} gutterBottom>Description</Typography>
+                            <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.7 }}>
+                                {product.description}
+                            </Typography>
+                        </Box>
+                    )}
 
                     {/* Highlights */}
                     {highlights.length > 0 && (
@@ -308,58 +370,77 @@ export default function ProductDetail() {
                 </Grid>
             </Grid>
 
-            {/* Tabs: Specifications, Reviews, Q&A */}
-            <Box sx={{ mt: 6 }}>
-                <Tabs value={tab} onChange={(_, v) => setTab(v)} sx={{ mb: 3 }}>
+            {/* Specifications, Reviews, Q&A */}
+            <Paper variant="outlined" sx={{ mt: 6, borderRadius: 2, overflow: 'hidden' }}>
+                <Tabs
+                    value={tab}
+                    onChange={(_, v) => setTab(v)}
+                    variant="scrollable"
+                    scrollButtons="auto"
+                    allowScrollButtonsMobile
+                    sx={{ borderBottom: '1px solid', borderColor: 'divider', px: 1 }}
+                >
                     <Tab label="Specifications" />
                     <Tab label={`Reviews (${product.review_count})`} />
                     <Tab label="Questions & Answers" />
                 </Tabs>
 
-                {tab === 0 && Object.keys(specs).length > 0 && (
-                    <Table size="small">
-                        <TableBody>
-                            {Object.entries(specs).map(([key, val]) => (
-                                <TableRow key={key}>
-                                    <TableCell sx={{ fontWeight: 600, width: '30%', textTransform: 'capitalize' }}>
-                                        {key.replace(/_/g, ' ')}
-                                    </TableCell>
-                                    <TableCell>{typeof val === 'object' ? JSON.stringify(val) : String(val)}</TableCell>
-                                </TableRow>
-                            ))}
-                        </TableBody>
-                    </Table>
-                )}
+                <Box sx={{ p: { xs: 2, sm: 3 } }}>
+                    {tab === 0 && (
+                        Object.keys(specs).length > 0 ? (
+                            <Table size="small">
+                                <TableBody>
+                                    {Object.entries(specs).map(([key, val]) => (
+                                        <TableRow
+                                            key={key}
+                                            sx={{
+                                                '&:nth-of-type(odd)': { bgcolor: 'action.hover' },
+                                                '& td': { border: 0 },
+                                            }}
+                                        >
+                                            <TableCell sx={{ fontWeight: 600, width: '30%', textTransform: 'capitalize' }}>
+                                                {key.replace(/_/g, ' ')}
+                                            </TableCell>
+                                            <TableCell>{typeof val === 'object' ? JSON.stringify(val) : String(val)}</TableCell>
+                                        </TableRow>
+                                    ))}
+                                </TableBody>
+                            </Table>
+                        ) : (
+                            <Typography color="text.secondary">No specifications available.</Typography>
+                        )
+                    )}
 
-                {tab === 1 && (
-                    <Box>
-                        {product.reviews?.length > 0 ? product.reviews.map(review => (
-                            <Box key={review.id} sx={{ mb: 3, pb: 3, borderBottom: '1px solid', borderColor: 'divider' }}>
-                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                                    <Rating value={review.rating} size="small" readOnly />
-                                    <Typography variant="body2" fontWeight={600}>{review.reviewer_name}</Typography>
+                    {tab === 1 && (
+                        <Box>
+                            {product.reviews?.length > 0 ? product.reviews.map(review => (
+                                <Box key={review.id} sx={{ mb: 3, pb: 3, '&:not(:last-child)': { borderBottom: '1px solid', borderColor: 'divider' } }}>
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                                        <Rating value={review.rating} size="small" readOnly />
+                                        <Typography variant="body2" fontWeight={600}>{review.reviewer_name}</Typography>
+                                    </Box>
+                                    <Typography variant="body2" color="text.secondary">{review.reviews}</Typography>
                                 </Box>
-                                <Typography variant="body2" color="text.secondary">{review.reviews}</Typography>
-                            </Box>
-                        )) : (
-                            <Typography color="text.secondary">No reviews yet.</Typography>
-                        )}
-                    </Box>
-                )}
+                            )) : (
+                                <Typography color="text.secondary">No reviews yet.</Typography>
+                            )}
+                        </Box>
+                    )}
 
-                {tab === 2 && (
-                    <Box>
-                        {product.questions?.length > 0 ? product.questions.map(q => (
-                            <Box key={q.id} sx={{ mb: 3, pb: 3, borderBottom: '1px solid', borderColor: 'divider' }}>
-                                <Typography variant="body2" fontWeight={600}>Q: {q.question}</Typography>
-                                {q.answer && <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>A: {q.answer}</Typography>}
-                            </Box>
-                        )) : (
-                            <Typography color="text.secondary">No questions yet.</Typography>
-                        )}
-                    </Box>
-                )}
-            </Box>
+                    {tab === 2 && (
+                        <Box>
+                            {product.questions?.length > 0 ? product.questions.map(q => (
+                                <Box key={q.id} sx={{ mb: 3, pb: 3, '&:not(:last-child)': { borderBottom: '1px solid', borderColor: 'divider' } }}>
+                                    <Typography variant="body2" fontWeight={600}>Q: {q.question}</Typography>
+                                    {q.answer && <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>A: {q.answer}</Typography>}
+                                </Box>
+                            )) : (
+                                <Typography color="text.secondary">No questions yet.</Typography>
+                            )}
+                        </Box>
+                    )}
+                </Box>
+            </Paper>
 
             {/* Related Products */}
             {product.related_products?.length > 0 && (
@@ -375,32 +456,53 @@ export default function ProductDetail() {
                 </Box>
             )}
 
-            {/* Size Chart Dialog */}
-            <Dialog open={sizeChartOpen} onClose={() => setSizeChartOpen(false)} maxWidth="sm" fullWidth>
-                <DialogTitle>Size Chart</DialogTitle>
-                <DialogContent>
-                    <Table size="small">
-                        <TableBody>
-                            <TableRow>
-                                <TableCell sx={{ fontWeight: 700 }}>Size</TableCell>
-                                {Object.keys(sizeChart).length > 0 &&
-                                    Object.keys(Object.values(sizeChart)[0] || {}).map(key => (
-                                        <TableCell key={key} sx={{ fontWeight: 700, textTransform: 'capitalize' }}>{key}</TableCell>
-                                    ))
-                                }
-                            </TableRow>
-                            {Object.entries(sizeChart).map(([size, measurements]) => (
-                                <TableRow key={size}>
-                                    <TableCell sx={{ fontWeight: 600 }}>{size}</TableCell>
-                                    {Object.values(measurements).map((val, i) => (
-                                        <TableCell key={i}>{val}"</TableCell>
+            {/* Size Chart Dialog -- only ever mounted with content when there is
+                real data (hasSizeChart), so it can never render an empty table. */}
+            {hasSizeChart && (
+                <Dialog open={sizeChartOpen} onClose={() => setSizeChartOpen(false)} maxWidth="xs" fullWidth>
+                    <DialogTitle sx={{ pb: 0.5 }}>
+                        Size chart
+                        <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 400 }}>
+                            In {sizeChartUnit === 'cm' ? 'centimeters' : 'inches'} (Expected Deviation &lt; 3%)
+                        </Typography>
+                    </DialogTitle>
+                    <DialogContent>
+                        <Tabs
+                            value={sizeChartUnit}
+                            onChange={(_, v) => setSizeChartUnit(v)}
+                            sx={{ mb: 2, minHeight: 36 }}
+                        >
+                            <Tab value="inch" label="INCH" sx={{ minHeight: 36, py: 0.5 }} />
+                            <Tab value="cm" label="CM" sx={{ minHeight: 36, py: 0.5 }} />
+                        </Tabs>
+                        <Table size="small">
+                            <TableHead>
+                                <TableRow>
+                                    <TableCell sx={{ fontWeight: 700 }}>Size</TableCell>
+                                    {sizeChartMeasurementKeys.map(key => (
+                                        <TableCell key={key} sx={{ fontWeight: 700, textTransform: 'capitalize' }}>
+                                            {key.replace(/_/g, ' ')}
+                                        </TableCell>
                                     ))}
                                 </TableRow>
-                            ))}
-                        </TableBody>
-                    </Table>
-                </DialogContent>
-            </Dialog>
+                            </TableHead>
+                            <TableBody>
+                                {sizeChartSizes.map(size => (
+                                    <TableRow key={size}>
+                                        <TableCell sx={{ fontWeight: 600 }}>{size}</TableCell>
+                                        {sizeChartMeasurementKeys.map(key => {
+                                            const raw = sizeChart[size]?.[key];
+                                            if (raw == null) return <TableCell key={key}>-</TableCell>;
+                                            const value = sizeChartUnit === 'cm' ? inchToCm(raw) : raw;
+                                            return <TableCell key={key}>{value}{sizeChartUnit === 'cm' ? ' cm' : '"'}</TableCell>;
+                                        })}
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    </DialogContent>
+                </Dialog>
+            )}
         </Container>
     );
 }

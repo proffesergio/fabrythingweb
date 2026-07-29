@@ -148,3 +148,28 @@ if [ -n "$APPLY_PRICING_MARKUP" ]; then
     python manage.py apply_pricing_markup --apply || echo "WARNING: pricing markup backfill failed (non-fatal)"
   fi
 fi
+
+# One-off: backfill size_chart on the 64 already-seeded Fabrilife products
+# (catalog.services_size_chart_backfill) by looking each one up by exact name
+# on fabrilife.com's own public search and reading the chart straight off the
+# search hit -- they have no source_url to refetch by URL (fabrilife.com is a
+# one-time seed source, not a reseller partner). Makes outbound network
+# requests but only ever writes size_chart, never price/images/etc, so it is
+# opt-in and two-stage exactly like PURGE_DEMO_CATALOG/APPLY_PRICING_MARKUP
+# above — there is no shell on Render's free plan:
+#   1. set BACKFILL_FABRILIFE_SIZE_CHART=report -> deploy, read the dry-run
+#      (which products matched, which had no chart, which didn't match) in
+#      the build log.
+#   2. set BACKFILL_FABRILIFE_SIZE_CHART=apply  -> deploy again to actually
+#      write size_chart onto the matched products.
+#   3. REMOVE the variable.
+# Idempotent: a product that already has a size_chart is never a candidate
+# again, so an accidental extra deploy with the variable still set changes
+# nothing. See docs/PRODUCT_DETAILS.md.
+if [ -n "$BACKFILL_FABRILIFE_SIZE_CHART" ]; then
+  echo "BACKFILL_FABRILIFE_SIZE_CHART=$BACKFILL_FABRILIFE_SIZE_CHART — size chart backfill:"
+  python manage.py backfill_fabrilife_size_chart            # always print the dry run first
+  if [ "$BACKFILL_FABRILIFE_SIZE_CHART" = "apply" ]; then
+    python manage.py backfill_fabrilife_size_chart --apply || echo "WARNING: size chart backfill failed (non-fatal)"
+  fi
+fi

@@ -71,8 +71,8 @@ def seed_product_entry(entry, category, domain_user, added_by_user=None, *,
     """Create or update one ``Products`` row (+ its ``ProductVariant`` rows)
     from a plain-dict ``entry`` (same shape the scrape fixtures use: name,
     price, discount_price, description, specifications, brand, gender,
-    material, sizes, images -- raw source image URLs, downloaded here --
-    source_url).
+    material, sizes, size_chart, images -- raw source image URLs, downloaded
+    here -- source_url).
 
     ``category`` is an already-resolved ``Categories`` instance. ``domain_user``
     owns the row (``Products.domain_user_id``); ``added_by_user`` records who
@@ -141,6 +141,7 @@ def seed_product_entry(entry, category, domain_user, added_by_user=None, *,
         "gender": entry.get("gender") or "UNISEX",
         "material": entry.get("material") or "",
         "available_sizes": entry.get("sizes") or [],
+        "size_chart": entry.get("size_chart") or {},
         "image": images,
         "initial_buying_price": round(price * 0.85),  # dealer-price placeholder
         "base_price": price,

@@ -6,6 +6,7 @@ import json
 
 from catalog.scrape_parsers import (
     parse_bdt_price,
+    parse_fabrilife_algolia_size_chart,
     parse_fabrilife_listing,
     parse_fabrilife_product,
     parse_opencart_listing,
@@ -314,6 +315,97 @@ class FabrilifeProductTests(SimpleTestCase):
 
     def test_description_mentions_product(self):
         self.assertIn("Jacquard Dobby Cotton", self.product["description"])
+
+    def test_no_size_chart_on_this_product(self):
+        # This Panjabi page has no "Size chart" block at all -- most
+        # Fabrilife products besides Tops/Kurti don't carry measurements.
+        # Must come back as {} (falsy), not raise or return garbage, so the
+        # storefront's "hide when no data" rule has something to check.
+        self.assertEqual(self.product["size_chart"], {})
+
+
+class FabrilifeSizeChartTests(SimpleTestCase):
+    """Fixture is a trimmed, real capture of
+    https://fabrilife.com/product/74169-womens-premium-tops-estrella
+    (fetched 2026-07-29), captured specifically because it has a "Size
+    chart - In inches (Expected Deviation < 3%)" table with INCH/CM tabs --
+    same rigor as FabrilifeProductTests: pin the exact values on the live
+    page so selector drift fails loudly."""
+
+    def setUp(self):
+        html = (FIXTURES / "fabrilife_product_size_chart.html").read_text(encoding="utf-8")
+        self.product = parse_fabrilife_product(html)
+
+    def test_size_chart_exact(self):
+        self.assertEqual(
+            self.product["size_chart"],
+            {
+                "M": {"chest": 36.0, "length": 30.0, "sleeve": 21.0},
+                "L": {"chest": 38.0, "length": 31.0, "sleeve": 21.0},
+                "XL": {"chest": 40.0, "length": 32.0, "sleeve": 21.5},
+                "2XL": {"chest": 42.0, "length": 33.0, "sleeve": 22.0},
+            },
+        )
+
+    def test_only_inch_tab_is_read_not_cm(self):
+        # The CM tab-pane on the same page has chest=91.4 for M -- if the
+        # parser ever picked the wrong pane this would silently start
+        # returning centimeters mislabeled as inches.
+        self.assertEqual(self.product["size_chart"]["M"]["chest"], 36.0)
+
+    def test_other_fields_still_parse_alongside_the_chart(self):
+        # The size-chart tab-content div re-uses the `.self-product-description`
+        # class the real description block also uses -- guard against the
+        # chart section leaking into the description/specifications extraction.
+        self.assertEqual(self.product["name"], "Womens Premium Tops - Estrella")
+        self.assertIn("Estrella Premium Top", self.product["description"])
+        self.assertNotIn("Size chart", self.product["description"])
+
+
+class FabrilifeAlgoliaSizeChartTests(SimpleTestCase):
+    """`raw` here is the exact `size_chart` field shape confirmed live
+    (2026-07-29) on an Algolia `products` search hit for "Womens Premium
+    Tops - Estrella" -- catalog.services_size_chart_backfill reads this
+    field directly off a search hit instead of re-fetching/parsing the
+    product page HTML."""
+
+    RAW = (
+        '[{"title":"Size chart - In inches (Expected Deviation < 3%)",'
+        '"unit_of_measurement":"inch","chart":{'
+        '"M":{"chest (round)":"36","length":"30","sleeve":"21"},'
+        '"L":{"chest (round)":"38","length":"31","sleeve":"21"},'
+        '"XL":{"chest (round)":"40","length":"32","sleeve":"21.5"},'
+        '"2XL":{"chest (round)":"42","length":"33","sleeve":"22"}}}]'
+    )
+
+    def test_parses_json_string(self):
+        self.assertEqual(
+            parse_fabrilife_algolia_size_chart(self.RAW),
+            {
+                "M": {"chest": 36.0, "length": 30.0, "sleeve": 21.0},
+                "L": {"chest": 38.0, "length": 31.0, "sleeve": 21.0},
+                "XL": {"chest": 40.0, "length": 32.0, "sleeve": 21.5},
+                "2XL": {"chest": 42.0, "length": 33.0, "sleeve": 22.0},
+            },
+        )
+
+    def test_accepts_already_decoded_list(self):
+        import json
+        self.assertEqual(
+            parse_fabrilife_algolia_size_chart(json.loads(self.RAW)),
+            parse_fabrilife_algolia_size_chart(self.RAW),
+        )
+
+    def test_missing_field_is_empty(self):
+        self.assertEqual(parse_fabrilife_algolia_size_chart(None), {})
+        self.assertEqual(parse_fabrilife_algolia_size_chart(""), {})
+
+    def test_malformed_json_is_empty_not_raise(self):
+        self.assertEqual(parse_fabrilife_algolia_size_chart("not json"), {})
+
+    def test_no_inch_entry_is_empty(self):
+        raw = '[{"title":"x","unit_of_measurement":"cm","chart":{"M":{"chest":"91.4"}}}]'
+        self.assertEqual(parse_fabrilife_algolia_size_chart(raw), {})
 
 
 class FabrilifeSpecEdgeCaseTests(SimpleTestCase):
