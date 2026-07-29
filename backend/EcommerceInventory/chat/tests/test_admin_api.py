@@ -148,6 +148,17 @@ class AdminChatMessagesTests(TestCase):
         bodies = [m["body"] for m in res.data["data"]["messages"]]
         self.assertEqual(bodies, ["two"])
 
+    def test_poll_with_no_new_messages_preserves_cursor(self):
+        m1 = ChatMessage.objects.create(thread=self.thread, sender=self.customer, sender_role="CUSTOMER", body="one")
+
+        auth(self.client, self.staff)
+        res = self.client.get(f"/api/chat/admin/threads/{self.thread.id}/messages/?after={m1.id}")
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual(res.data["data"]["messages"], [])
+        # Must echo the cursor back, not null -- a null here would clobber a
+        # naive client's stored cursor (see chat/views.py::_resolve_latest_id).
+        self.assertEqual(res.data["data"]["latest_id"], m1.id)
+
     def test_mark_read_resets_staff_unread_count(self):
         self.thread.staff_unread_count = 5
         self.thread.save(update_fields=["staff_unread_count"])

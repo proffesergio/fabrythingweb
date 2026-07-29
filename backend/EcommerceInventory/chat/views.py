@@ -62,6 +62,32 @@ def _parse_after(raw):
     return None, None
 
 
+def _resolve_latest_id(thread, messages, cursor_kind, cursor_value):
+    """The cursor a client should poll with next.
+
+    A poll that returns zero messages must NOT report `None` here — a client
+    that (reasonably) trusts this field as its next cursor would overwrite a
+    perfectly good one with null, and every subsequent poll then falls back to
+    "no cursor" (the full initial page) or, worse, sends a literal
+    `after=null`/`after=undefined`. This is the exact seam a customer's "the
+    admin's reply never showed up" report traces back to (see
+    docs/LIVE_CHAT.md) — the fix belongs here, once, rather than trusting every
+    current and future consumer (the storefront widget, the admin inbox, any
+    future mobile client) to individually guard against it.
+    """
+    if messages:
+        return messages[-1].id
+    if cursor_kind == "id":
+        # Nothing newer than the cursor the caller already has -- hand the
+        # same cursor straight back so it never regresses.
+        return cursor_value
+    # No cursor (or a timestamp cursor with nothing newer): report the
+    # thread's actual latest message id, which is None only for a thread with
+    # zero messages -- in practice this never happens, since a thread is
+    # always created together with its first message.
+    return thread.messages.order_by("-id").values_list("id", flat=True).first()
+
+
 class ChatThreadListCreateView(APIView):
     authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated]
@@ -134,7 +160,7 @@ class ChatThreadMessagesView(APIView):
 
         data = {
             "messages": ChatMessageSerializer(messages, many=True).data,
-            "latest_id": messages[-1].id if messages else None,
+            "latest_id": _resolve_latest_id(thread, messages, cursor_kind, cursor_value),
         }
         return renderResponse(data=data, message="Messages retrieved successfully")
 

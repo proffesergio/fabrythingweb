@@ -20,7 +20,7 @@ from chat.serializers import (
     ChatThreadStatusSerializer,
 )
 from chat.services import post_message
-from chat.views import MAX_POLL_MESSAGES, MESSAGE_SELECT_FIELDS, _parse_after
+from chat.views import MAX_POLL_MESSAGES, MESSAGE_SELECT_FIELDS, _parse_after, _resolve_latest_id
 from core.helpers import renderResponse
 
 INBOX_FIELDS = (
@@ -80,7 +80,7 @@ class AdminChatMessagesView(APIView):
 
         data = {
             "messages": ChatMessageSerializer(messages, many=True).data,
-            "latest_id": messages[-1].id if messages else None,
+            "latest_id": _resolve_latest_id(thread, messages, cursor_kind, cursor_value),
         }
         return renderResponse(data=data, message="Messages retrieved successfully")
 
