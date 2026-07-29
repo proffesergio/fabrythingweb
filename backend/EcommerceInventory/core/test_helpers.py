@@ -11,7 +11,8 @@ regress while fixing the non-string case.
 """
 from django.test import RequestFactory, TestCase
 
-from core.helpers import absolutize_image_list, absolutize_media_url
+from accounts.models import Users
+from core.helpers import absolutize_image_list, absolutize_media_url, isPlatformScope, isPlatformStaff
 
 
 class AbsolutizeMediaUrlMalformedInputTests(TestCase):
@@ -37,3 +38,62 @@ class AbsolutizeMediaUrlMalformedInputTests(TestCase):
         raising. Only the non-string-value case should degrade quietly."""
         with self.assertRaises(ValueError):
             absolutize_media_url("/api/media/realhash/", None)
+
+
+class IsPlatformStaffTests(TestCase):
+    """isPlatformScope alone is TRUE for any domain-root user -- and
+    Users.save() self-assigns domain_user_id = self.id for every account
+    created without one, so a plain self-signed-up Customer/Rider/Restaurant
+    is their own domain root too. isPlatformStaff is the canonical
+    authorization predicate: a back-office role (Admin/Super Admin/Staff)
+    that is ALSO platform-scoped."""
+
+    def test_self_signed_up_customer_is_platform_scope_but_not_platform_staff(self):
+        customer = Users.objects.create_user(
+            username="isp-customer", email="isp-customer@x.com", password="x",
+            role="Customer", country="Bangladesh")
+        # The trap this whole fix exists for: isPlatformScope alone is True.
+        self.assertTrue(isPlatformScope(customer))
+        self.assertFalse(isPlatformStaff(customer))
+
+    def test_self_signed_up_rider_is_not_platform_staff(self):
+        rider = Users.objects.create_user(
+            username="isp-rider", email="isp-rider@x.com", password="x",
+            role="Rider", country="Bangladesh")
+        self.assertTrue(isPlatformScope(rider))
+        self.assertFalse(isPlatformStaff(rider))
+
+    def test_self_signed_up_restaurant_is_not_platform_staff(self):
+        restaurant = Users.objects.create_user(
+            username="isp-restaurant", email="isp-restaurant@x.com", password="x",
+            role="Restaurant", country="Bangladesh")
+        self.assertTrue(isPlatformScope(restaurant))
+        self.assertFalse(isPlatformStaff(restaurant))
+
+    def test_super_admin_is_platform_staff(self):
+        super_admin = Users.objects.create_user(
+            username="isp-super", email="isp-super@x.com", password="x",
+            role="Super Admin", country="Bangladesh")
+        self.assertTrue(isPlatformStaff(super_admin))
+
+    def test_domain_root_admin_is_platform_staff(self):
+        admin = Users.objects.create_user(
+            username="isp-admin", email="isp-admin@x.com", password="x",
+            role="Admin", country="Bangladesh")
+        self.assertTrue(isPlatformStaff(admin))
+
+    def test_domain_root_staff_is_platform_staff(self):
+        staff = Users.objects.create_user(
+            username="isp-staff-root", email="isp-staff-root@x.com", password="x",
+            role="Staff", country="Bangladesh")
+        self.assertTrue(isPlatformStaff(staff))
+
+    def test_sub_domain_staff_is_not_platform_staff(self):
+        owner = Users.objects.create_user(
+            username="isp-owner", email="isp-owner@x.com", password="x",
+            role="Super Admin", country="Bangladesh")
+        sub_staff = Users.objects.create_user(
+            username="isp-sub-staff", email="isp-sub-staff@x.com", password="x",
+            role="Staff", country="Bangladesh", domain_user_id=owner)
+        self.assertFalse(isPlatformScope(sub_staff))
+        self.assertFalse(isPlatformStaff(sub_staff))

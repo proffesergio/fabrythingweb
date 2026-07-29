@@ -1,7 +1,8 @@
-from core.helpers import CommonListAPIMixin, CustomPageNumberPagination, absolutize_image_list, createParsedCreatedAtUpdatedAt, isPlatformScope, renderResponse
+from core.helpers import CommonListAPIMixin, CustomPageNumberPagination, PLATFORM_STAFF_ROLES, absolutize_image_list, createParsedCreatedAtUpdatedAt, isPlatformScope, renderResponse
 from catalog.models import Categories
 from rest_framework import generics
 from rest_framework import serializers
+from rest_framework.exceptions import PermissionDenied
 from rest_framework.permissions import IsAuthenticated
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from django.db.models import Q
@@ -46,11 +47,19 @@ class CategoryListView(generics.ListAPIView):
 
 
     def get_queryset(self):
-        # Super Admin sees all categories; others see only their domain's categories
-        if isPlatformScope(self.request.user):
+        user = self.request.user
+        if user.role not in PLATFORM_STAFF_ROLES:
+            # Same rule as ProductListView -- a non-back-office role (e.g. a
+            # self-signed-up Customer, its own domain root -- see
+            # core.helpers.isPlatformStaff) must never reach the admin
+            # category list at all.
+            raise PermissionDenied('Staff account required.')
+        # Super Admin / domain-root back-office account sees all categories;
+        # a domain sub-account sees only their own domain's categories.
+        if isPlatformScope(user):
             queryset = Categories.objects.filter(parent_id__isnull=True)
         else:
-            queryset = Categories.objects.filter(parent_id__isnull=True, domain_user_id=self.request.user.domain_user_id_id)
+            queryset = Categories.objects.filter(parent_id__isnull=True, domain_user_id=user.domain_user_id_id)
         return queryset
 
     @CommonListAPIMixin.common_list_decorator(CategorySerializer)

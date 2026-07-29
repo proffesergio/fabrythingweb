@@ -1,10 +1,11 @@
 from accounts.models import Users
-from core.helpers import CommonListAPIMixin, CustomPageNumberPagination, absolutize_image_list, createParsedCreatedAtUpdatedAt, isPlatformScope, renderResponse
+from core.helpers import CommonListAPIMixin, CustomPageNumberPagination, PLATFORM_STAFF_ROLES, absolutize_image_list, createParsedCreatedAtUpdatedAt, isPlatformScope, isPlatformStaff, renderResponse
 from catalog.category_tree import descendant_category_ids
 from catalog.models import Categories, ProductQuestions, ProductReviews, Products, ProductVariant
 from catalog.services_price_sync import sync_source_prices
 from rest_framework import generics
 from rest_framework import serializers
+from rest_framework.exceptions import PermissionDenied
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.views import APIView
 from rest_framework_simplejwt.authentication import JWTAuthentication
@@ -85,11 +86,22 @@ class ProductListView(generics.ListAPIView):
     pagination_class = CustomPageNumberPagination
 
     def get_queryset(self):
-        # Super Admin sees all products; others see only their domain's products
-        if isPlatformScope(self.request.user):
+        user = self.request.user
+        if user.role not in PLATFORM_STAFF_ROLES:
+            # This is the admin product list -- it serializes base_price,
+            # source_price, source_url and initial_buying_price (supplier
+            # costs / partner sources). A non-back-office role (e.g. a
+            # self-signed-up Customer, who is their own domain root -- see
+            # core.helpers.isPlatformStaff) must never reach it at all, not
+            # even scoped to an empty/own-domain queryset.
+            raise PermissionDenied('Staff account required.')
+        # Platform-scope (Super Admin or a domain-root back-office account)
+        # sees all products; a domain sub-account (Staff/Admin under someone
+        # else's domain) sees only their own domain's products.
+        if isPlatformScope(user):
             queryset = Products.objects.all()
         else:
-            queryset = Products.objects.filter(domain_user_id=self.request.user.domain_user_id_id)
+            queryset = Products.objects.filter(domain_user_id=user.domain_user_id_id)
 
         category_param = self.request.query_params.get('category')
         if category_param:
@@ -182,13 +194,16 @@ class UpdateProductReviewView(generics.UpdateAPIView):
 class AdminSyncPricesView(APIView):
     """Re-fetch partner-store (potakait.com / canvasit.com.bd) prices for
     every product carrying a source_url and mirror them onto our catalog.
-    Platform-scope only (Super Admin or a domain-root user) -- everyone
-    else, including ordinary Staff, is forbidden."""
+    Platform staff only (core.helpers.isPlatformStaff) -- a domain sub-account
+    (e.g. ordinary Staff under someone else's domain) is forbidden, and so is
+    any non-back-office role even if it happens to be a domain root (a
+    self-signed-up Customer is its own domain root -- isPlatformScope alone
+    is not enough, see isPlatformStaff's docstring)."""
     authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
-        if not isPlatformScope(request.user):
+        if not isPlatformStaff(request.user):
             return renderResponse(data='Forbidden', message='Forbidden', status=403)
         changes = sync_source_prices()
         return renderResponse(
@@ -214,8 +229,8 @@ class AdminProductQuickUpdateView(APIView):
 
     Patches only the "quick" fields the all-products list edits inline, so an
     admin can fix a price/stock typo without opening the full edit form.
-    Platform-scope only (Super Admin or a domain-root user), same rule as
-    every other admin catalog endpoint (core.helpers.isPlatformScope).
+    Platform staff only, same rule as every other admin catalog endpoint
+    (core.helpers.isPlatformStaff).
 
     Editable fields -- nothing else, and never source_url/source_price (those
     belong to the partner price sync in services_price_sync.py):
@@ -250,7 +265,7 @@ class AdminProductQuickUpdateView(APIView):
     ALLOWED_STATUSES = {"ACTIVE", "INACTIVE"}
 
     def patch(self, request, pk):
-        if not isPlatformScope(request.user):
+        if not isPlatformStaff(request.user):
             return renderResponse(data='Forbidden', message='Forbidden', status=403)
 
         try:
@@ -425,7 +440,7 @@ class AdminBulkShippingFeeView(APIView):
     without touching its per-product fee. At least one of the two must be
     present.
 
-    Same authorization as quick-update (isPlatformScope) and the same
+    Same authorization as quick-update (isPlatformStaff) and the same
     field_errors validation shape. Negative fees are rejected. The match is
     capped at MAX_BATCH rows so a fat-fingered top-level category can't silently
     rewrite the entire catalog in one request -- narrow the selection instead.
@@ -436,7 +451,7 @@ class AdminBulkShippingFeeView(APIView):
     MAX_BATCH = 2000
 
     def post(self, request):
-        if not isPlatformScope(request.user):
+        if not isPlatformStaff(request.user):
             return renderResponse(data='Forbidden', message='Forbidden', status=403)
 
         data = request.data

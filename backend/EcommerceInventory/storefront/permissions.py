@@ -1,6 +1,6 @@
 from rest_framework.permissions import BasePermission
 
-from core.helpers import isPlatformScope
+from core.helpers import isPlatformStaff as _isPlatformStaff
 
 
 class IsPlatformStaff(BasePermission):
@@ -13,15 +13,15 @@ class IsPlatformStaff(BasePermission):
     makes this permission class the ONLY thing standing between banner CRUD
     and any logged-in Customer account.
 
+    Delegates to core.helpers.isPlatformStaff -- the canonical predicate.
     `core.helpers.isPlatformScope` alone is not enough: it is true for ANY
     domain-root user, and a self-signed-up Customer is their own domain root
     (Users.save() self-assigns domain_user_id = self on insert for every
     role -- see accounts/models.py and the identical trap documented on
-    chat.permissions.IsChatStaff). The role check narrows it back down to the
-    roles that actually operate the admin panel; isPlatformScope on top of
-    that still excludes a domain sub-account (e.g. a Staff user created under
-    someone else's domain), matching the widening rule
-    ProductListView/CategoryListView already use.
+    chat.permissions.IsChatStaff). isPlatformStaff's role check narrows it
+    back down to the roles that actually operate the admin panel;
+    isPlatformScope on top of that still excludes a domain sub-account (e.g.
+    a Staff user created under someone else's domain).
     """
 
     message = "Staff account required."
@@ -30,4 +30,4 @@ class IsPlatformStaff(BasePermission):
         u = request.user
         if not (u and u.is_authenticated):
             return False
-        return u.role in ("Admin", "Super Admin", "Staff") and isPlatformScope(u)
+        return _isPlatformStaff(u)

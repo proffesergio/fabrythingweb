@@ -1,6 +1,6 @@
 from rest_framework.permissions import BasePermission
 
-from core.helpers import isPlatformScope
+from core.helpers import isPlatformStaff
 
 
 class IsChatStaff(BasePermission):
@@ -14,14 +14,14 @@ class IsChatStaff(BasePermission):
     Restaurant account — IsAuthenticated alone would let anyone read/reply to
     every customer's thread.
 
+    Delegates to core.helpers.isPlatformStaff -- the canonical predicate.
     `core.helpers.isPlatformScope` alone is not enough: it is true for ANY
     domain-root user (a plain Customer who self-signed up is their own domain
-    root — see accounts/test_dynamic_form_scope.py), not just staff. The role
-    check narrows it back down to the roles that actually operate the admin
-    panel; isPlatformScope on top of that excludes a domain sub-account
-    (a Staff/Admin user created *under* someone else's domain) that should only
-    ever act within its own tenant, matching the widening rule
-    ProductListView/CategoryListView already use.
+    root — see accounts/test_dynamic_form_scope.py), not just staff.
+    isPlatformStaff's role check narrows it back down to the roles that
+    actually operate the admin panel; isPlatformScope on top of that excludes
+    a domain sub-account (a Staff/Admin user created *under* someone else's
+    domain) that should only ever act within its own tenant.
     """
 
     message = "Staff account required."
@@ -30,4 +30,4 @@ class IsChatStaff(BasePermission):
         u = request.user
         if not (u and u.is_authenticated):
             return False
-        return u.role in ("Admin", "Super Admin", "Staff") and isPlatformScope(u)
+        return isPlatformStaff(u)

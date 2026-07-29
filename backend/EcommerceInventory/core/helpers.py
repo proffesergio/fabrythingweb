@@ -30,8 +30,48 @@ def getSuperAdminDynamicFormModels():
 def isPlatformScope(user):
     """The widening rule the admin list views already use
     (ProductListView/CategoryListView): Super Admins and domain-root users
-    operate on the whole platform's rows, everyone else only on their domain."""
+    operate on the whole platform's rows, everyone else only on their domain.
+
+    Row-visibility widening for an ALREADY-AUTHORISED staff user ONLY -- this
+    must never be used alone to decide whether a request is authorized (it is
+    True for any self-signed-up Customer/Rider/Restaurant too; see
+    isPlatformStaff below)."""
     return user.role == 'Super Admin' or user.domain_user_id_id == user.id
+
+
+# Back-office roles that may ever act as platform staff. Kept alongside
+# isPlatformStaff so callers that need the role-only half of the check (e.g.
+# an admin list view that must still show a legitimate domain-scoped Staff
+# sub-account their OWN tenant's rows, just not the widened cross-tenant
+# view) have one place to import it from rather than re-typing the tuple.
+PLATFORM_STAFF_ROLES = ("Admin", "Super Admin", "Staff")
+
+
+def isPlatformStaff(user):
+    """The canonical authorization predicate for platform/admin-only
+    endpoints -- use this, never isPlatformScope alone, to decide whether a
+    request may act as platform staff.
+
+    The trap: isPlatformScope(user) is True for ANY domain-root user, and
+    Users.save() self-assigns domain_user_id = self.id for any account
+    created without one -- which includes every Customer who self-signs-up
+    at /api/store/auth/signup/ (and Rider/Restaurant accounts created through
+    their own onboarding flows). That made a plain self-signed-up Customer
+    their own domain root, so isPlatformScope(customer) was True and every
+    call site that used it alone as the authorization check (admin product/
+    category list, price sync, quick-update, bulk shipping, product import,
+    cross-domain product/category editing) let that customer through as if
+    they were an admin -- both a privilege escalation and, for the product
+    list, a confidential-data leak (base_price/source_price/source_url/
+    initial_buying_price).
+
+    A back-office role (Admin/Super Admin/Staff) that is ALSO platform-scoped
+    -- i.e. Super Admin, or a domain-root account holding one of those roles.
+    This still excludes a Staff/Admin sub-account created *under* someone
+    else's domain (isPlatformScope is False for them), which must stay
+    confined to its own tenant -- matching chat.permissions.IsChatStaff and
+    storefront.permissions.IsPlatformStaff, which both delegate here."""
+    return user.role in PLATFORM_STAFF_ROLES and isPlatformScope(user)
 
 def checkisFileField(field):
     return field in ['image','file','path','video','audio','profile_pic']

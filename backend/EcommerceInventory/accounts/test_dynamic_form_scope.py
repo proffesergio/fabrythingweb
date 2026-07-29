@@ -199,3 +199,73 @@ class DynamicFormCrossTenantEscalationTests(TestCase):
             domain_user_id=self.tenant_b_admin, added_by_user_id=self.tenant_b_admin)
         res = self._get("category", foreign_cat.id, self.tenant_a_admin)
         self.assertEqual(res.status_code, 200)
+
+
+class DynamicFormNonStaffRoleEscalationTests(TestCase):
+    """CRITICAL regression test, the same bug as
+    DynamicFormCrossTenantEscalationTests above but for the *role* axis
+    instead of the tenant axis: core.helpers.isPlatformScope is true for ANY
+    domain-root user, and Users.save() self-assigns domain_user_id = self.id
+    for every account created without one -- so a plain self-signed-up
+    Customer (or Rider, or Restaurant) is their own domain root too, even
+    though the product/category widening (PLATFORM_SCOPE_WIDENED_MODELS) was
+    only ever meant for back-office roles. Before the fix this let a Customer
+    fetch AND edit ANY product/category belonging to ANY tenant via
+    /api/getForm/product/<id>/ and /api/getForm/category/<id>/ -- a full
+    cross-domain privilege escalation reachable by anyone who can sign up."""
+
+    def setUp(self):
+        self.owner = Users.objects.create_user(
+            username="store-owner", email="store-owner@x.com", password="x",
+            role="Admin", country="Bangladesh")
+        self.customer = Users.objects.create_user(
+            username="plain-customer", email="plain-customer@x.com", password="x",
+            role="Customer", country="Bangladesh")
+        self.rider = Users.objects.create_user(
+            username="plain-rider", email="plain-rider@x.com", password="x",
+            role="Rider", country="Bangladesh")
+        self.restaurant = Users.objects.create_user(
+            username="plain-restaurant", email="plain-restaurant@x.com", password="x",
+            role="Restaurant", country="Bangladesh")
+        # Each is its own domain root, exactly like isPlatformScope's trap.
+        for u in (self.customer, self.rider, self.restaurant):
+            self.assertEqual(u.domain_user_id_id, u.id)
+
+        self.category = Categories.objects.create(
+            name="Store Category", slug="store-category", description="",
+            domain_user_id=self.owner, added_by_user_id=self.owner)
+
+    def _get(self, modelName, obj_id, user):
+        request = APIRequestFactory().get(f"/api/getForm/{modelName}/{obj_id}/")
+        force_authenticate(request, user=user)
+        return DynamicFormController.as_view()(request, modelName=modelName, id=obj_id)
+
+    def _post(self, modelName, obj_id, user, data):
+        request = APIRequestFactory().post(f"/api/getForm/{modelName}/{obj_id}/", data, format="json")
+        force_authenticate(request, user=user)
+        return DynamicFormController.as_view()(request, modelName=modelName, id=obj_id)
+
+    def test_customer_cannot_fetch_category_edit_form(self):
+        res = self._get("category", self.category.id, self.customer)
+        self.assertEqual(res.status_code, 403)
+
+    def test_customer_cannot_edit_category(self):
+        res = self._post("category", self.category.id, self.customer,
+                          {"name": "Hijacked", "description": "x", "slug": "store-category", "display_order": 0})
+        self.assertEqual(res.status_code, 403)
+        self.category.refresh_from_db()
+        self.assertEqual(self.category.name, "Store Category")
+
+    def test_rider_cannot_fetch_category_edit_form(self):
+        res = self._get("category", self.category.id, self.rider)
+        self.assertEqual(res.status_code, 403)
+
+    def test_restaurant_cannot_fetch_category_edit_form(self):
+        res = self._get("category", self.category.id, self.restaurant)
+        self.assertEqual(res.status_code, 403)
+
+    def test_legitimate_domain_root_admin_still_works(self):
+        """Must not regress: a real Admin (domain-root, back-office role)
+        must keep the widened access this whole mechanism exists for."""
+        res = self._get("category", self.category.id, self.owner)
+        self.assertEqual(res.status_code, 200)
