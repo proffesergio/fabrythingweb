@@ -1,11 +1,12 @@
 from .controllers.CategoryController import CategoryListView
-from .controllers.ProductController import ProductListView,ProductReviewListView,CreateProductReviewView,UpdateProductReviewView,ProductQuestionsListView,CreateProductQuestionsView,UpdateProductQuestionsView,AdminSyncPricesView,AdminProductQuickUpdateView
+from .controllers.ProductController import ProductListView,ProductReviewListView,CreateProductReviewView,UpdateProductReviewView,ProductQuestionsListView,CreateProductQuestionsView,UpdateProductQuestionsView,AdminSyncPricesView,AdminProductQuickUpdateView,AdminBulkShippingFeeView
 from .controllers.ProductImportController import AdminBrowseImportCandidatesView,AdminImportProductsView
 from django.urls import path
 
 urlpatterns = [
     path('categories/',CategoryListView.as_view(),name='category_list'),
     path('admin/sync-prices/',AdminSyncPricesView.as_view(),name='admin_sync_prices'),
+    path('admin/shipping-fee/bulk/',AdminBulkShippingFeeView.as_view(),name='admin_bulk_shipping_fee'),
     path('admin/<int:pk>/quick-update/',AdminProductQuickUpdateView.as_view(),name='admin_product_quick_update'),
     path('admin/import/browse/',AdminBrowseImportCandidatesView.as_view(),name='admin_import_browse'),
     path('admin/import/',AdminImportProductsView.as_view(),name='admin_import_products'),

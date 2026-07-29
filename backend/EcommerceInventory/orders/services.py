@@ -57,9 +57,12 @@ def place_cod_order(*, customer, items, contact_name, contact_phone,
         requested[vid] = requested.get(vid, 0) + qty
 
     # Lock all variant rows up front, in a stable order, to avoid deadlocks.
+    # select_related('product') so reading variant.product.shipping_fee below
+    # (and variant.product.name, used further down) doesn't fire a query per line.
     variants = {
         v.id: v
         for v in ProductVariant.objects.select_for_update()
+        .select_related('product')
         .filter(id__in=requested.keys())
         .order_by("id")
     }
@@ -80,7 +83,11 @@ def place_cod_order(*, customer, items, contact_name, contact_phone,
         subtotal += line_total
         order_items.append((variant, qty, unit_price, line_total))
 
-    shipping = config.shipping_for(subtotal)
+    # One per-product shipping fee per cart line -- see StoreConfiguration.
+    # shipping_for for the max() rule (highest per-product fee, floored at
+    # the store's flat rate; free-shipping-threshold still wins over both).
+    product_shipping_fees = [variant.product.shipping_fee for variant, _, _, _ in order_items]
+    shipping = config.shipping_for(subtotal, product_shipping_fees)
     total = subtotal + shipping
 
     order = Order.objects.create(

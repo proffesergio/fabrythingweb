@@ -4,7 +4,7 @@ import {
     Tab, Tabs, IconButton, Dialog, DialogTitle, DialogContent,
     Table, TableBody, TableRow, TableCell, Skeleton, Breadcrumbs,
 } from '@mui/material';
-import { ShoppingCart, Add, Remove, NavigateNext } from '@mui/icons-material';
+import { ShoppingCart, Add, Remove, NavigateNext, LocalShipping } from '@mui/icons-material';
 import { useParams, Link } from 'react-router-dom';
 import { useDispatch } from 'react-redux';
 import { addToCart } from '../../redux/reducer/cartSlice';
@@ -75,6 +75,11 @@ export default function ProductDetail() {
     const specs = product.specifications && typeof product.specifications === 'object' ? product.specifications : {};
     const highlights = Array.isArray(product.highlights) ? product.highlights : [];
     const sizeChart = product.size_chart && typeof product.size_chart === 'object' ? product.size_chart : {};
+    // `effective_shipping_fee` is always a number from the storefront API --
+    // this product's own override, or the store's flat rate when it has none
+    // -- so the customer is never shown nothing here.
+    const shippingFee = product.effective_shipping_fee;
+    const freeDelivery = shippingFee === 0;
 
     const handleAddToCart = () => {
         if (!selectedVariant || !inStock) return;
@@ -109,12 +114,13 @@ export default function ProductDetail() {
                     <Box sx={{ position: 'sticky', top: 80 }}>
                         {/* Partner photos have inconsistent aspect ratios and tight crops --
                             padding + object-fit: contain shows the whole product instead of
-                            edge-cropping it (matches ProductCard's treatment). Neutral
-                            `action.hover` surface instead of a hardcoded hex so this reads
-                            correctly in dark mode too. */}
+                            edge-cropping it (matches ProductCard's treatment). Explicit white,
+                            not a theme surface token: the photos are shot on white, so a white
+                            tile is what makes them read correctly, even in dark mode (a dark
+                            tile would show an obvious white rectangle around the photo). */}
                         <Box sx={{
                             width: '100%', height: { xs: 400, md: 500 },
-                            borderRadius: 2, overflow: 'hidden', bgcolor: 'action.hover', mb: 1,
+                            borderRadius: 2, overflow: 'hidden', bgcolor: '#fff', mb: 1,
                             p: { xs: 2, md: 3 },
                         }}>
                             {images.length > 0 ? (
@@ -139,7 +145,7 @@ export default function ProductDetail() {
                                         sx={{
                                             width: 64, height: 64, borderRadius: 1, overflow: 'hidden',
                                             cursor: 'pointer', flexShrink: 0,
-                                            bgcolor: 'action.hover', p: 0.5,
+                                            bgcolor: '#fff', p: 0.5,
                                             border: selectedImage === i ? '2px solid' : '2px solid transparent',
                                             borderColor: selectedImage === i ? 'secondary.main' : 'transparent',
                                         }}
@@ -185,6 +191,23 @@ export default function ProductDetail() {
                             </>
                         )}
                     </Box>
+
+                    {/* Delivery fee -- more prominent than the card's quiet caption, and
+                        always shown (falls back to the store's flat rate) so the customer
+                        knows the shipping cost before they add to cart. */}
+                    {shippingFee != null && (
+                        <Box sx={{
+                            display: 'flex', alignItems: 'center', gap: 1, mb: 2,
+                            px: 1.5, py: 1, borderRadius: 1,
+                            bgcolor: freeDelivery ? 'success.main' : 'action.hover',
+                            color: freeDelivery ? 'success.contrastText' : 'text.primary',
+                        }}>
+                            <LocalShipping fontSize="small" />
+                            <Typography variant="body2" fontWeight={600}>
+                                {freeDelivery ? 'Free delivery' : `Delivery: ৳${shippingFee.toLocaleString()}`}
+                            </Typography>
+                        </Box>
+                    )}
 
                     {/* Material & Color */}
                     <Box sx={{ display: 'flex', gap: 2, mb: 2, flexWrap: 'wrap' }}>
