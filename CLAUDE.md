@@ -4,6 +4,25 @@ Read this before exploring. It exists so a fresh session does not have to
 re-derive the layout with Glob/Grep. If something here contradicts the code,
 the code wins — fix this file in the same commit.
 
+## Delivery mode (set by the owner 2026-07-29) — ship code, not paperwork
+
+The mobile app release is the goal and it is far off. Optimise for shipping
+working features per token, not for documentation.
+
+- **Do not write a per-feature `docs/*.md`.** Owner-facing docs are written
+  only when the owner explicitly asks, or when a feature is inert without
+  setup he must perform (credentials, an env-gated one-off command). In that
+  case: a short section appended to an existing doc, not a new file.
+- **Code + tests are the deliverable.** A subagent's report goes in its report
+  file, not into the repo.
+- **Comment the non-obvious in code** (a constraint, a why) instead of
+  restating it in a doc that drifts.
+- **Test once, before pushing** — module tests while iterating, full suite once
+  at the end. See the test budget below.
+- Ask the owner only when a decision changes money, data loss, or user-facing
+  behaviour in a way the code cannot settle. Otherwise pick the sane default,
+  state it, and move.
+
 ## Test budget — run what you shipped, not the world
 
 The suite is ~680 tests. Running all of it after every edit is the single
