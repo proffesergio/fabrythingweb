@@ -18,9 +18,16 @@ from django.db.models import Q
 #     gating it behind a JWT would just make every image on the storefront
 #     403. The URL is content-addressed (the sha256 of the bytes), so there
 #     is nothing sensitive to protect by requiring auth here.
+#   - the live chat API (/api/chat/): same shape as /api/food/ above — it
+#     mixes customer-authenticated and staff-authenticated endpoints under one
+#     prefix, each enforcing its own JWTAuthentication + permission class
+#     (IsAuthenticated / chat.permissions.IsChatStaff). Gating it behind this
+#     middleware's per-user ModuleUrls lookup instead would require seeding a
+#     module row before ANY customer could open a chat thread.
 PUBLIC_API_PREFIXES = (
     '/api/store/',
     '/api/food/',
+    '/api/chat/',
     '/api/auth/login',
     '/api/auth/signup',
     '/api/health/',

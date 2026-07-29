@@ -61,6 +61,7 @@ LOCAL_APPS = [
     "orders",
     "storefront",
     "food",
+    "chat",
 ]
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
@@ -129,6 +130,10 @@ REST_FRAMEWORK = {
         # Anti-spam for COD: cap order creation per user/IP.
         "orders.create": os.getenv("THROTTLE_ORDER_CREATE", "10/hour"),
         "auth": os.getenv("THROTTLE_AUTH", "20/hour"),
+        # Anti-spam for chat: caps opening threads / posting messages. Only
+        # applied to the write path (see chat/views.py's get_throttles) —
+        # never to the polling reads, which need to run every few seconds.
+        "chat.message": os.getenv("THROTTLE_CHAT_MESSAGE", "30/minute"),
     },
 }
 
