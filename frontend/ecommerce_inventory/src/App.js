@@ -37,6 +37,7 @@ import PartnerApplications from './pages/food/PartnerApplications';
 import RiderCash from './pages/food/RiderCash';
 import ChatInbox from './pages/chat/ChatInbox';
 import ManageBanners from './pages/banners/ManageBanners';
+import ManageAffiliateProducts from './pages/affiliate/ManageAffiliateProducts';
 import ManagePrintRequests from './pages/printing/ManagePrintRequests';
 import PrintSetup from './pages/printing/PrintSetup';
 import RiderDashboard from './rider/RiderDashboard';
@@ -55,6 +56,7 @@ import CustomerAuth from './storefront/pages/CustomerAuth';
 import CustomerAccount from './storefront/pages/CustomerAccount';
 import CustomPrintingPage from './storefront/pages/CustomPrintingPage';
 import PrintRequestDetail from './storefront/pages/PrintRequestDetail';
+import DealsPage from './storefront/pages/DealsPage';
 import { useMemo, useState } from 'react';
 
 // Vendor (Restaurant-role) dashboard imports
@@ -151,6 +153,7 @@ function App() {
           {path:"account",element:<ProtectedRoute element={<CustomerAccount/>}/>},
           {path:"account/orders",element:<ProtectedRoute element={<CustomerAccount/>}/>},
           {path:"custom-printing",element:<CustomPrintingPage/>},
+          {path:"deals",element:<DealsPage/>},
           // Not ProtectedRoute: an anonymous visitor can still land here (e.g. a
           // shared link) and the page itself prompts login for the parts that need it.
           {path:"custom-printing/requests/:id",element:<ProtectedRoute element={<PrintRequestDetail/>}/>},
@@ -238,6 +241,7 @@ function App() {
           {path:"manage/food/rider-cash",element:<ProtectedRoute element={<RiderCash/>}/>},
           {path:"manage/chat/inbox",element:<ProtectedRoute element={<ChatInbox/>}/>},
           {path:"manage/banners",element:<ProtectedRoute element={<ManageBanners/>}/>},
+          {path:"manage/affiliate",element:<ProtectedRoute element={<ManageAffiliateProducts/>}/>},
           {path:"manage/print/requests",element:<ProtectedRoute element={<ManagePrintRequests/>}/>},
           {path:"manage/print/setup",element:<ProtectedRoute element={<PrintSetup/>}/>},
           {path:"*",element:<Error404Page/>},
