@@ -9,6 +9,7 @@ import TabbedProductSection from '../components/TabbedProductSection';
 import ProductCarousel from '../components/ProductCarousel';
 import PromoBanner from '../components/PromoBanner';
 import CategoryGrid from '../components/CategoryGrid';
+import AffiliateWidget from '../components/AffiliateWidget';
 
 export default function HomePage() {
     // Stale-while-revalidate: renders instantly from the last cached homepage,
@@ -75,6 +76,11 @@ export default function HomePage() {
                         bestSellers={data?.best_sellers}
                     />
                 )}
+            </Container>
+
+            {/* Rotating affiliate deals (Rokomari) -- homepage section widget */}
+            <Container maxWidth="lg">
+                <AffiliateWidget placement="sidebar" title="Deals from Rokomari" />
             </Container>
 
             {/* Promo Banners */}

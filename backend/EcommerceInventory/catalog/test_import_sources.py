@@ -111,10 +111,21 @@ class SeededImportSourcesTests(TestCase):
         # reseller partner -- imports from it must never enrol a product
         # into sync_source_prices's re-pricing loop.
         self.assertFalse(source.sets_source_url)
-        # No beauty/health branch exists yet in seed_store_catalog.TAXONOMY
-        # (see the 0009 migration's docstring) -- zero categories seeded
-        # rather than inventing a taxonomy node to hang them on.
-        self.assertEqual(source.categories.count(), 0)
+        # The 0012 migration maps all 15 live beauty/health subcategories
+        # (see that migration's docstring) onto the beauty-health branch
+        # added to seed_store_catalog.TAXONOMY in the same change -- this
+        # used to be 0 (no taxonomy branch existed to hang them on).
+        self.assertEqual(source.categories.count(), 15)
+        self.assertEqual(
+            set(source.categories.values_list("our_category_slug", flat=True)),
+            {
+                "beauty-hand-sanitizer", "beauty-perfume", "beauty-body-spray",
+                "beauty-air-freshener", "beauty-adult-diaper", "beauty-shaving-grooming",
+                "beauty-talcum-powder", "beauty-personal-care", "beauty-medical-supplies",
+                "beauty-makeup", "beauty-herbal-skin-care", "beauty-nail-care",
+                "beauty-tools", "beauty-herbal-hair-care", "beauty-deodorant",
+            },
+        )
 
     def test_arogga_seeded_disabled_with_reason(self):
         source = ImportSource.objects.get(slug="arogga")

@@ -8,6 +8,8 @@ import { FilterList, Close } from '@mui/icons-material';
 import { useSearchParams } from 'react-router-dom';
 import useApi from '../../hooks/APIHandler';
 import ProductCard from '../components/ProductCard';
+import AffiliateWidget from '../components/AffiliateWidget';
+import AffiliateProductCard from '../components/AffiliateProductCard';
 
 const GENDER_OPTIONS = ['MEN', 'WOMEN', 'KIDS', 'UNISEX'];
 export default function ProductCatalog() {
@@ -77,6 +79,22 @@ export default function ProductCatalog() {
     useEffect(() => { fetchProducts(); }, [fetchProducts]);
     // eslint-disable-next-line react-hooks/exhaustive-deps
     useEffect(() => { fetchCategories(); }, []);
+
+    // Category-grid injection: affiliate products tagged for the active
+    // taxonomy category (AffiliateProduct.grid_categories +
+    // show_in_category_grid=True) are appended after the real catalog
+    // results for that category -- see storefront.views_affiliate.
+    // PublicAffiliateListView's ?category= filter.
+    const [affiliateGridItems, setAffiliateGridItems] = useState([]);
+    useEffect(() => {
+        if (!filters.category) { setAffiliateGridItems([]); return undefined; }
+        let mounted = true;
+        callApi({ url: 'store/affiliate/', params: { category: filters.category } }).then((res) => {
+            if (mounted) setAffiliateGridItems(res?.data?.data || []);
+        });
+        return () => { mounted = false; };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [filters.category]);
 
     const activeFilterCount = [filters.category, filters.gender, filters.price_min, filters.price_max, filters.search]
         .filter(Boolean).length;
@@ -238,6 +256,7 @@ export default function ProductCatalog() {
                     <Grid item md={3}>
                         <Box sx={{ position: 'sticky', top: 80 }}>
                             <FilterPanel />
+                            <AffiliateWidget placement="sidebar" />
                         </Box>
                     </Grid>
                 )}
@@ -265,6 +284,11 @@ export default function ProductCatalog() {
                                 {products.map(product => (
                                     <Grid item xs={6} sm={4} md={4} key={product.id}>
                                         <ProductCard product={product} />
+                                    </Grid>
+                                ))}
+                                {affiliateGridItems.map(item => (
+                                    <Grid item xs={6} sm={4} md={4} key={`affiliate-${item.id}`}>
+                                        <AffiliateProductCard item={item} />
                                     </Grid>
                                 ))}
                             </Grid>

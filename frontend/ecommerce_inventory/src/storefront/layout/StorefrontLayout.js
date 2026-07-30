@@ -321,6 +321,16 @@ export default function StorefrontLayout({ toggleDarkMode, darkMode }) {
                                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
                                         <Box
                                             component={Link}
+                                            to="/deals"
+                                            sx={{
+                                                fontSize: '0.85rem', fontWeight: 700, textDecoration: 'none',
+                                                color: 'text.primary', '&:hover': { color: 'secondary.main' },
+                                            }}
+                                        >
+                                            Deals
+                                        </Box>
+                                        <Box
+                                            component={Link}
                                             to="/custom-printing"
                                             sx={{
                                                 fontSize: '0.85rem', fontWeight: 700, textDecoration: 'none',
@@ -352,6 +362,10 @@ export default function StorefrontLayout({ toggleDarkMode, darkMode }) {
                             </Box>
                             <Box sx={{ px: 2, pb: 2 }} onClick={() => setMobileMenuOpen(false)}>
                                 <FoodNavBadge />
+                            </Box>
+                            <Box component={Link} to="/deals" onClick={() => setMobileMenuOpen(false)}
+                                sx={{ display: 'block', px: 2, py: 1.5, textDecoration: 'none', color: 'text.primary', fontWeight: 600 }}>
+                                Deals
                             </Box>
                             <Box component={Link} to="/custom-printing" onClick={() => setMobileMenuOpen(false)}
                                 sx={{ display: 'block', px: 2, py: 1.5, textDecoration: 'none', color: 'text.primary', fontWeight: 600 }}>

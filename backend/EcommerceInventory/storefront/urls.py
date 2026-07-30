@@ -38,6 +38,15 @@ from .views_banners import (
     AdminBannerReorderView,
     PublicBannerListView,
 )
+from .views_affiliate import (
+    AdminAffiliateBulkAddView,
+    AdminAffiliateDetailView,
+    AdminAffiliateListCreateView,
+    AdminAffiliateReorderView,
+    AdminAffiliateSearchView,
+    AffiliateClickRedirectView,
+    PublicAffiliateListView,
+)
 
 urlpatterns = [
     # Public (no auth)
@@ -47,6 +56,8 @@ urlpatterns = [
     path('products/', PublicProductListView.as_view(), name='store_products'),
     path('products/<slug:slug>/', PublicProductDetailView.as_view(), name='store_product_detail'),
     path('banners/', PublicBannerListView.as_view(), name='store_banners'),
+    path('affiliate/', PublicAffiliateListView.as_view(), name='store_affiliate_list'),
+    path('affiliate/<int:pk>/go/', AffiliateClickRedirectView.as_view(), name='store_affiliate_go'),
 
     # Customer Auth
     path('auth/signup/', CustomerSignupView.as_view(), name='store_signup'),
@@ -80,4 +91,9 @@ urlpatterns = [
     path('admin/banners/', AdminBannerListCreateView.as_view(), name='admin_banners'),
     path('admin/banners/reorder/', AdminBannerReorderView.as_view(), name='admin_banners_reorder'),
     path('admin/banners/<int:pk>/', AdminBannerDetailView.as_view(), name='admin_banner_detail'),
+    path('admin/affiliate/search/', AdminAffiliateSearchView.as_view(), name='admin_affiliate_search'),
+    path('admin/affiliate/bulk-add/', AdminAffiliateBulkAddView.as_view(), name='admin_affiliate_bulk_add'),
+    path('admin/affiliate/reorder/', AdminAffiliateReorderView.as_view(), name='admin_affiliate_reorder'),
+    path('admin/affiliate/', AdminAffiliateListCreateView.as_view(), name='admin_affiliate'),
+    path('admin/affiliate/<int:pk>/', AdminAffiliateDetailView.as_view(), name='admin_affiliate_detail'),
 ]
