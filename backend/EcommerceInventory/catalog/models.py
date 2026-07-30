@@ -211,3 +211,161 @@ class ProductReviews(models.Model):
     domain_user_id=models.ForeignKey(Users,on_delete=models.CASCADE,blank=True,null=True,related_name='domain_user_id_reviews')
     review_user_id=models.ForeignKey(Users,on_delete=models.CASCADE,blank=True,null=True,related_name='added_by_user_id_reviews')
     created_at=models.DateTimeField(auto_now_add=True)
+
+
+# Adapter keys are code, not admin-editable strings -- a new adapter needs a
+# parser function written and registered in catalog.services_scrape_import
+# (ADAPTER_REGISTRY) either way, so a source with no working adapter simply
+# carries a blank adapter_key and must stay is_enabled=False (enforced in
+# ImportSource.clean(), not just convention -- see the 0007 data migration's
+# arogga row for the disabled-with-reason shape this is meant to support).
+ADAPTER_CHOICES = [
+    ('opencart', 'OpenCart (potakait/canvasit)'),
+    ('fabrilife', 'Fabrilife (Algolia)'),
+    ('', 'No adapter yet'),
+]
+
+
+class ImportSource(models.Model):
+    """A reference site the admin can import products from. Replaces the
+    hardcoded SOURCES/OPENCART_CATEGORY_PATHS/FABRILIFE_CATEGORY_PATHS dicts
+    that used to live in catalog.services_scrape_import and were mirrored
+    again in frontend/.../ImportProducts.js's FALLBACK_CATEGORIES -- the two
+    copies could silently drift. This is now the single source of truth;
+    services_scrape_import reads it at request time instead of importing a
+    module constant.
+    """
+    id = models.AutoField(primary_key=True)
+    name = models.CharField(max_length=255, help_text="Display name, e.g. Potakait.com")
+    slug = models.SlugField(max_length=64, unique=True, help_text="Stable key used in the API/URLs, e.g. potakait")
+    base_url = models.URLField(max_length=500, blank=True, default='')
+    adapter_key = models.CharField(
+        max_length=32, choices=ADAPTER_CHOICES, blank=True, default='',
+        help_text="Which parser handles this source. Blank means no adapter exists yet -- "
+                  "such a source must stay disabled.",
+    )
+    supports_search = models.BooleanField(
+        default=False,
+        help_text="Whether this source has a reachable free-text search endpoint "
+                  "(distinct from category browsing, which every enabled source supports).",
+    )
+    is_enabled = models.BooleanField(
+        default=False,
+        help_text="A disabled source is rejected by the import API with a clear message, "
+                  "not silently skipped.",
+    )
+    # True ONLY for reseller-permission partners (potakait, canvasit): this
+    # flags imports from this source to set Products.source_url, which is
+    # what catalog.services_price_sync.sync_source_prices re-prices later.
+    # Fabrilife is not a partner and must stay False -- enrolling it would
+    # make sync_source_prices start re-pricing products we have no
+    # reseller agreement to re-price. This distinction is load-bearing;
+    # see catalog.services_import.seed_product_entry and CLAUDE.md's "Store
+    # catalog seeding" note.
+    sets_source_url = models.BooleanField(
+        default=False,
+        help_text="Set Products.source_url on import from this source (partner stores only "
+                  "-- this is what the price-sync job re-prices).",
+    )
+    notes = models.TextField(blank=True, default='')
+    last_synced_at = models.DateTimeField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['name']
+
+    def __str__(self):
+        return self.name
+
+    def clean(self):
+        from django.core.exceptions import ValidationError
+        if self.is_enabled and not self.adapter_key:
+            raise ValidationError(
+                {'is_enabled': 'A source with no adapter_key cannot be enabled -- '
+                               'there is no parser to run it through.'})
+
+
+class ImportSourceCategory(models.Model):
+    """One row per source category path -> our taxonomy category slug.
+    Several source paths may map to the same our_category_slug (e.g.
+    potakait's `earbuds` and `headphones` both -> `gadgets-earbuds`) -- that
+    is intended, not a duplicate to dedupe.
+
+    our_category_slug is stored as a plain slug rather than a FK to
+    Categories: the target category is resolved by slug at import time the
+    same way AdminImportProductsView already resolves an admin-supplied
+    category_id/slug, and a mapping should be safe to seed even for a
+    taxonomy slug that doesn't exist yet (a not-yet-created category is a
+    config error to fix in the mapping, not a reason the migration should
+    fail).
+    """
+    id = models.AutoField(primary_key=True)
+    source = models.ForeignKey(ImportSource, on_delete=models.CASCADE, related_name='categories')
+    source_path = models.CharField(max_length=255, help_text="Path/slug on the source site, e.g. 'laptops'")
+    label = models.CharField(max_length=255, blank=True, default='', help_text="Display label, e.g. 'Laptops'")
+    our_category_slug = models.SlugField(max_length=255, help_text="Target taxonomy slug, e.g. 'computers-laptops'")
+    display_order = models.IntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['source_id', 'display_order', 'id']
+        constraints = [
+            models.UniqueConstraint(fields=['source', 'source_path'], name='uq_import_source_category_path'),
+        ]
+
+    def __str__(self):
+        return f"{self.source.slug}:{self.source_path} -> {self.our_category_slug}"
+
+
+class ImportRun(models.Model):
+    """History of one admin-triggered import batch against an ImportSource.
+    A silent import is untrustworthy -- this is what lets the owner see what
+    happened on past syncs (POST /api/products/admin/import/) instead of only
+    the response of the request that triggered it.
+    """
+    STATUS_RUNNING = 'RUNNING'
+    STATUS_COMPLETED = 'COMPLETED'
+    STATUS_FAILED = 'FAILED'
+    STATUS_CHOICES = [
+        (STATUS_RUNNING, 'Running'),
+        (STATUS_COMPLETED, 'Completed'),
+        (STATUS_FAILED, 'Failed'),
+    ]
+
+    id = models.AutoField(primary_key=True)
+    source = models.ForeignKey(ImportSource, on_delete=models.CASCADE, related_name='runs')
+    triggered_by_user_id = models.ForeignKey(
+        Users, on_delete=models.SET_NULL, blank=True, null=True, related_name='triggered_import_runs')
+    status = models.CharField(max_length=16, choices=STATUS_CHOICES, default=STATUS_RUNNING)
+    started_at = models.DateTimeField(auto_now_add=True)
+    finished_at = models.DateTimeField(blank=True, null=True)
+    found_count = models.IntegerField(default=0, help_text="How many source_urls were requested for this run.")
+    imported_count = models.IntegerField(default=0)
+    skipped_count = models.IntegerField(default=0)
+    failed_count = models.IntegerField(default=0)
+    error_summary = models.TextField(blank=True, default='', help_text="Set when the whole run failed outright "
+                                     "(e.g. a listing fetch error), not for individual per-item failures -- "
+                                     "those are already counted in failed_count.")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-started_at']
+
+    def __str__(self):
+        return f"{self.source.slug} run #{self.id} ({self.status})"
+
+    def mark_finished(self, *, imported=0, skipped=0, failed=0, status=STATUS_COMPLETED, error_summary=''):
+        from django.utils import timezone
+        self.imported_count = imported
+        self.skipped_count = skipped
+        self.failed_count = failed
+        self.status = status
+        self.error_summary = error_summary
+        self.finished_at = timezone.now()
+        self.save(update_fields=[
+            'imported_count', 'skipped_count', 'failed_count', 'status',
+            'error_summary', 'finished_at', 'updated_at',
+        ])
