@@ -276,3 +276,62 @@ class AdminImportAuthorizationTests(AdminAuthorizationTestBase):
 
     def test_import_restaurant_forbidden(self):
         self.assertEqual(self._import(self.restaurant).status_code, 403)
+
+
+class AdminImportSourceManagementAuthorizationTests(AdminAuthorizationTestBase):
+    """The DB-driven import control panel (ImportSource/ImportSourceCategory/
+    ImportRun admin endpoints, catalog.controllers.ImportSourceController)
+    must be gated by the same isPlatformStaff rule as the browse/import pair
+    above -- these are equally capable of leaking source config or letting a
+    self-signed-up account disable/enable a partner source."""
+
+    def setUp(self):
+        super().setUp()
+        from catalog.models import ImportSource
+        self.potakait = ImportSource.objects.get(slug="potakait")
+
+    def _list_sources(self, user):
+        from catalog.controllers.ImportSourceController import AdminImportSourceListCreateView
+        request = self.factory.get("/api/products/admin/import/sources/")
+        force_authenticate(request, user=user)
+        return AdminImportSourceListCreateView.as_view()(request)
+
+    def _patch_source(self, user):
+        from catalog.controllers.ImportSourceController import AdminImportSourceDetailView
+        request = self.factory.patch(
+            f"/api/products/admin/import/sources/{self.potakait.id}/",
+            {"is_enabled": False}, format="json")
+        force_authenticate(request, user=user)
+        return AdminImportSourceDetailView.as_view()(request, pk=self.potakait.id)
+
+    def _run_list(self, user):
+        auth(self.client, user)
+        return self.client.get("/api/products/admin/import/runs/")
+
+    def test_list_sources_customer_forbidden(self):
+        self.assertEqual(self._list_sources(self.customer).status_code, 403)
+
+    def test_list_sources_rider_forbidden(self):
+        self.assertEqual(self._list_sources(self.rider).status_code, 403)
+
+    def test_list_sources_restaurant_forbidden(self):
+        self.assertEqual(self._list_sources(self.restaurant).status_code, 403)
+
+    def test_patch_source_customer_forbidden(self):
+        res = self._patch_source(self.customer)
+        self.assertEqual(res.status_code, 403)
+        self.potakait.refresh_from_db()
+        self.assertTrue(self.potakait.is_enabled)  # unchanged
+
+    def test_run_list_customer_forbidden(self):
+        self.assertEqual(self._run_list(self.customer).status_code, 403)
+
+    def test_run_list_rider_forbidden(self):
+        self.assertEqual(self._run_list(self.rider).status_code, 403)
+
+    def test_run_list_restaurant_forbidden(self):
+        self.assertEqual(self._run_list(self.restaurant).status_code, 403)
+
+    def test_super_admin_allowed_on_sources_and_runs(self):
+        self.assertEqual(self._list_sources(self.super_admin).status_code, 200)
+        self.assertEqual(self._run_list(self.super_admin).status_code, 200)

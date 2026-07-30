@@ -1,28 +1,50 @@
 """Admin product-import tool: browse candidates from reference sites
 (potakait.com, canvasit.com.bd, fabrilife.com) and import a picked subset
-into our catalog. See catalog/services_scrape_import.py for the machinery
-and docs/PRODUCT_IMPORT.md for the owner-facing how-to.
+into our catalog. Sources and their category mappings are DB-driven
+(``catalog.models.ImportSource``/``ImportSourceCategory``, managed through
+``ImportSourceController``) -- see catalog/services_scrape_import.py for the
+browse/import machinery and docs/PRODUCT_IMPORT.md for the owner-facing
+how-to.
 
 Both endpoints are platform-staff only (core.helpers.isPlatformStaff), same
 rule as every other admin catalog endpoint (AdminSyncPricesView,
 AdminProductQuickUpdateView).
 """
 from django.db.models import Q
+from django.utils import timezone
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.views import APIView
 from rest_framework_simplejwt.authentication import JWTAuthentication
 
-from catalog.models import Categories
+from catalog.models import Categories, ImportRun, ImportSource
 from catalog.services_scrape_import import (
     BROWSE_LIMIT,
     IMPORT_LIMIT,
-    SOURCES,
+    DisabledSourceError,
     SourceFetchError,
     UnsupportedSearchError,
     browse_candidates,
     import_candidates,
 )
 from core.helpers import isPlatformStaff, renderResponse
+
+
+def _resolve_enabled_source(slug):
+    """Look up an ImportSource by slug and check it's usable, returning
+    ``(source, error_response)`` -- error_response is None on success. A
+    disabled source (e.g. arogga -- no working adapter) is rejected here with
+    its own `notes` as the reason, never silently returning empty results."""
+    source = ImportSource.objects.filter(slug=slug).first() if slug else None
+    if source is None:
+        return None, renderResponse(
+            data={'source': [f'Unknown source: {slug!r}.']},
+            message='Validation error', status=400)
+    if not source.is_enabled:
+        reason = source.notes or 'this source is currently disabled.'
+        return None, renderResponse(
+            data={'source': [f'{source.name} is disabled -- {reason}']},
+            message='Source is disabled', status=400)
+    return source, None
 
 
 class AdminBrowseImportCandidatesView(APIView):
@@ -39,11 +61,9 @@ class AdminBrowseImportCandidatesView(APIView):
         if not isPlatformStaff(request.user):
             return renderResponse(data='Forbidden', message='Forbidden', status=403)
 
-        source = request.query_params.get('source')
-        if source not in SOURCES:
-            return renderResponse(
-                data={'source': [f'Must be one of {sorted(SOURCES)}.']},
-                message='Validation error', status=400)
+        source, error = _resolve_enabled_source(request.query_params.get('source'))
+        if error is not None:
+            return error
 
         category_path = request.query_params.get('category') or None
         query = request.query_params.get('q') or None
@@ -58,7 +78,7 @@ class AdminBrowseImportCandidatesView(APIView):
             limit = BROWSE_LIMIT
 
         try:
-            result = browse_candidates(source, category_path=category_path, query=query, limit=limit)
+            result = browse_candidates(source.slug, category_path=category_path, query=query, limit=limit)
         except SourceFetchError as e:
             return renderResponse(data=str(e), message='Could not fetch that listing', status=502)
         except UnsupportedSearchError as e:
@@ -70,7 +90,7 @@ class AdminBrowseImportCandidatesView(APIView):
             # ever returning an empty "no results" list that looks like a
             # genuine zero-result search.
             return renderResponse(data={'q': [str(e)]}, message='Validation error', status=400)
-        except ValueError as e:
+        except (ValueError, DisabledSourceError) as e:
             return renderResponse(data={'category': [str(e)]}, message='Validation error', status=400)
 
         return renderResponse(data=result, message='Candidates fetched')
@@ -85,6 +105,11 @@ class AdminImportProductsView(APIView):
     etiquette makes a bigger batch too slow for one request). Never silently
     truncates: an over-cap request is rejected with a clear message so the
     admin can split it into multiple runs.
+
+    Records one ImportRun per request -- found/imported/skipped/failed
+    counts and, if the whole batch blew up before per-item results could be
+    produced, an error_summary -- so past syncs are auditable from the admin
+    panel instead of only the response of the request that triggered them.
     """
     authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated]
@@ -94,11 +119,9 @@ class AdminImportProductsView(APIView):
             return renderResponse(data='Forbidden', message='Forbidden', status=403)
 
         data = request.data
-        source = data.get('source')
-        if source not in SOURCES:
-            return renderResponse(
-                data={'source': [f'Must be one of {sorted(SOURCES)}.']},
-                message='Validation error', status=400)
+        source, error = _resolve_enabled_source(data.get('source'))
+        if error is not None:
+            return error
 
         urls = data.get('source_urls') or []
         if not isinstance(urls, list) or not urls:
@@ -126,8 +149,27 @@ class AdminImportProductsView(APIView):
                 message='Validation error', status=400)
 
         domain_user = request.user.domain_user_id or request.user
-        results = import_candidates(source, urls, category, domain_user, request.user)
+        run = ImportRun.objects.create(
+            source=source, triggered_by_user_id=request.user, found_count=len(urls))
+
+        try:
+            results = import_candidates(source.slug, urls, category, domain_user, request.user)
+        except Exception as e:  # noqa: BLE001 -- import_candidates already catches per-item
+                                 # failures internally, so reaching here means the whole batch
+                                 # blew up (e.g. a category/domain_user problem). That must still
+                                 # leave an auditable ImportRun record, not vanish along with a
+                                 # bare 500 -- see catalog.services_price_sync's SourceFetchError
+                                 # handling in the sibling browse view for the same principle.
+            run.mark_finished(status=ImportRun.STATUS_FAILED, error_summary=str(e))
+            return renderResponse(data=str(e), message='Import failed', status=500)
+
         imported = sum(1 for r in results if r['status'] == 'imported')
+        skipped = sum(1 for r in results if r['status'] == 'skipped_exists')
+        failed = sum(1 for r in results if r['status'] == 'failed')
+        run.mark_finished(imported=imported, skipped=skipped, failed=failed)
+        source.last_synced_at = timezone.now()
+        source.save(update_fields=['last_synced_at', 'updated_at'])
+
         return renderResponse(
-            data={'results': results, 'imported': imported, 'total': len(results)},
+            data={'results': results, 'imported': imported, 'total': len(results), 'run_id': run.id},
             message='Import finished')
