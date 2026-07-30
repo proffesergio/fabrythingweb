@@ -222,6 +222,7 @@ class ProductReviews(models.Model):
 ADAPTER_CHOICES = [
     ('opencart', 'OpenCart (potakait/canvasit)'),
     ('fabrilife', 'Fabrilife (Algolia)'),
+    ('rokomari', 'Rokomari.com'),
     ('', 'No adapter yet'),
 ]
 

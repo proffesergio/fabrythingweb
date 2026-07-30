@@ -4,10 +4,12 @@ admin-only endpoints in ``catalog.controllers.ProductImportController``.
 Sources and their category mappings are DB-driven (``catalog.models.
 ImportSource`` / ``ImportSourceCategory``), not a hardcoded dict -- the owner
 manages them from the admin panel instead of needing a code change to add a
-source or fix a category mapping. Only two adapters exist in code: the
-OpenCart one (potakait, canvasit) and the Fabrilife one. A source with no
-working adapter (``adapter_key=""``) must stay ``is_enabled=False`` --
-enforced by ``ImportSource.clean()`` and re-checked here defensively.
+source or fix a category mapping. Three adapters exist in code: the OpenCart
+one (potakait, canvasit), the Fabrilife one, and the Rokomari one (see the
+0009 data migration -- a reference source, not a reseller partner, so
+``sets_source_url=False``). A source with no working adapter
+(``adapter_key=""``) must stay ``is_enabled=False`` -- enforced by
+``ImportSource.clean()`` and re-checked here defensively.
 
 Arogga is registered as a disabled ImportSource row (see the 0008 data
 migration) carrying the reason in its `notes`: there is no parser for it and
@@ -31,6 +33,7 @@ patching the module attribute since browse and import both need several
 fetches (a listing + N product pages) rather than one.
 """
 import json
+from urllib.parse import quote
 
 from django.utils.text import slugify
 
@@ -40,6 +43,8 @@ from catalog.scrape_parsers import (
     parse_fabrilife_product,
     parse_opencart_listing,
     parse_opencart_product,
+    parse_rokomari_listing,
+    parse_rokomari_product,
 )
 from catalog.services_import import import_image, seed_product_entry
 from tools.scrape.common import polite_get
@@ -174,6 +179,18 @@ def _opencart_listing_url(source, category_path=None, query=None):
     return base + f"index.php?route=product/search&search={query}&description=1"
 
 
+def _rokomari_listing_url(source, category_path=None, query=None):
+    """category_path is a full ``product/category/<id>/<slug>`` path (see
+    ImportSourceCategory rows / the 0009 data migration); search hits the
+    real ``/search?term=&search_type=ALL`` route -- verified live 2026-07-30,
+    ``search_type=products`` (a plausible-looking guess) 500s, ``ALL`` (the
+    value the site's own search form actually submits) works."""
+    base = source.base_url
+    if category_path:
+        return base + category_path.strip().lstrip("/")
+    return base + f"search?term={quote(query)}&search_type=ALL"
+
+
 def _candidate_from_product(url, parsed):
     already_have = Products.objects.filter(slug=slugify(parsed.get("name") or "")).exists() \
         if parsed.get("name") else False
@@ -227,6 +244,14 @@ def browse_candidates(source_slug, *, category_path=None, query=None, limit=BROW
             raise SourceFetchError(str(e)) from e
         product_urls = parse_fabrilife_listing(listing_json, source.base_url or FABRILIFE_BASE_URL)[:limit]
         parser = parse_fabrilife_product
+    elif source.adapter_key == "rokomari":
+        listing_url = _rokomari_listing_url(source, category_path, query)
+        try:
+            listing_html = fetch(listing_url)
+        except Exception as e:  # noqa: BLE001 -- one bad listing must surface, not crash the process
+            raise SourceFetchError(str(e)) from e
+        product_urls = parse_rokomari_listing(listing_html, listing_url)[:limit]
+        parser = parse_rokomari_product
     else:
         listing_url = _opencart_listing_url(source, category_path, query)
         try:
@@ -296,7 +321,12 @@ def import_candidates(source_slug, source_urls, category, domain_user, added_by_
     """
     source = get_source_or_raise(source_slug)
     fetch = fetch or polite_get
-    parser = parse_fabrilife_product if source.adapter_key == "fabrilife" else parse_opencart_product
+    if source.adapter_key == "fabrilife":
+        parser = parse_fabrilife_product
+    elif source.adapter_key == "rokomari":
+        parser = parse_rokomari_product
+    else:
+        parser = parse_opencart_product
 
     results = []
     for url in source_urls[:IMPORT_LIMIT]:
