@@ -9,37 +9,17 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from django.contrib.auth import authenticate
 
-class SignupAPIView(APIView):
-    def post(self,request):
-        username=request.data.get('username')
-        email=request.data.get('email')
-        password=request.data.get('password')
-        profile_pic=request.data.get('profile_pic')
-
-        emailCheck=Users.objects.filter(email=email)
-        if emailCheck.exists():
-            return renderResponse(data='Email Already Exists',message='Email Already Exists',status=status.HTTP_400_BAD_REQUEST)
-        
-        usernameCheck=Users.objects.filter(username=username)
-        if usernameCheck.exists():
-            return renderResponse(data='Username Already Exists',message='Username Already Exists',status=status.HTTP_400_BAD_REQUEST)
-
-        if username is None or email is None or password is None:
-            return renderResponse(data='Please provide both username and password and Email',message='Please provide both username and password and Email',status=status.HTTP_400_BAD_REQUEST)
-        
-        user=Users.objects.create_user(username=username,email=email,password=password,profile_pic=profile_pic)
-        if request.data.get('domain_user_id'):
-            user.domain_user_id=Users.objects.get(id=request.data.get('domain_user_id'))
-        user.save()
-        
-        refresh = RefreshToken.for_user(user)
-        access =refresh.access_token
-        access['username'] = user.username
-        access['email'] = user.email
-        access['role'] = user.role
-        access['profile_pic'] = user.profile_pic
-
-        return Response({'access':str(access),'refresh':str(refresh),'message':'User Created Successfully'},status=status.HTTP_201_CREATED)
+# SignupAPIView used to live here: a public, unauthenticated endpoint that
+# called Users.objects.create_user() with no role argument, so it minted an
+# "Admin" (the model's old default) for anyone who posted to it -- and it
+# trusted a client-supplied `domain_user_id` straight off the request body,
+# so the new admin could attach itself to any tenant. It has been removed
+# entirely rather than gated: nothing legitimate called /api/auth/signup/
+# (the storefront customer signup is the separate, still-public
+# /api/store/auth/signup/ -> storefront.views.CustomerSignupView, which
+# always hardcodes role='Customer'). Back-office accounts are now only
+# created by a logged-in platform staff member via
+# UserController.CreateUserView (accounts/users/create/).
 
 
 class LoginAPIView(APIView):

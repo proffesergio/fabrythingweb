@@ -15,10 +15,19 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 from django.contrib import admin
+from django.http import JsonResponse
 from django.urls import include, path, re_path
 
 from core.views import index,FileUploadViewInS3,HealthView,serve_media_blob
 from django.conf import settings
+
+
+def api_not_found(request, *args, **kwargs):
+    """Any /api/ path that fell through every route above is genuinely gone
+    (e.g. the removed /api/auth/signup/), not an SPA page -- answer a real
+    404 instead of falling into the `index` catch-all below, which used to
+    serve 200 + index.html for ANY unmatched path including dead /api/ ones."""
+    return JsonResponse({'message': 'Not Found'}, status=404)
 from accounts.controllers.DynamicFormController import DynamicFormController
 from accounts.controllers.SuperAdminDynamicFormController import SuperAdminDynamicFormController
 from accounts.controllers.SidebarController import ModuleUrlsListAPIView, ModuleView
@@ -54,5 +63,7 @@ if settings.DEBUG:
     urlpatterns+=static(settings.MEDIA_URL,document_root=settings.MEDIA_ROOT)
 
 urlpatterns+=[
-    re_path(r'^(?:.*)/?$',index,name='index')
+    # Only reached if none of the real api/... includes above matched.
+    re_path(r'^api/.*$',api_not_found,name='api-not-found'),
+    re_path(r'^(?:.*)/?$',index,name='index'),
 ]

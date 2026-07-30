@@ -9,8 +9,15 @@ from django.db.models import Q
 # These are the endpoints a visitor reaches *before* they have a token:
 #   - the whole storefront (it enforces its own auth via DRF permission_classes)
 #   - the public food-delivery read API (restaurants/zones; AllowAny via DRF)
-#   - login / signup (you cannot present a valid access token before you have
-#     logged in) — refresh is handled under /api/store/, already public above
+#   - login (you cannot present a valid access token before you have
+#     logged in) — refresh is handled under /api/store/, already public above.
+#     /api/auth/signup is kept in this list even though the route itself is
+#     gone (see AuthController.py) -- without it this middleware forces a JWT
+#     check on every /api/ path regardless of whether anything is mounted
+#     there, so a token-less POST to a dead route got a misleading 401
+#     "Unauthorized" instead of the 404 that actually describes it. Leaving
+#     the prefix public lets Django's own resolver answer 404. Back-office
+#     accounts are now created by a logged-in staff member, never signed up.
 #   - the deploy health check (it must answer even when the DB is unreachable,
 #     which is precisely when you most need it)
 #   - served images (core.views.serve_media_blob): this is <img src="..."/>
