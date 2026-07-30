@@ -24,10 +24,16 @@ from django.db.models import Q
 #     (IsAuthenticated / chat.permissions.IsChatStaff). Gating it behind this
 #     middleware's per-user ModuleUrls lookup instead would require seeding a
 #     module row before ANY customer could open a chat thread.
+#   - the custom print-on-demand API (/api/print/): same shape again --
+#     public preset/print-area/quote lookups, customer-authenticated request
+#     endpoints and staff-authenticated admin endpoints all under one prefix,
+#     each enforcing its own JWTAuthentication + permission class
+#     (IsAuthenticated / printing.permissions.IsPrintStaff).
 PUBLIC_API_PREFIXES = (
     '/api/store/',
     '/api/food/',
     '/api/chat/',
+    '/api/print/',
     '/api/auth/login',
     '/api/auth/signup',
     '/api/health/',

@@ -318,7 +318,19 @@ export default function StorefrontLayout({ toggleDarkMode, darkMode }) {
                             <Box sx={{ borderTop: '1px solid', borderColor: 'divider' }}>
                                 <Toolbar variant="dense" sx={{ minHeight: 44, gap: 1, justifyContent: 'space-between' }}>
                                     <MegaMenu categories={categories} />
-                                    <FoodNavBadge />
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                                        <Box
+                                            component={Link}
+                                            to="/custom-printing"
+                                            sx={{
+                                                fontSize: '0.85rem', fontWeight: 700, textDecoration: 'none',
+                                                color: 'text.primary', '&:hover': { color: 'secondary.main' },
+                                            }}
+                                        >
+                                            Custom Printing
+                                        </Box>
+                                        <FoodNavBadge />
+                                    </Box>
                                 </Toolbar>
                             </Box>
                         )}
@@ -340,6 +352,10 @@ export default function StorefrontLayout({ toggleDarkMode, darkMode }) {
                             </Box>
                             <Box sx={{ px: 2, pb: 2 }} onClick={() => setMobileMenuOpen(false)}>
                                 <FoodNavBadge />
+                            </Box>
+                            <Box component={Link} to="/custom-printing" onClick={() => setMobileMenuOpen(false)}
+                                sx={{ display: 'block', px: 2, py: 1.5, textDecoration: 'none', color: 'text.primary', fontWeight: 600 }}>
+                                Custom Printing
                             </Box>
                             <Divider />
                             <MobileCategoryMenu

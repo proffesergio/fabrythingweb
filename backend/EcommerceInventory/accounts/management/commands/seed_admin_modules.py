@@ -217,6 +217,28 @@ MODULES = [
         'display_order': 10,
         'parent': 'Food',
     },
+    # ── Custom print-on-demand (SP6) ────────────────────────────────────
+    {
+        'module_name': 'Custom Printing',
+        'module_icon': 'Checkroom',
+        'module_url': None,
+        'display_order': 10,
+        'parent': None,
+    },
+    {
+        'module_name': 'Print Requests',
+        'module_icon': 'Checkroom',
+        'module_url': '/manage/print/requests',
+        'display_order': 1,
+        'parent': 'Custom Printing',
+    },
+    {
+        'module_name': 'Print Setup',
+        'module_icon': 'Tune',
+        'module_url': '/manage/print/setup',
+        'display_order': 2,
+        'parent': 'Custom Printing',
+    },
 ]
 
 # The exact module_names we manage — anything else gets deactivated
