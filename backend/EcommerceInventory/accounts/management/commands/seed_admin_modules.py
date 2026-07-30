@@ -139,6 +139,15 @@ MODULES = [
         'display_order': 9,
         'parent': None,
     },
+    # Rokomari affiliate automation -- single manager page (search/bulk-add +
+    # placement/schedule/link-type CRUD), same reasoning as Banners above.
+    {
+        'module_name': 'Affiliate Products',
+        'module_icon': 'Storefront',
+        'module_url': '/manage/affiliate',
+        'display_order': 11,
+        'parent': None,
+    },
     # ── Food delivery vertical (unified here so this seeder never deletes it) ──
     {
         'module_name': 'Food',
