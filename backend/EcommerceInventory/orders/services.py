@@ -73,6 +73,17 @@ def place_cod_order(*, customer, items, contact_name, contact_phone,
         variant = variants.get(vid)
         if variant is None or not variant.is_active:
             raise ValidationError(f"Variant {vid} is not available.")
+        # Prescription gate: the owner does not yet hold a DGDA licence, so a
+        # requires_prescription product must never be purchasable while
+        # StoreConfiguration.rx_sales_enabled is off -- this is the single
+        # place checkout resolves/prices a cart line, so putting the guard
+        # here (rather than in a view) means no endpoint can bypass it. Not
+        # an OutOfStock (409) -- this is a policy block, not a stock issue.
+        if variant.product.requires_prescription and not config.rx_sales_enabled:
+            raise ValidationError(
+                f"{variant.product.name} requires a prescription and is not yet "
+                f"available for online purchase."
+            )
         if variant.stock_quantity < qty:
             raise OutOfStock(
                 f"Only {variant.stock_quantity} left of "
