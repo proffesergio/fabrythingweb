@@ -73,6 +73,29 @@ TAXONOMY = [
         ("gadgets-cameras", "Cameras & Drones", "Action cams & drones.", []),
         ("gadgets-smart-home", "Smart Home", "Smart bulbs, plugs & security cams.", []),
     ]),
+    # Added for the Rokomari affiliate automation feature: the 15 live
+    # rokomari.com beauty/health subcategories (see the 0009 migration's
+    # seed_rokomari_source docstring) had no honest home in any of the four
+    # branches above and were seeding zero ImportSourceCategory rows as a
+    # result. See catalog/migrations/0012_seed_rokomari_beauty_categories.py
+    # for the mapping this branch exists to receive.
+    ("beauty-health", "Beauty & Health", "Personal care, cosmetics & wellness essentials.", [
+        ("beauty-hand-sanitizer", "Hand Sanitizer", "Hand sanitizers & antiseptics.", []),
+        ("beauty-perfume", "Perfume", "Perfumes & attars.", []),
+        ("beauty-body-spray", "Body Spray", "Deodorant body sprays.", []),
+        ("beauty-air-freshener", "Air Freshener", "Room & car air fresheners.", []),
+        ("beauty-adult-diaper", "Adult Diaper", "Adult diapers & incontinence care.", []),
+        ("beauty-shaving-grooming", "Shaving & Grooming", "Razors, trimmers & grooming accessories.", []),
+        ("beauty-talcum-powder", "Talcum Powder", "Talcum & body powders.", []),
+        ("beauty-personal-care", "Personal Care", "Everyday personal-care essentials.", []),
+        ("beauty-medical-supplies", "Medical Supplies", "Basic medical & first-aid supplies.", []),
+        ("beauty-makeup", "Makeup", "Cosmetics & makeup.", []),
+        ("beauty-herbal-skin-care", "Herbal Skin Care", "Herbal & natural skincare.", []),
+        ("beauty-nail-care", "Nail Care", "Nail polish & nail-care tools.", []),
+        ("beauty-tools", "Beauty Tools", "Brushes, mirrors & beauty tools.", []),
+        ("beauty-herbal-hair-care", "Herbal Hair Care", "Herbal & natural hair care.", []),
+        ("beauty-deodorant", "Deodorant", "Deodorants & antiperspirants.", []),
+    ]),
 ]
 
 # Legacy top-level slugs from seed_bd_store, adopted into the new tree in place

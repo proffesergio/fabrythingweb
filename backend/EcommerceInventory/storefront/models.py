@@ -1,6 +1,9 @@
 from django.conf import settings
+from django.core.cache import cache
 from django.db import models
 from django.utils import timezone
+
+AFFILIATE_CONFIG_CACHE_KEY = "affiliate_config"
 
 
 class BannerQuerySet(models.QuerySet):
@@ -117,3 +120,178 @@ class CartItem(models.Model):
 
     def __str__(self):
         return f"{self.quantity} x variant {self.variant_id}"
+
+
+# ─── Affiliate automation (Rokomari and, in future, other programmes) ──────
+#
+# The owner is a registered Rokomari affiliate. Their dashboard only hands
+# out an opaque rkmri.co/<random> short link with no way to construct one
+# ourselves -- but resolving one shows it 302s to a plain parameterised URL:
+#
+#     https://rkmri.co/R5MEpp0p0IEI/  ->
+#     https://www.rokomari.com/quick-cart?affId=Ma8A710222i0iRo&affs=70278
+#         &cma=604800&productId=531074
+#
+# So attribution rides on ordinary query parameters, which means we can build
+# a link for ANY product ourselves -- no manual per-product dashboard
+# round-trip needed. This is reverse-engineered, not contracted: Rokomari can
+# change the scheme (or the owner's ids) with no notice, so the params below
+# are admin-editable config, never hardcoded in a view/template, and
+# AffiliateProduct.manual_short_link exists as an escape hatch (paste a real
+# generated link and it wins over anything constructed here). See
+# storefront/services_affiliate.py for the actual link-building logic.
+
+
+class AffiliateConfig(models.Model):
+    """Singleton (pk=1, cached) holding the current affiliate programme's
+    attribution query params -- follows the same get_solo() pattern as
+    core.models.StoreConfiguration / food.models.DeliveryPricing.
+
+    One row today because there is exactly one live programme (Rokomari).
+    ``AffiliateProduct.program`` already distinguishes products by programme
+    so a second config row (or a program->config lookup) is a additive change
+    later, not a rewrite.
+    """
+
+    base_url = models.URLField(max_length=300, default="https://www.rokomari.com/")
+    affiliate_id = models.CharField(
+        max_length=64, default="Ma8A710222i0iRo",
+        help_text="Rokomari's 'affId' query param -- the owner's affiliate account id.",
+    )
+    sub_id = models.CharField(
+        max_length=32, default="70278",
+        help_text="Rokomari's 'affs' query param (sub-affiliate/site id).",
+    )
+    cookie_window_seconds = models.PositiveIntegerField(
+        default=604800,
+        help_text="Rokomari's 'cma' query param -- attribution cookie lifetime in seconds "
+                  "(604800 = 7 days).",
+    )
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Affiliate Config"
+        verbose_name_plural = "Affiliate Config"
+
+    def __str__(self):
+        return f"Affiliate config (affId={self.affiliate_id}, affs={self.sub_id})"
+
+    def save(self, *args, **kwargs):
+        self.pk = 1  # enforce singleton
+        super().save(*args, **kwargs)
+        cache.delete(AFFILIATE_CONFIG_CACHE_KEY)
+
+    @classmethod
+    def get_solo(cls):
+        obj = cache.get(AFFILIATE_CONFIG_CACHE_KEY)
+        if obj is None:
+            obj, _ = cls.objects.get_or_create(pk=1)
+            cache.set(AFFILIATE_CONFIG_CACHE_KEY, obj, timeout=300)
+        return obj
+
+
+# Code, not an admin-editable string -- adding a programme needs a
+# link-building branch written in services_affiliate.py either way, mirroring
+# catalog.models.ADAPTER_CHOICES's reasoning exactly.
+AFFILIATE_PROGRAM_CHOICES = [
+    ("rokomari", "Rokomari.com"),
+]
+
+AFFILIATE_LINK_TYPE_CHOICES = [
+    ("CART", "Cart link (quick-cart)"),
+    ("PRODUCT", "Product page link"),
+]
+
+
+class AffiliateProductQuerySet(models.QuerySet):
+    def active(self, at=None):
+        """Active *and* inside its scheduling window -- same shape as
+        BannerQuerySet.active() above; this is the only path that may ever
+        serve a product publicly or resolve its redirect."""
+        at = at or timezone.now()
+        return (
+            self.filter(is_active=True)
+            .filter(models.Q(starts_at__isnull=True) | models.Q(starts_at__lte=at))
+            .filter(models.Q(ends_at__isnull=True) | models.Q(ends_at__gte=at))
+        )
+
+    def for_sidebar(self, at=None):
+        return self.active(at).filter(show_in_sidebar=True)
+
+    def for_deals_page(self, at=None):
+        return self.active(at).filter(show_on_deals_page=True)
+
+    def for_category(self, category_slug, at=None):
+        return (
+            self.active(at)
+            .filter(show_in_category_grid=True, grid_categories__slug=category_slug)
+            .distinct()
+        )
+
+
+class AffiliateProduct(models.Model):
+    """A product promoted via an outside affiliate programme (Rokomari
+    today). ``program`` keeps the door open for a second programme without a
+    schema rewrite -- see AFFILIATE_PROGRAM_CHOICES.
+
+    The outbound link is never stored -- it is built at read/redirect time
+    from AffiliateConfig + this row's remote_product_id/link_type (see
+    services_affiliate.build_affiliate_link), so a config change (new affId,
+    scheme change) retroactively fixes every product's link with no
+    migration. ``manual_short_link`` overrides that construction entirely.
+
+    Per-product placement is three independent booleans (the owner explicitly
+    asked for "let me choose what products gets visible where"): one product
+    can be sidebar-only, another can appear in the sidebar AND the deals page
+    AND several category grids at once.
+    """
+
+    program = models.CharField(max_length=32, choices=AFFILIATE_PROGRAM_CHOICES, default="rokomari")
+    remote_product_id = models.CharField(
+        max_length=64, help_text="The product's id on the affiliate site (Rokomari's numeric productId).")
+    source_url = models.URLField(
+        max_length=500, help_text="The affiliate site's own product page (reference only -- no tracking params).")
+    title = models.CharField(max_length=255)
+    brand = models.CharField(max_length=255, blank=True, default="")
+    # Re-hosted via core.storage.save_file (catalog.services_import.import_image,
+    # reused here verbatim) -- never hotlink the source CDN, see core/storage.py
+    # for why that silently vanishes on Render's ephemeral disk.
+    image = models.CharField(max_length=500, blank=True, default="")
+    original_price = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    current_price = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    commission_amount = models.DecimalField(
+        max_digits=10, decimal_places=2, null=True, blank=True,
+        help_text="Commission earned per sale, when the programme discloses it.")
+    link_type = models.CharField(
+        max_length=10, choices=AFFILIATE_LINK_TYPE_CHOICES, default="CART",
+        help_text="Cart (quick-buy) link or product-page link -- chosen per product.")
+    manual_short_link = models.URLField(
+        max_length=300, blank=True, default="",
+        help_text="Optional pasted rkmri.co short link. When set, this is used INSTEAD of "
+                  "the constructed link -- the owner's escape hatch if the constructed-link "
+                  "scheme ever stops attributing.")
+
+    is_active = models.BooleanField(default=True)
+    starts_at = models.DateTimeField(null=True, blank=True)
+    ends_at = models.DateTimeField(null=True, blank=True)
+    display_order = models.IntegerField(default=0)
+    click_count = models.PositiveIntegerField(default=0)
+
+    show_in_sidebar = models.BooleanField(default=False, help_text="Rotating sidebar/section widget.")
+    show_on_deals_page = models.BooleanField(default=False, help_text="Dedicated Deals page.")
+    show_in_category_grid = models.BooleanField(
+        default=False, help_text="Inject into the category-grid pages listed in grid_categories.")
+    grid_categories = models.ManyToManyField(
+        "catalog.Categories", blank=True, related_name="affiliate_products",
+        help_text="Which of our taxonomy categories this product's grid injection appears in.")
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    objects = AffiliateProductQuerySet.as_manager()
+
+    class Meta:
+        ordering = ["display_order", "id"]
+
+    def __str__(self):
+        return f"[{self.program}] {self.title or self.remote_product_id}"
