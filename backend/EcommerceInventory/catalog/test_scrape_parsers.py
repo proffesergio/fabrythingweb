@@ -11,6 +11,8 @@ from catalog.scrape_parsers import (
     parse_fabrilife_product,
     parse_opencart_listing,
     parse_opencart_product,
+    parse_rokomari_listing,
+    parse_rokomari_product,
 )
 
 FIXTURES = Path(__file__).resolve().parent / "test_fixtures"
@@ -29,6 +31,15 @@ class BdtPriceTests(SimpleTestCase):
     def test_empty_returns_none(self):
         self.assertIsNone(parse_bdt_price(""))
         self.assertIsNone(parse_bdt_price(None))
+
+    def test_rokomari_tk_prefix_with_space(self):
+        self.assertEqual(parse_bdt_price("TK. 554"), 554.0)
+
+    def test_rokomari_tk_prefix_no_space(self):
+        self.assertEqual(parse_bdt_price("TK.554"), 554.0)
+
+    def test_rokomari_tk_prefix_with_thousands_separator(self):
+        self.assertEqual(parse_bdt_price("TK. 11,500"), 11500.0)
 
 
 class OpenCartProductTests(SimpleTestCase):
@@ -482,3 +493,101 @@ class FabrilifeListingTests(SimpleTestCase):
 
     def test_malformed_json_returns_empty_list(self):
         self.assertEqual(parse_fabrilife_listing("not json", "https://fabrilife.com/"), [])
+
+
+class RokomariProductTests(SimpleTestCase):
+    """Fixture is a trimmed, real capture of
+    https://www.rokomari.com/product/210626/ashol-extra-virgin-olive-oil-joytun-tel-250ml
+    (fetched 2026-07-30). Assertions pin the exact values on that live page,
+    same rigor as OpenCartProductTests -- selector drift on the real site
+    must fail loudly rather than silently returning empty/garbage data."""
+
+    def setUp(self):
+        self.html = (FIXTURES / "rokomari_product.html").read_text(encoding="utf-8")
+        self.product = parse_rokomari_product(self.html)
+
+    def test_extracts_core_fields(self):
+        p = self.product
+        self.assertTrue(p["name"])
+        self.assertIsInstance(p["price"], float)
+        self.assertGreater(p["price"], 0)
+        self.assertIsInstance(p["images"], list)
+        self.assertTrue(p["images"])
+        self.assertTrue(all(u.startswith("http") for u in p["images"]))
+        self.assertIsInstance(p["specifications"], dict)
+
+    def test_exact_name(self):
+        self.assertEqual(self.product["name"], "Ashol Extra Virgin Olive Oil (Joytun Tel) - 250Ml")
+
+    def test_discount_price_when_both_old_and_new_present(self):
+        # The captured page shows span.sell-price=TK.554 (current, what you
+        # pay) and strike.original-price=TK. 590 (crossed-out original):
+        # price is the higher original, discount_price the lower current
+        # price -- same convention as parse_opencart_product.
+        self.assertEqual(self.product["price"], 590.0)
+        self.assertEqual(self.product["discount_price"], 554.0)
+
+    def test_brand(self):
+        self.assertEqual(self.product["brand"], "Ashol")
+
+    def test_images_are_absolute_and_full_resolution(self):
+        # The full-res image lives in the <li>'s `hovermax` attribute (a
+        # 1104x1581 image); the <img src> in the same <li> is a 45x64
+        # thumbnail and must not leak in instead.
+        images = self.product["images"]
+        self.assertTrue(images)
+        for url in images:
+            self.assertIn("1104X1581", url)
+
+    def test_specifications_has_known_keys(self):
+        specs = self.product["specifications"]
+        self.assertEqual(specs["Volume"], "250 ml")
+        self.assertEqual(specs["Country of Origin"], "Bangladesh")
+        self.assertEqual(specs["Ingredients"], "Joytun and Olive")
+        # The header row (just the "Specification" <h2>, no proDetailLabel/
+        # proDetailValue cells) must not leak in as a bogus entry.
+        self.assertNotIn("Specification", specs)
+
+    def test_description_mentions_product(self):
+        self.assertIn("Ashol Extra Virgin Olive Oil", self.product["description"])
+        # Generic site-wide "About Rokomari" marketing copy (repeated on
+        # every page) must not be mistaken for this product's description.
+        self.assertNotIn("largest online store", self.product["description"].lower())
+
+
+class RokomariListingTests(SimpleTestCase):
+    """Fixture is a trimmed, real capture of
+    https://www.rokomari.com/product/category/2355/beauty-health (fetched
+    2026-07-30) -- a plain server-rendered listing, 60 `.product-card-wrapper`
+    cards on the live page (trimmed to 8 here)."""
+
+    def setUp(self):
+        self.html = (FIXTURES / "rokomari_category.html").read_text(encoding="utf-8")
+
+    def test_extracts_real_product_url(self):
+        urls = parse_rokomari_listing(self.html, "https://www.rokomari.com/")
+        self.assertIn(
+            "https://www.rokomari.com/product/210626/ashol-extra-virgin-olive-oil-joytun-tel-250ml",
+            urls,
+        )
+
+    def test_urls_are_absolute_and_deduped(self):
+        urls = parse_rokomari_listing(self.html, "https://www.rokomari.com/")
+        self.assertTrue(urls)
+        self.assertEqual(len(urls), len(set(urls)))
+        self.assertTrue(all(u.startswith("https://www.rokomari.com/product/") for u in urls))
+
+    def test_dedupes_preserving_order(self):
+        html = """
+        <div class="product-card-wrapper"><a href="/product/1/a">A</a></div>
+        <div class="product-card-wrapper"><a href="/product/2/b">B</a></div>
+        <div class="product-card-wrapper"><a href="/product/1/a">A again</a></div>
+        """
+        urls = parse_rokomari_listing(html, "https://www.rokomari.com/")
+        self.assertEqual(
+            urls,
+            [
+                "https://www.rokomari.com/product/1/a",
+                "https://www.rokomari.com/product/2/b",
+            ],
+        )

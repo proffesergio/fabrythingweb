@@ -56,15 +56,21 @@ from urllib.parse import urljoin, urlsplit
 from bs4 import BeautifulSoup
 
 _PRICE_RE = re.compile(r"[\d,]+(?:\.\d+)?")
+# rokomari.com formats prices "TK. 554" / "TK.554" (no ৳ symbol at all) --
+# stripped explicitly here (rather than relying on _PRICE_RE to just skip
+# over the letters) so the intent is legible and future price-string tweaks
+# on either site can't accidentally break the other's parsing.
+_TK_PREFIX_RE = re.compile(r"tk\.?", re.IGNORECASE)
 
 
 def parse_bdt_price(text):
-    """Parse a BDT price string like ``"8,500৳"`` or ``"৳ 12,990"``
-    into a float. Returns ``None`` when the text has no digits (e.g. "Out of
-    stock")."""
+    """Parse a BDT price string like ``"8,500৳"``, ``"৳ 12,990"`` or
+    rokomari.com's ``"TK. 554"`` into a float. Returns ``None`` when the text
+    has no digits (e.g. "Out of stock")."""
     if not text:
         return None
-    m = _PRICE_RE.search(text.replace("৳", "").strip())  # strip Taka sign
+    cleaned = _TK_PREFIX_RE.sub("", text.replace("৳", "")).strip()  # strip Taka sign / TK. prefix
+    m = _PRICE_RE.search(cleaned)
     if not m or not any(c.isdigit() for c in m.group()):
         return None
     try:
@@ -596,4 +602,136 @@ def parse_fabrilife_listing(html, base_url):
         if pid is None or not slug:
             continue
         urls.append(urljoin(base_url, f"product/{pid}-{slug}"))
+    return _dedupe_preserve_order(urls)
+
+
+# ---------------------------------------------------------------------------
+# Rokomari (rokomari.com) -- a reference source, NOT a reseller partner (no
+# sets_source_url, see catalog/models.py's ImportSource docstring and the
+# 0009 data migration): imported products must never enter
+# services_price_sync.sync_source_prices's re-pricing loop.
+#
+# Verified live 2026-07-30 against
+# https://www.rokomari.com/product/category/2355/beauty-health (a plain
+# server-rendered listing, ~309KB, 60 product cards) and one of its product
+# pages (https://www.rokomari.com/product/210626/ashol-extra-virgin-olive-oil-
+# joytun-tel-250ml):
+#
+# - Listing card: ``.product-card-wrapper``, its first ``<a href>`` is the
+#   product URL (a second, later ``<a>`` in ``.home-details-btn-wrapper``
+#   duplicates it -- ``card.find("a", href=True)`` picks the first, same
+#   dedupe-by-URL approach as ``parse_opencart_listing``).
+# - Product title: ``h1.title``.
+# - Product price: ``.details-stationary__price`` (rendered twice in the raw
+#   HTML -- once for a mobile toggle, once for desktop, both carrying
+#   identical values, so ``select_one`` picking the first is fine) holding
+#   ``span.sell-price`` (current/discounted price, always present) and,
+#   only when discounted, ``strike.original-price`` (crossed-out original).
+#   Deliberately NOT the ``.book-price``/``.original-price`` pair the listing
+#   *card* markup uses for the same purpose -- that pair is reused verbatim
+#   by the "Related/Similar Products" carousels further down a *product*
+#   page, so selecting it there would silently grab an unrelated product's
+#   price instead of this one's.
+# - Brand: ``.details-stationary__brand a``.
+# - Images: ``.details-stationary__thumbnil li[hovermax]`` -- the
+#   ``hovermax`` attribute is the full-resolution image (1104x1581); the
+#   ``<img src>`` in the same ``<li>`` is a 45x64 thumbnail.
+# - Specifications: ``table.specification-section__table`` rows of
+#   ``td.proDetailLabel``/``td.proDetailValue`` pairs; the header row (just
+#   the "Specification" ``<h2>`` in a single ``<td>``) has neither class and
+#   is skipped for free.
+# - Description: ``.summary.ql-editor`` (a rich-text block headed "Summary"
+#   followed by a "Key Features" list) -- there is no separate isolated
+#   "Description" block on this theme; ``.about-description`` elsewhere on
+#   the page is generic site-wide "About Rokomari" marketing copy repeated on
+#   every page, not this product's text, and must not be used.
+# - Prices are formatted "TK. 554" / "TK.554" (see the ``_TK_PREFIX_RE``
+#   handling in ``parse_bdt_price`` above), not with the ৳ symbol.
+# ---------------------------------------------------------------------------
+
+
+def _extract_rokomari_prices(soup):
+    wrap = soup.select_one(".details-stationary__price")
+    if wrap is None:
+        return None, None
+    sell = wrap.select_one(".sell-price")
+    original = wrap.select_one(".original-price")
+    sell_val = parse_bdt_price(sell.get_text()) if sell else None
+    original_val = parse_bdt_price(original.get_text()) if original else None
+    if original_val is not None and sell_val is not None:
+        # Discounted: .sell-price is the lower, current price; .original-price
+        # (a <strike>) is the crossed-out original -- same convention as
+        # every other adapter in this module (price=original, discount_price=current).
+        return original_val, sell_val
+    if sell_val is not None:
+        return sell_val, None
+    return original_val, None
+
+
+def _extract_rokomari_brand(soup):
+    link = soup.select_one(".details-stationary__brand a")
+    return link.get_text(strip=True) if link else ""
+
+
+def _extract_rokomari_images(soup):
+    urls = []
+    for li in soup.select(".details-stationary__thumbnil li[hovermax]"):
+        src = li.get("hovermax")
+        if src:
+            urls.append(_strip_query(src))
+    return _dedupe_preserve_order(urls)
+
+
+def _extract_rokomari_specifications(soup):
+    specs = {}
+    for row in soup.select("table.specification-section__table tr"):
+        label = row.find("td", class_="proDetailLabel")
+        value = row.find("td", class_="proDetailValue")
+        if label and value:
+            specs[label.get_text(strip=True)] = value.get_text(strip=True)
+    return specs
+
+
+def _extract_rokomari_description(soup):
+    node = soup.select_one(".summary.ql-editor") or soup.select_one(".summary")
+    if node is None:
+        return ""
+    return node.get_text(separator="\n", strip=True)
+
+
+def parse_rokomari_product(html):
+    """Parse a single rokomari.com product page into a plain dict with the
+    same keys as ``parse_opencart_product`` (name, price, discount_price,
+    description, specifications, brand, images). Pure function -- no
+    network, no ORM (this module is imported by the runtime price-sync
+    service and must stay side-effect-free)."""
+    soup = BeautifulSoup(html, "html.parser")
+
+    h1 = soup.select_one("h1.title") or soup.find("h1")
+    name = h1.get_text(strip=True) if h1 else ""
+
+    price, discount_price = _extract_rokomari_prices(soup)
+
+    return {
+        "name": name,
+        "price": price,
+        "discount_price": discount_price,
+        "description": _extract_rokomari_description(soup),
+        "specifications": _extract_rokomari_specifications(soup),
+        "brand": _extract_rokomari_brand(soup),
+        "images": _extract_rokomari_images(soup),
+    }
+
+
+def parse_rokomari_listing(html, base_url):
+    """Parse a rokomari.com category or search-results listing page into a
+    list of absolute product page URLs (deduped, order preserved). Both the
+    category-browse page and the ``/search`` results page share the same
+    ``.product-card-wrapper`` card markup."""
+    soup = BeautifulSoup(html, "html.parser")
+    urls = []
+    for card in soup.select(".product-card-wrapper"):
+        link = card.find("a", href=True)
+        if link:
+            urls.append(urljoin(base_url, link["href"]))
     return _dedupe_preserve_order(urls)

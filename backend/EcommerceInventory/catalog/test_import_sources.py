@@ -102,6 +102,20 @@ class SeededImportSourcesTests(TestCase):
         self.assertFalse(source.sets_source_url)
         self.assertEqual(source.categories.count(), 8)
 
+    def test_rokomari_seeded_with_source_url_false(self):
+        source = ImportSource.objects.get(slug="rokomari")
+        self.assertEqual(source.adapter_key, "rokomari")
+        self.assertTrue(source.supports_search)
+        self.assertTrue(source.is_enabled)
+        # Load-bearing distinction: rokomari is a reference source, not a
+        # reseller partner -- imports from it must never enrol a product
+        # into sync_source_prices's re-pricing loop.
+        self.assertFalse(source.sets_source_url)
+        # No beauty/health branch exists yet in seed_store_catalog.TAXONOMY
+        # (see the 0009 migration's docstring) -- zero categories seeded
+        # rather than inventing a taxonomy node to hang them on.
+        self.assertEqual(source.categories.count(), 0)
+
     def test_arogga_seeded_disabled_with_reason(self):
         source = ImportSource.objects.get(slug="arogga")
         self.assertFalse(source.is_enabled)
@@ -349,3 +363,62 @@ class ImportRunBookkeepingTests(TestCase):
         res = client.get("/api/products/admin/import/runs/", {"source": "fabrilife"})
         self.assertEqual(res.status_code, 200)
         self.assertEqual(len(res.data["data"]["data"]), 0)
+
+
+# --- Rokomari adapter end-to-end (via import_candidates) --------------------
+
+def _rokomari_product_page(name, original_price, current_price):
+    return f"""<html><body>
+<h1 class="title">{name}</h1>
+<div class="details-stationary__price">
+    <span class="sell-price">TK.{current_price}</span>
+    <strike class="original-price">TK. {original_price}</strike>
+</div>
+<div class="details-stationary__brand"><a href="/brand/1">TestBrand</a></div>
+<div class="details-stationary__thumbnil">
+    <ul><li hovermax="https://rokbucket.rokomari.io/x/full.jpg">
+        <img src="https://rokbucket.rokomari.io/x/thumb.jpg">
+    </li></ul>
+</div>
+</body></html>"""
+
+
+class RokomariImportFlowTests(TestCase):
+    """Confirms the rokomari adapter is actually wired into
+    services_scrape_import's dispatch (not just registered as an
+    ImportSource row) and that -- because sets_source_url=False for this
+    source -- an imported product's source_url stays blank, keeping it out
+    of sync_source_prices's re-pricing loop."""
+
+    def setUp(self):
+        self.factory = APIRequestFactory()
+        self.owner = Users.objects.create_user(
+            username="root5", email="root5@x.com", password="x",
+            role="Super Admin", country="Bangladesh")
+        self.cat = Categories.objects.create(name="Roko Cat", slug="roko-cat", description="")
+
+    def test_import_creates_product_with_blank_source_url(self):
+        def fake_fetch(url):
+            return _rokomari_product_page("Test Beauty Item", 590, 554)
+
+        request = self.factory.post("/api/products/admin/import/", {
+            "source": "rokomari", "source_urls": ["https://www.rokomari.com/product/1/test-beauty-item"],
+            "category_id": self.cat.id,
+        }, format="json")
+        force_authenticate(request, user=self.owner)
+
+        with patch("catalog.services_scrape_import.polite_get", side_effect=fake_fetch), \
+             patch("catalog.services_import.import_image", return_value="https://cdn.test/x.jpg"):
+            res = AdminImportProductsView.as_view()(request)
+
+        self.assertEqual(res.status_code, 200, res.data)
+        self.assertEqual(res.data["data"]["imported"], 1)
+
+        from catalog.models import Products
+        product = Products.objects.get(name="Test Beauty Item")
+        self.assertEqual(product.source_url, "")
+        # base_price is the source's raw pre-markup number (see
+        # services_import.seed_product_entry) -- price=original(590),
+        # discount_price=current(554), same convention as every other adapter.
+        self.assertEqual(product.base_price, 590.0)
+        self.assertIsNotNone(product.discount_price)

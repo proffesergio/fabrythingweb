@@ -82,6 +82,18 @@ class StoreConfiguration(models.Model):
         help_text="Minimum taka markup applied to every product regardless of price, "
                   "so a cheap item still carries a guaranteed minimum margin.",
     )
+    # Master switch for selling `requires_prescription` medicines
+    # (catalog.models.Products.requires_prescription). Default False because
+    # the owner does not yet hold a DGDA licence -- orders.services.
+    # place_cod_order refuses to sell an Rx product while this is off, so
+    # flipping this one admin-editable field (no deploy) is what turns
+    # medicine sales on once the licence arrives.
+    rx_sales_enabled = models.BooleanField(
+        default=False,
+        help_text="Allow checkout of prescription-required medicines. Leave off until "
+                  "a DGDA licence is in hand -- every requires_prescription product is "
+                  "blocked at checkout while this is False, regardless of any other setting.",
+    )
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:

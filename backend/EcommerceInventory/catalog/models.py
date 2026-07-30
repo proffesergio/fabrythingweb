@@ -47,6 +47,23 @@ SIZE_CHOICES = [
     ('FREE', 'Free Size'),
 ]
 
+# Medicine fields (for manual pharmacy entry -- see orders/services.py's
+# place_cod_order for the requires_prescription checkout gate and
+# core.models.StoreConfiguration.rx_sales_enabled for the master switch).
+# All blank/optional so the ~200 pre-existing non-medicine products are
+# completely unaffected.
+DOSAGE_FORM_CHOICES = [
+    ('TABLET', 'Tablet'),
+    ('CAPSULE', 'Capsule'),
+    ('SYRUP', 'Syrup'),
+    ('INJECTION', 'Injection'),
+    ('CREAM', 'Cream'),
+    ('OINTMENT', 'Ointment'),
+    ('DROPS', 'Drops'),
+    ('INHALER', 'Inhaler'),
+    ('OTHER', 'Other'),
+]
+
 class Products(models.Model):
     id=models.AutoField(primary_key=True)
     name=models.CharField(max_length=255,blank=True,null=True)
@@ -106,6 +123,19 @@ class Products(models.Model):
     available_sizes=models.JSONField(default=list,blank=True,help_text='List of available sizes, e.g. ["S","M","L","XL"]')
     size_chart=models.JSONField(default=dict,blank=True,help_text='Size measurements in inches, e.g. {"S":{"chest":36,"length":27},"M":{"chest":38,"length":28}}. Keys beyond chest/length (e.g. "sleeve") are fine -- the storefront renders whatever measurement keys are present, see catalog.scrape_parsers._extract_fabrilife_size_chart.')
     material=models.CharField(max_length=255,blank=True,default='',help_text='e.g. Cotton, Polyester, Silk')
+    # Medicine-specific fields (manual pharmacy entry -- Arogga is being
+    # dropped as an import source, but the owner wants the same richness on
+    # hand-entered medicines). All optional so existing non-medicine products
+    # are unaffected; blank/empty means "not a medicine" or "not specified".
+    generic_name=models.CharField(max_length=255,blank=True,default='',help_text='Active ingredient, e.g. Paracetamol -- the primary search axis for medicines.')
+    strength=models.CharField(max_length=100,blank=True,default='',help_text='e.g. "500 mg"')
+    dosage_form=models.CharField(max_length=20,choices=DOSAGE_FORM_CHOICES,blank=True,default='',help_text='Tablet, capsule, syrup, injection, cream, etc.')
+    manufacturer=models.CharField(max_length=255,blank=True,default='',help_text='Pharma company, e.g. Square Pharmaceuticals')
+    pack_size=models.CharField(max_length=100,blank=True,default='',help_text='e.g. "10 x 10", "100 ml"')
+    # Load-bearing, not just a label: see orders/services.py::place_cod_order,
+    # which refuses to sell an Rx product while core.models.StoreConfiguration
+    # .rx_sales_enabled is False (the owner has no DGDA licence yet).
+    requires_prescription=models.BooleanField(default=False,help_text='Requires a prescription to purchase -- blocks checkout while StoreConfiguration.rx_sales_enabled is False.')
     # SEO
     seo_title=models.CharField(max_length=255,blank=True,default='')
     seo_description=models.TextField(blank=True,default='')
@@ -222,6 +252,7 @@ class ProductReviews(models.Model):
 ADAPTER_CHOICES = [
     ('opencart', 'OpenCart (potakait/canvasit)'),
     ('fabrilife', 'Fabrilife (Algolia)'),
+    ('rokomari', 'Rokomari.com'),
     ('', 'No adapter yet'),
 ]
 
