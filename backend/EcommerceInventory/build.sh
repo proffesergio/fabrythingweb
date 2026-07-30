@@ -173,3 +173,27 @@ if [ -n "$BACKFILL_FABRILIFE_SIZE_CHART" ]; then
     python manage.py backfill_fabrilife_size_chart --apply || echo "WARNING: size chart backfill failed (non-fatal)"
   fi
 fi
+
+# One-off: audit and clean up rogue Admin/Staff/Super Admin accounts left by
+# the now-closed public /api/auth/signup/ hole (accounts/controllers/
+# AuthController.py -- it handed out role="Admin" to anyone who posted to it).
+# Production verification created a real one this way: username
+# __probe_no_create, role Admin. Always list every back-office account
+# (read-only, cheap) so strays are visible in the build log without needing
+# Render shell access (the free plan has none); deletion is opt-in and
+# two-stage exactly like PURGE_DEMO_CATALOG above, because it removes users:
+#   1. set ROGUE_ADMIN_ACCOUNTS=<comma-separated usernames/emails>, deploy --
+#      the dry-run cascade + SAFE/REFUSED verdict for each prints in the log.
+#   2. also set PURGE_ROGUE_ADMINS=apply, deploy again to delete only the
+#      ones marked SAFE. An account with ANY order/content history (or that
+#      itself created other accounts) is refused automatically, never
+#      deleted -- see accounts/management/commands/audit_admin_accounts.py.
+#   3. REMOVE both variables.
+python manage.py audit_admin_accounts || true
+if [ -n "$ROGUE_ADMIN_ACCOUNTS" ]; then
+  echo "ROGUE_ADMIN_ACCOUNTS=$ROGUE_ADMIN_ACCOUNTS — auditing named admin accounts:"
+  python manage.py audit_admin_accounts "$ROGUE_ADMIN_ACCOUNTS"
+  if [ "$PURGE_ROGUE_ADMINS" = "apply" ]; then
+    python manage.py audit_admin_accounts "$ROGUE_ADMIN_ACCOUNTS" --apply || echo "WARNING: audit_admin_accounts --apply failed (non-fatal)"
+  fi
+fi

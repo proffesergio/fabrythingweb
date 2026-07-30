@@ -1,4 +1,4 @@
-from core.helpers import CommonListAPIMixin, CommonListAPIMixinWithFilter, CustomPageNumberPagination, PLATFORM_STAFF_ROLES, createParsedCreatedAtUpdatedAt, executeQuery, renderResponse
+from core.helpers import CommonListAPIMixin, CommonListAPIMixinWithFilter, CustomPageNumberPagination, PLATFORM_STAFF_ROLES, createParsedCreatedAtUpdatedAt, executeQuery, isPlatformStaff, renderResponse
 from accounts.models import Modules, UserPermissions, Users
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.views import APIView
@@ -67,6 +67,76 @@ class UserWithFilterListView(generics.ListAPIView):
     @CommonListAPIMixinWithFilter.common_list_decorator(UserSerializerWithFilters)
     def list(self,request,*args,**kwargs):
         return super().list(request,*args,**kwargs)
+
+
+class CreateUserView(APIView):
+    """The replacement for the old public /api/auth/signup/: a logged-in
+    back-office user creates another account here and sets its role directly
+    -- this is now the ONLY way to mint an Admin/Staff/Super Admin account.
+
+    Gated with the full isPlatformStaff predicate (not just
+    PLATFORM_STAFF_ROLES like the views above) because, unlike those, there is
+    no pre-existing domain filter narrowing what this endpoint can do -- an
+    unscoped Staff/Admin sub-account (created under someone else's domain)
+    must not be able to mint accounts at all, only a genuinely platform-scoped
+    caller (Super Admin, or a domain-root Admin/Staff) may reach it.
+
+    Escalation is blocked server-side: only an existing Super Admin may create
+    another Super Admin. An Admin or Staff caller creating anyone -- including
+    attempting "Super Admin" -- is capped at the roles below Super Admin.
+    """
+    permission_classes = [IsAuthenticated]
+    authentication_classes = [JWTAuthentication]
+
+    def post(self, request):
+        if not isPlatformStaff(request.user):
+            return renderResponse(data='Forbidden', message='Forbidden', status=403)
+
+        username = request.data.get('username')
+        email = request.data.get('email')
+        password = request.data.get('password')
+        role = request.data.get('role')
+
+        if not username or not email or not password or not role:
+            return renderResponse(
+                data='username, email, password and role are all required',
+                message='username, email, password and role are all required',
+                status=400)
+
+        valid_roles = dict(Users._meta.get_field('role').choices)
+        if role not in valid_roles:
+            return renderResponse(data=f'Invalid role: {role}', message='Invalid role', status=400)
+
+        if role == 'Super Admin' and request.user.role != 'Super Admin':
+            return renderResponse(
+                data='Only a Super Admin may create another Super Admin',
+                message='Only a Super Admin may create another Super Admin',
+                status=403)
+
+        if Users.objects.filter(email=email).exists():
+            return renderResponse(data='Email Already Exists', message='Email Already Exists', status=400)
+        if Users.objects.filter(username=username).exists():
+            return renderResponse(data='Username Already Exists', message='Username Already Exists', status=400)
+
+        user = Users.objects.create_user(
+            username=username, email=email, password=password, role=role,
+            first_name=request.data.get('first_name', ''),
+            last_name=request.data.get('last_name', ''),
+            phone=request.data.get('phone', ''),
+            profile_pic=request.data.get('profile_pic'),
+            country='Bangladesh',
+        )
+        # A new sub-account joins the creator's tenant; a new Super Admin is
+        # left to self-heal to its own domain (Users.save() self-assigns
+        # domain_user_id = its own id on insert when left unset) -- it is a
+        # top-level account, same convention as create_admin.
+        user.added_by_user_id_id = request.user.id
+        if role != 'Super Admin':
+            user.domain_user_id_id = request.user.domain_user_id_id
+        user.save()
+
+        serializer = UserSerializerWithFilters(user)
+        return renderResponse(data=serializer.data, message='User Created Successfully', status=201)
 
 
 class UpdateUsers(generics.UpdateAPIView):

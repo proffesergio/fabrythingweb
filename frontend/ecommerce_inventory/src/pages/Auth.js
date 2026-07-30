@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { Tabs, Tab, Card, CardContent, Typography, TextField, Button, Box, CssBaseline, ThemeProvider, createTheme, LinearProgress } from '@mui/material';
+import { Card, CardContent, Typography, TextField, Button, Box, CssBaseline, ThemeProvider, createTheme, LinearProgress } from '@mui/material';
 import { ThemeProvider as Emotion10ThemeProvider } from '@emotion/react';
 import { useTheme } from '@mui/system';
 import { orangeDarkTheme, orangeLightTheme, basicTheme, darkTheme, lightTheme, customTheme, blueLightTheme, blueDarkTheme, greenLightTheme, greenDarkTheme, redLightTheme, redDarkTheme } from '../layout/themes';
@@ -14,7 +14,6 @@ import { useDispatch } from 'react-redux';
 import { login } from '../redux/reducer/IsLoggedInReducer';
 
 const Auth = () => {
-  const [tab, setTab] = useState(0);
   const [themeMode, setThemeMode] = useState('basic');
   const navigate=useNavigate();
   const {callApi,error,loading}=useApi();
@@ -64,25 +63,10 @@ const Auth = () => {
     navigate('/ReactMUIDashboard/');
   }
 
-  const handleChange = (event, newValue) => {
-    setTab(newValue);
-  };
-
-  const doSignup = async(e) => {
-    e.preventDefault();
-    let response=await callApi({url:"auth/signup/",method:"POST",body:{username:e.target.username.value,password:e.target.password.value,email:e.target.email.value,profile_pic:"https://www.google.com/images/branding/googlelogo/1x/googlelogo_color_272x92dp.png"}});
-    if(response?.data?.access){
-        localStorage.setItem("token",response.data.access);
-        toast.success("Signup Successfully");
-        dispatch(login());
-        navigate("/admin/home");
-    }
-    else{
-        toast.error("Signup failed");
-    }
-    console.log(response);
-}
-
+  // There is no public admin sign-up any more: /api/auth/signup/ was removed
+  // (it minted an "Admin" account for anyone who posted to it). Only login
+  // lives here now -- an existing admin creates new Admin/Staff/Super Admin
+  // accounts from inside the logged-in panel (Users page -> Create User).
 const doLogin = async(e) => {
     e.preventDefault();
     let response=await callApi({url:"auth/login/",method:"POST",body:{username:e.target.username.value,password:e.target.password.value}});
@@ -125,81 +109,35 @@ const doLogin = async(e) => {
               <Typography variant="subtitle2" align="center" color="text.secondary" gutterBottom>
                 Admin Panel
               </Typography>
-              <Tabs value={tab} onChange={handleChange} centered>
-                <Tab label="Sign Up" />
-                <Tab label="Sign In" />
-              </Tabs>
-              {tab === 0 && (
-                <Box component="form" sx={{ mt: 2 }} onSubmit={doSignup}>
-                  <TextField
-                    margin="normal"
-                    required
-                    fullWidth
-                    name="username"
-                    label="Username"
-                    autoComplete="username"
-                    autoFocus
-                  />
-                  <TextField
-                    margin="normal"
-                    required
-                    fullWidth
-                    name="email"
-                    label="Email"
-                    type="email"
-                    autoComplete="email"
-                  />
-                  <TextField
-                    margin="normal"
-                    required
-                    fullWidth
-                    name='password'
-                    label="Password"
-                    type="password"
-                    autoComplete="current-password"
-                  />
-                  {loading?<LinearProgress sx={{width:'100%'}}/>: <Button
-                    type="submit"
-                    fullWidth
-                    variant="contained"
-                    color="primary"
-                    sx={{ mt: 3, mb: 2 }}
-                  >
-                    Sign Up
-                  </Button>}
-                </Box>
-              )}
-              {tab === 1 && (
-                <Box component="form" sx={{ mt: 2 }} onSubmit={doLogin}>
-                  <TextField
-                    margin="normal"
-                    required
-                    fullWidth
-                    name="username"
-                    label="Username"
-                    autoComplete="username"
-                    autoFocus
-                  />
-                  <TextField
-                    margin="normal"
-                    required
-                    fullWidth
-                    name='password'
-                    label="Password"
-                    type="password"
-                    autoComplete="current-password"
-                  />
-                  {loading?<LinearProgress sx={{width:'100%'}}/>: <Button
-                    type="submit"
-                    fullWidth
-                    variant="contained"
-                    color="primary"
-                    sx={{ mt: 3, mb: 2 }}
-                  >
-                    Sign In
-                  </Button>}
-                </Box>
-              )}
+              <Box component="form" sx={{ mt: 2 }} onSubmit={doLogin}>
+                <TextField
+                  margin="normal"
+                  required
+                  fullWidth
+                  name="username"
+                  label="Username"
+                  autoComplete="username"
+                  autoFocus
+                />
+                <TextField
+                  margin="normal"
+                  required
+                  fullWidth
+                  name='password'
+                  label="Password"
+                  type="password"
+                  autoComplete="current-password"
+                />
+                {loading?<LinearProgress sx={{width:'100%'}}/>: <Button
+                  type="submit"
+                  fullWidth
+                  variant="contained"
+                  color="primary"
+                  sx={{ mt: 3, mb: 2 }}
+                >
+                  Sign In
+                </Button>}
+              </Box>
             </CardContent>
             <Box sx={{ textAlign: 'center', py: 2, borderTop: '1px solid', borderColor: theme.palette.divider }}>
               <Typography variant="body2" color="text.secondary">

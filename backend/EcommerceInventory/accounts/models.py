@@ -97,7 +97,15 @@ class Users(AbstractUser):
         max_length=50,
         blank=True,
         null=True,
-        default="Admin",
+        # Least-privileged default on purpose. It used to be "Admin", which
+        # meant ANY code path that called create_user()/Users.objects.create()
+        # without an explicit role -- including the old public
+        # /api/auth/signup/ -- minted a full admin account. Every legitimate
+        # caller in this codebase already passes role= explicitly (seeders,
+        # create_admin, rider/restaurant/partner onboarding); this default is
+        # the fallback for whatever forgets to, and "Customer" is the one role
+        # with no back-office access.
+        default="Customer",
         choices=(
             ("Super Admin", "Super Admin"),
             ("Admin", "Admin"),
