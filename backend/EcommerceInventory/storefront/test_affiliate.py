@@ -8,7 +8,7 @@ catalog.services_scrape_import.polite_get exactly like catalog/
 test_import_sources.py does for the existing rokomari import flow.
 """
 from datetime import timedelta
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 from django.core.cache import cache
 from django.test import TestCase
@@ -340,24 +340,20 @@ class AffiliateAdminAuthorizationTests(TestCase):
 
 
 ROKOMARI_LISTING = """<html><body>
-<div class="product-card-wrapper"><a href="/product/531074/perfume-a">Perfume A</a></div>
-<div class="product-card-wrapper"><a href="/product/531075/perfume-b">Perfume B</a></div>
-</body></html>"""
-
-
-def _rokomari_product_page(name, original_price, current_price):
-    return f"""<html><body>
-<h1 class="title">{name}</h1>
-<div class="details-stationary__price">
-    <span class="sell-price">TK.{current_price}</span>
-    <strike class="original-price">TK. {original_price}</strike>
-</div>
-<div class="details-stationary__brand"><a href="/brand/1">TestBrand</a></div>
-<div class="details-stationary__thumbnil">
-    <ul><li hovermax="https://rokbucket.rokomari.io/x/full.jpg">
-        <img src="https://rokbucket.rokomari.io/x/thumb.jpg">
-    </li></ul>
-</div>
+<div class="product-card-wrapper"><a href="/product/531074/perfume-a">
+    <div class="book-img"><img data-src="https://rokbucket.rokomari.io/x/perfume-a.jpg"
+        src="https://rokbucket.rokomari.io/x/non-book-default-image.png"></div>
+    <h4 class="book-title">Perfume A</h4>
+    <p class="book-author">Brand: BrandA</p>
+    <p class="book-price"><strike class="original-price">TK. 590</strike> TK. 554</p>
+</a></div>
+<div class="product-card-wrapper"><a href="/product/531075/perfume-b">
+    <div class="book-img"><img data-src="https://rokbucket.rokomari.io/x/perfume-b.jpg"
+        src="https://rokbucket.rokomari.io/x/non-book-default-image.png"></div>
+    <h4 class="book-title">Perfume B</h4>
+    <p class="book-author">Brand: BrandB</p>
+    <p class="book-price"> TK. 300 </p>
+</a></div>
 </body></html>"""
 
 
@@ -373,22 +369,57 @@ class AffiliateAdminSearchAndBulkAddTests(TestCase):
         auth(self.client, self.admin)
 
     def test_search_returns_candidates_with_remote_product_id(self):
-        def fake_fetch(url):
-            if "/search" in url:
-                return ROKOMARI_LISTING
-            return _rokomari_product_page("Perfume A", 590, 554)
-
-        with patch("catalog.services_scrape_import.polite_get", side_effect=fake_fetch):
+        mock_fetch = Mock(return_value=ROKOMARI_LISTING)
+        with patch("catalog.services_scrape_import.polite_get", mock_fetch):
             res = self.client.get("/api/store/admin/affiliate/search/", {"q": "perfume"})
 
         self.assertEqual(res.status_code, 200, res.content)
         candidates = res.data["data"]["candidates"]
         self.assertEqual(len(candidates), 2)
         self.assertEqual(candidates[0]["remote_product_id"], "531074")
+        self.assertEqual(candidates[0]["name"], "Perfume A")
+        self.assertEqual(candidates[0]["brand"], "BrandA")
+        self.assertEqual(candidates[0]["price"], 590)
+        self.assertEqual(candidates[0]["discount_price"], 554)
 
-    def test_search_requires_category_or_query(self):
-        res = self.client.get("/api/store/admin/affiliate/search/")
-        self.assertEqual(res.status_code, 400)
+    def test_search_is_a_single_fetch_not_one_per_product(self):
+        """Regression guard for the live 502: fetching the listing page and
+        then each of up to 12 product pages individually (13 sequential
+        requests at 1 req/sec) took ~25-30s and blew past Render's gateway
+        timeout. The affiliate picker must build candidates from the listing
+        page alone -- exactly one fetch, regardless of candidate count."""
+        mock_fetch = Mock(return_value=ROKOMARI_LISTING)
+        with patch("catalog.services_scrape_import.polite_get", mock_fetch):
+            res = self.client.get("/api/store/admin/affiliate/search/", {"q": "perfume"})
+
+        self.assertEqual(res.status_code, 200, res.content)
+        self.assertEqual(len(res.data["data"]["candidates"]), 2)
+        self.assertEqual(mock_fetch.call_count, 1)
+
+    def test_search_with_no_query_or_category_returns_default_listing(self):
+        """The picker must load a default listing on open, not 400 until the
+        admin types something -- see AdminAffiliateSearchView's docstring.
+        ImportSourceCategory rows for rokomari are seeded by migration 0012,
+        so the default resolves to one of those real category paths."""
+        mock_fetch = Mock(return_value=ROKOMARI_LISTING)
+        with patch("catalog.services_scrape_import.polite_get", mock_fetch):
+            res = self.client.get("/api/store/admin/affiliate/search/")
+
+        self.assertEqual(res.status_code, 200, res.content)
+        self.assertEqual(len(res.data["data"]["candidates"]), 2)
+        fetched_url = mock_fetch.call_args[0][0]
+        self.assertIn("product/category/", fetched_url)
+
+    def test_search_slow_source_returns_a_clear_error_not_a_hang(self):
+        """The timeout guard: a source that never responds must surface as a
+        clean 502, not hang the request until Render's gateway kills it."""
+        def timeout(url):
+            raise TimeoutError("no route to host")
+
+        with patch("catalog.services_scrape_import.polite_get", side_effect=timeout):
+            res = self.client.get("/api/store/admin/affiliate/search/", {"q": "perfume"})
+
+        self.assertEqual(res.status_code, 502)
 
     def test_bulk_add_creates_products_and_rehosts_image(self):
         payload = {"candidates": [{

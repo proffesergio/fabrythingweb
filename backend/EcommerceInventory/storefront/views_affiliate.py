@@ -20,9 +20,10 @@ from rest_framework.permissions import AllowAny
 from rest_framework.views import APIView
 from rest_framework_simplejwt.authentication import JWTAuthentication
 
+from catalog.models import ImportSourceCategory
 from catalog.services_import import import_image
 from catalog.services_scrape_import import (
-    BROWSE_LIMIT,
+    LISTING_ONLY_LIMIT,
     DisabledSourceError,
     SourceFetchError,
     UnsupportedSearchError,
@@ -37,6 +38,13 @@ from .services_affiliate import UnsupportedProgramError, build_affiliate_link, e
 
 ROKOMARI_SOURCE_SLUG = "rokomari"
 
+# Fallback default category (Rokomari's Beauty & Health top-level page) for
+# when the admin opens the picker with no q/category AND, somehow, no
+# ImportSourceCategory rows are seeded for rokomari -- shouldn't happen in
+# practice (the 0012 migration seeds 15 of them) but this keeps "browse with
+# nothing typed yet" from ever 400ing.
+DEFAULT_ROKOMARI_CATEGORY_PATH = "product/category/2355/beauty-health"
+
 # Bulk-add is capped the same way the catalog import tool caps IMPORT_LIMIT:
 # each candidate's image download is one more request against Rokomari, and
 # polite_get enforces 1 req/sec, so an unbounded batch would blow past a
@@ -47,11 +55,23 @@ AFFILIATE_BULK_ADD_LIMIT = 12
 class AdminAffiliateSearchView(APIView):
     """GET /api/store/admin/affiliate/search/?q=perfume
     GET /api/store/admin/affiliate/search/?category=product/category/2618/perfume
+    GET /api/store/admin/affiliate/search/  (no params -- see below)
 
     Thin wrapper over the existing browse_candidates() used by the regular
     catalog product-import tool, pinned to the rokomari source, with each
     candidate's Rokomari productId extracted so the bulk-add step never has
     to re-derive it.
+
+    Always calls browse_candidates(detail=False): the picker only needs
+    name/brand/price/image, which rokomari's listing card already carries,
+    so there's no need to fetch each product page individually -- see
+    catalog.services_scrape_import.browse_candidates's docstring for why that
+    per-product loop was a live 502.
+
+    No q/category -> defaults to the first configured rokomari
+    ImportSourceCategory (Beauty & Health is the owner's stated area of
+    interest, and that's what's seeded) instead of 400ing, so the admin can
+    open the picker and immediately see products without typing anything.
     """
     authentication_classes = [JWTAuthentication]
     permission_classes = [IsPlatformStaff]
@@ -60,18 +80,18 @@ class AdminAffiliateSearchView(APIView):
         category_path = request.query_params.get('category') or None
         query = request.query_params.get('q') or None
         if not category_path and not query:
-            return renderResponse(
-                data={'q': ['Provide a category or a search term.']},
-                message='Validation error', status=400)
+            default_cat = ImportSourceCategory.objects.filter(
+                source__slug=ROKOMARI_SOURCE_SLUG).order_by('display_order', 'id').first()
+            category_path = default_cat.source_path if default_cat else DEFAULT_ROKOMARI_CATEGORY_PATH
 
         try:
-            limit = int(request.query_params.get('limit', BROWSE_LIMIT))
+            limit = int(request.query_params.get('limit', LISTING_ONLY_LIMIT))
         except (TypeError, ValueError):
-            limit = BROWSE_LIMIT
+            limit = LISTING_ONLY_LIMIT
 
         try:
             result = browse_candidates(
-                ROKOMARI_SOURCE_SLUG, category_path=category_path, query=query, limit=limit)
+                ROKOMARI_SOURCE_SLUG, category_path=category_path, query=query, limit=limit, detail=False)
         except SourceFetchError as e:
             return renderResponse(data=str(e), message='Could not fetch that listing', status=502)
         except UnsupportedSearchError as e:
