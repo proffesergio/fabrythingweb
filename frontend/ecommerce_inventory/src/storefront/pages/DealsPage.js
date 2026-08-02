@@ -2,11 +2,36 @@ import React, { useEffect, useState } from 'react';
 import { Box, Container, Grid, Skeleton, Typography } from '@mui/material';
 import LocalOfferIcon from '@mui/icons-material/LocalOffer';
 import useApi from '../../hooks/APIHandler';
-import AffiliateProductCard from '../components/AffiliateProductCard';
+import ProductCard from '../components/ProductCard';
 
 /** Dedicated Deals page -- every AffiliateProduct with show_on_deals_page=True,
  * active and inside its scheduling window (GET /api/store/affiliate/?placement=deals).
+ *
+ * Renders through the SAME ProductCard the storefront uses for its own
+ * products (image tile proportions, price/discount treatment, the mobile
+ * card-height work) via ProductCard's `affiliate` prop, instead of a
+ * separately-styled layout. The "via <Program>" partner badge and the
+ * click-tracking redirect (/api/store/affiliate/<id>/go/, opened in a new
+ * tab with rel="noopener noreferrer") still apply -- see ProductCard.js.
  */
+
+// Maps AffiliateProductPublicSerializer's shape onto the plain fields
+// ProductCard already knows how to render (image as an array, discount vs
+// list price) -- keeps ProductCard itself agnostic of the affiliate API shape.
+function toProductShape(item) {
+    const original = item.original_price != null ? Number(item.original_price) : null;
+    const current = item.current_price != null ? Number(item.current_price) : null;
+    const hasDiscount = original != null && current != null && original !== current;
+    return {
+        id: item.id,
+        name: item.title,
+        brand: item.brand,
+        image: item.image ? [item.image] : [],
+        initial_selling_price: hasDiscount ? original : (current ?? original),
+        discount_price: hasDiscount ? current : null,
+    };
+}
+
 export default function DealsPage() {
     const { callApi } = useApi();
     const [items, setItems] = useState(null); // null = loading
@@ -50,7 +75,10 @@ export default function DealsPage() {
                 <Grid container spacing={2}>
                     {items.map((item) => (
                         <Grid item xs={6} sm={4} md={3} key={item.id}>
-                            <AffiliateProductCard item={item} />
+                            <ProductCard
+                                product={toProductShape(item)}
+                                affiliate={{ goUrl: item.go_url, label: item.program_label || item.program }}
+                            />
                         </Grid>
                     ))}
                 </Grid>

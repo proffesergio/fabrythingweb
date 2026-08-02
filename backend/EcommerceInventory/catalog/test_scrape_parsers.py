@@ -12,6 +12,7 @@ from catalog.scrape_parsers import (
     parse_opencart_listing,
     parse_opencart_product,
     parse_rokomari_listing,
+    parse_rokomari_listing_cards,
     parse_rokomari_product,
 )
 
@@ -591,3 +592,99 @@ class RokomariListingTests(SimpleTestCase):
                 "https://www.rokomari.com/product/2/b",
             ],
         )
+
+
+class RokomariListingCardsTests(SimpleTestCase):
+    """The affiliate picker's cheap path (services_scrape_import.
+    browse_candidates's detail=False branch) -- no per-product fetch, so
+    every field must come from the listing card alone. Same fixture as
+    RokomariListingTests, values pinned exactly against the real capture so
+    selector drift on rokomari's end fails loudly instead of silently
+    returning blank cards."""
+
+    def setUp(self):
+        self.html = (FIXTURES / "rokomari_category.html").read_text(encoding="utf-8")
+        self.cards = parse_rokomari_listing_cards(self.html, "https://www.rokomari.com/")
+
+    def test_card_count_matches_url_only_parser(self):
+        urls = parse_rokomari_listing(self.html, "https://www.rokomari.com/")
+        self.assertEqual(len(self.cards), len(urls))
+        self.assertEqual(len(self.cards), 8)
+
+    def test_first_card_exact_fields(self):
+        card = self.cards[0]
+        self.assertEqual(
+            card["source_url"],
+            "https://www.rokomari.com/product/210626/ashol-extra-virgin-olive-oil-joytun-tel-250ml",
+        )
+        self.assertEqual(card["name"], "Ashol Extra Virgin Olive Oil (Joytun Tel) - 250Ml")
+        self.assertEqual(card["brand"], "Ashol")
+        # price=original, discount_price=current -- same convention as every
+        # other adapter (see _extract_rokomari_prices).
+        self.assertEqual(card["price"], 590.0)
+        self.assertEqual(card["discount_price"], 554.0)
+        self.assertEqual(
+            card["images"],
+            ["https://rokbucket.rokomari.io/ProductNew20190903/130X186/"
+             "Extra_Virgin_Olive_Oil_250ml-Ashol-f5788-210626.jpeg"],
+        )
+
+    def test_second_card_exact_fields(self):
+        card = self.cards[1]
+        self.assertEqual(
+            card["source_url"],
+            "https://www.rokomari.com/product/507927/professional-ear-cleaner-kit-6-in-1",
+        )
+        self.assertEqual(card["name"], "Professional Ear Cleaner Kit 6 in 1")
+        self.assertEqual(card["brand"], "Non-Brand")
+        self.assertEqual(card["price"], 172.0)
+        self.assertEqual(card["discount_price"], 49.0)
+
+    def test_uses_lazy_loaded_data_src_not_the_placeholder_src(self):
+        # Every card's plain <img src> is the shared
+        # non-book-default-image.png placeholder until lazy-load swaps it in
+        # -- the real photo lives in data-src, and that's what must be used.
+        for card in self.cards:
+            self.assertTrue(card["images"])
+            self.assertNotIn("non-book-default-image", card["images"][0])
+
+    def test_all_source_urls_absolute_and_deduped(self):
+        urls = [c["source_url"] for c in self.cards]
+        self.assertEqual(len(urls), len(set(urls)))
+        self.assertTrue(all(u.startswith("https://www.rokomari.com/product/") for u in urls))
+
+    def test_dedupes_preserving_order(self):
+        html = """
+        <div class="product-card-wrapper"><a href="/product/1/a">
+            <h4 class="book-title">A</h4><p class="book-author">Brand: X</p>
+        </a></div>
+        <div class="product-card-wrapper"><a href="/product/1/a">
+            <h4 class="book-title">A again</h4>
+        </a></div>
+        """
+        cards = parse_rokomari_listing_cards(html, "https://www.rokomari.com/")
+        self.assertEqual(len(cards), 1)
+        self.assertEqual(cards[0]["name"], "A")
+
+    def test_card_missing_price_markup_returns_none_not_raise(self):
+        html = """
+        <div class="product-card-wrapper"><a href="/product/9/no-price">
+            <h4 class="book-title">No Price Item</h4>
+        </a></div>
+        """
+        cards = parse_rokomari_listing_cards(html, "https://www.rokomari.com/")
+        self.assertEqual(len(cards), 1)
+        self.assertEqual(cards[0]["price"], None)
+        self.assertEqual(cards[0]["discount_price"], None)
+        self.assertEqual(cards[0]["images"], [])
+
+    def test_card_with_no_discount_has_only_price_set(self):
+        html = """
+        <div class="product-card-wrapper"><a href="/product/9/x">
+            <h4 class="book-title">Not Discounted</h4>
+            <p class="book-price"> TK. 250 </p>
+        </a></div>
+        """
+        cards = parse_rokomari_listing_cards(html, "https://www.rokomari.com/")
+        self.assertEqual(cards[0]["price"], 250.0)
+        self.assertIsNone(cards[0]["discount_price"])

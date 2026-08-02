@@ -215,6 +215,42 @@ class BrowseCandidatesTests(AdminProductImportTestBase):
         self.assertEqual(len(candidates), 2)
         self.assertEqual(candidates[0]["price"], 990)
 
+    def test_browse_rokomari_via_catalog_importer_still_fetches_full_per_product_detail(self):
+        # Regression guard: the affiliate picker's listing-only browse
+        # (detail=False) must NOT change the catalog import tool's own browse
+        # path -- ProductImportController never passes `detail`, so it must
+        # keep getting the original one-fetch-per-candidate behaviour (needed
+        # because the picker here decides what to actually import).
+        roko_listing = """<html><body>
+        <div class="product-card-wrapper"><a href="/product/1/item-a">Item A</a></div>
+        <div class="product-card-wrapper"><a href="/product/2/item-b">Item B</a></div>
+        </body></html>"""
+
+        def _roko_product_page(name, price):
+            return f"""<html><body>
+            <h1 class="title">{name}</h1>
+            <div class="details-stationary__price"><span class="sell-price">TK.{price}</span></div>
+            </body></html>"""
+
+        calls = []
+
+        def fake_fetch(url):
+            calls.append(url)
+            if url.endswith("beauty-health"):
+                return roko_listing
+            if "item-a" in url:
+                return _roko_product_page("Item A", 100)
+            return _roko_product_page("Item B", 200)
+
+        with patch("catalog.services_scrape_import.polite_get", side_effect=fake_fetch):
+            res = self.browse({"source": "rokomari", "category": "product/category/2355/beauty-health"}, self.owner)
+
+        self.assertEqual(res.status_code, 200, res.data)
+        self.assertEqual(len(res.data["data"]["candidates"]), 2)
+        # 1 listing fetch + 1 fetch per candidate -- the full per-product loop,
+        # not the affiliate picker's single-fetch shortcut.
+        self.assertEqual(len(calls), 3)
+
 
 class ImportProductsTests(AdminProductImportTestBase):
     def test_non_platform_user_forbidden(self):

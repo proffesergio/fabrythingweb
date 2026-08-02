@@ -44,6 +44,7 @@ from catalog.scrape_parsers import (
     parse_opencart_listing,
     parse_opencart_product,
     parse_rokomari_listing,
+    parse_rokomari_listing_cards,
     parse_rokomari_product,
 )
 from catalog.services_import import import_image, seed_product_entry
@@ -59,6 +60,14 @@ from tools.scrape.common import polite_get
 # unbounded run at a partner's site. See docs/PRODUCT_IMPORT.md.
 BROWSE_LIMIT = 12
 IMPORT_LIMIT = 12
+
+# Listing-only browse (browse_candidates(detail=False), the affiliate
+# picker's cheap path -- see that function's docstring) skips the
+# per-product fetch loop entirely, so it can afford a much higher cap than
+# BROWSE_LIMIT: one request either way, regardless of how many candidates
+# come back. 60 is what the live rokomari listing page itself caps out at,
+# so there is nothing to gain by going higher.
+LISTING_ONLY_LIMIT = 60
 
 _ALGOLIA_APP_ID = "2UIXGXYA5O"
 _ALGOLIA_SEARCH_KEY = "bfcfa7b10e2c9220df5d1d639d485218"  # public search-only key
@@ -204,7 +213,26 @@ def _candidate_from_product(url, parsed):
     }
 
 
-def browse_candidates(source_slug, *, category_path=None, query=None, limit=BROWSE_LIMIT, fetch=None):
+def _candidate_from_card(card):
+    """Same shape as _candidate_from_product, for the listing-only (no
+    per-product fetch) path -- see browse_candidates's detail=False branch.
+    Also carries `brand`, which the per-product-fetch path's parsers give us
+    but _candidate_from_product above never surfaced."""
+    already_have = Products.objects.filter(slug=slugify(card.get("name") or "")).exists() \
+        if card.get("name") else False
+    return {
+        "source_url": card["source_url"],
+        "name": card.get("name") or "",
+        "brand": card.get("brand") or "",
+        "price": card.get("price"),
+        "discount_price": card.get("discount_price"),
+        "images": card.get("images") or [],
+        "already_have": already_have,
+    }
+
+
+def browse_candidates(source_slug, *, category_path=None, query=None, limit=BROWSE_LIMIT, fetch=None,
+                       detail=True):
     """Fetch a listing (or search) for the ImportSource identified by
     ``source_slug`` and return candidate products with enough detail to
     render a picker: name, price, discount_price, image URL(s), source URL,
@@ -217,6 +245,27 @@ def browse_candidates(source_slug, *, category_path=None, query=None, limit=BROW
     UnsupportedSearchError for a `query` against a source with
     supports_search=False (potakait.com).
 
+    ``detail`` (default True, preserving the original behaviour): when True,
+    every candidate URL the listing/search returns is fetched individually
+    and run through the source's product-page parser -- needed for OpenCart
+    (its listing cards carry no price) and by the catalog product-import tool
+    (``catalog.controllers.ProductImportController``), which reuses this same
+    picker to decide what to actually import.
+
+    When ``detail=False`` -- currently only implemented for the rokomari
+    adapter, since it's the only caller (the affiliate picker,
+    ``storefront.views_affiliate.AdminAffiliateSearchView``) that needs it --
+    candidates are built from the listing page's own card markup, with NO
+    per-product fetch: rokomari's listing card already carries name, brand,
+    current/original price and an image (see ``parse_rokomari_listing_cards``
+    and the module comment in ``catalog/scrape_parsers.py``). This is what
+    fixed a live 502: fetching each of up to BROWSE_LIMIT product pages
+    individually through polite_get (1 req/sec) took ~13 sequential requests
+    (~25-30s), past Render's gateway timeout, for a picker that only ever
+    needed the listing anyway. Other adapters ignore ``detail=False`` and
+    still do the full per-product fetch (no listing-only parser exists for
+    them; scope limited to what the affiliate picker actually calls).
+
     The response distinguishes two different reasons a browse can come back
     with zero candidates, since a silent empty state has bitten this codebase
     before: ``listing_product_count`` is how many product links the
@@ -224,7 +273,9 @@ def browse_candidates(source_slug, *, category_path=None, query=None, limit=BROW
     ``fetch_failures`` is how many of those individual product pages then
     failed to fetch/parse (a positive count with 0 candidates means "the
     source has products here but we couldn't read them" -- likely the site
-    is down or blocking us -- not "empty category").
+    is down or blocking us -- not "empty category"). The listing-only path
+    never has per-product fetch failures (there is no per-product fetch), so
+    it always reports ``fetch_failures=0``.
     """
     source = get_source_or_raise(source_slug)
     if not category_path and not query:
@@ -233,7 +284,8 @@ def browse_candidates(source_slug, *, category_path=None, query=None, limit=BROW
         raise UnsupportedSearchError(
             f"{source.slug} search isn't available -- browse by category instead.")
 
-    limit = max(1, min(int(limit or BROWSE_LIMIT), BROWSE_LIMIT))
+    cap = BROWSE_LIMIT if detail else LISTING_ONLY_LIMIT
+    limit = max(1, min(int(limit or cap), cap))
     fetch = fetch or polite_get
 
     if source.adapter_key == "fabrilife":
@@ -246,10 +298,24 @@ def browse_candidates(source_slug, *, category_path=None, query=None, limit=BROW
         parser = parse_fabrilife_product
     elif source.adapter_key == "rokomari":
         listing_url = _rokomari_listing_url(source, category_path, query)
+        # A single request either way (detail or not) -- the timeout that
+        # guards against a slow/hung source is `fetch` itself (polite_get's
+        # requests.get(..., timeout=20)), and any exception it raises
+        # (including a timeout) is turned into a clear SourceFetchError/502
+        # below rather than the request hanging until Render's own gateway
+        # timeout kills it.
         try:
             listing_html = fetch(listing_url)
         except Exception as e:  # noqa: BLE001 -- one bad listing must surface, not crash the process
             raise SourceFetchError(str(e)) from e
+        if not detail:
+            cards = parse_rokomari_listing_cards(listing_html, listing_url)[:limit]
+            return {
+                "candidates": [_candidate_from_card(c) for c in cards],
+                "categories": _source_categories(source),
+                "listing_product_count": len(cards),
+                "fetch_failures": 0,
+            }
         product_urls = parse_rokomari_listing(listing_html, listing_url)[:limit]
         parser = parse_rokomari_product
     else:

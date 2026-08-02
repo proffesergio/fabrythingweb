@@ -4,8 +4,19 @@ import { ShoppingCart, FavoriteBorder, Visibility } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 
-export default function ProductCard({ product, showFlashBadge }) {
+// `affiliate` is opt-in: pass { goUrl, label } to render an affiliate item
+// through this same card instead of forking a second component (see
+// storefront/pages/DealsPage.js) -- clicking opens `goUrl` (our own
+// click-tracking redirect) in a new tab with rel="noopener noreferrer"
+// instead of routing to /product/:slug, and a "via <label>" badge replaces
+// the wishlist/quick-view affordances a partner link can't support. Every
+// other prop on `product` is expected in the same shape a real product uses
+// (image as an array, discount_price vs initial_selling_price) -- the caller
+// normalises the affiliate API shape onto that, so this component itself
+// stays unaware of where the data came from.
+export default function ProductCard({ product, showFlashBadge, affiliate = null }) {
     const navigate = useNavigate();
+    const isAffiliate = !!affiliate;
 
     const price = product.discount_price || product.initial_selling_price;
     const hasDiscount = product.discount_price && product.discount_price < product.initial_selling_price;
@@ -49,6 +60,10 @@ export default function ProductCard({ product, showFlashBadge }) {
             style={{ height: '100%' }}
         >
             <Card
+                component={isAffiliate ? 'a' : 'div'}
+                href={isAffiliate ? affiliate.goUrl : undefined}
+                target={isAffiliate ? '_blank' : undefined}
+                rel={isAffiliate ? 'noopener noreferrer' : undefined}
                 sx={{
                     cursor: 'pointer',
                     height: '100%',
@@ -56,14 +71,24 @@ export default function ProductCard({ product, showFlashBadge }) {
                     flexDirection: 'column',
                     position: 'relative',
                     overflow: 'hidden',
+                    textDecoration: 'none',
+                    color: 'inherit',
                     '&:hover .quick-add': { opacity: 1, transform: 'translateY(0)' },
                     '&:hover .card-overlay': { opacity: 1 },
                     '&:hover .action-icons': { opacity: 1, transform: 'translateX(0)' },
                 }}
-                onClick={() => navigate(`/product/${product.slug}`)}
+                onClick={isAffiliate ? undefined : () => navigate(`/product/${product.slug}`)}
             >
                 {/* Badges */}
                 <Box sx={{ position: 'absolute', top: 8, left: 8, zIndex: 2, display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                    {isAffiliate && (
+                        <Box sx={{
+                            bgcolor: 'secondary.main', color: 'white', px: 1, py: 0.25,
+                            borderRadius: 1, fontSize: '0.7rem', fontWeight: 700,
+                        }}>
+                            via {affiliate.label}
+                        </Box>
+                    )}
                     {hasDiscount && (
                         <motion.div
                             animate={showFlashBadge ? { scale: [1, 1.08, 1] } : {}}
@@ -89,44 +114,48 @@ export default function ProductCard({ product, showFlashBadge }) {
                     )}
                 </Box>
 
-                {/* Action icons (right side) */}
-                <Box
-                    className="action-icons"
-                    sx={{
-                        position: 'absolute', top: 8, right: 8, zIndex: 2,
-                        display: 'flex', flexDirection: 'column', gap: 0.5,
-                        opacity: { xs: 1, md: 0 },
-                        transform: { xs: 'translateX(0)', md: 'translateX(10px)' },
-                        transition: 'all 0.3s ease',
-                    }}
-                >
-                    {/* p bumped on xs only — these sit permanently visible on mobile
-                        (opacity xs:1 above), so their ~30px default small-IconButton
-                        hit area is genuinely tappable rather than a hover affordance;
-                        desktop padding is left at the component default. */}
-                    <IconButton
-                        size="small"
-                        onClick={(e) => e.stopPropagation()}
+                {/* Action icons (right side) -- wishlist/quick-view assume a
+                    /product/:slug detail page, which an affiliate item doesn't
+                    have here, so they're skipped for it entirely. */}
+                {!isAffiliate && (
+                    <Box
+                        className="action-icons"
                         sx={{
-                            p: { xs: 1.25 },
-                            bgcolor: 'white', boxShadow: 1,
-                            '&:hover': { bgcolor: 'secondary.main', color: 'white' },
+                            position: 'absolute', top: 8, right: 8, zIndex: 2,
+                            display: 'flex', flexDirection: 'column', gap: 0.5,
+                            opacity: { xs: 1, md: 0 },
+                            transform: { xs: 'translateX(0)', md: 'translateX(10px)' },
+                            transition: 'all 0.3s ease',
                         }}
                     >
-                        <FavoriteBorder fontSize="small" />
-                    </IconButton>
-                    <IconButton
-                        size="small"
-                        onClick={(e) => { e.stopPropagation(); navigate(`/product/${product.slug}`); }}
-                        sx={{
-                            p: { xs: 1.25 },
-                            bgcolor: 'white', boxShadow: 1,
-                            '&:hover': { bgcolor: 'primary.main', color: 'white' },
-                        }}
-                    >
-                        <Visibility fontSize="small" />
-                    </IconButton>
-                </Box>
+                        {/* p bumped on xs only — these sit permanently visible on mobile
+                            (opacity xs:1 above), so their ~30px default small-IconButton
+                            hit area is genuinely tappable rather than a hover affordance;
+                            desktop padding is left at the component default. */}
+                        <IconButton
+                            size="small"
+                            onClick={(e) => e.stopPropagation()}
+                            sx={{
+                                p: { xs: 1.25 },
+                                bgcolor: 'white', boxShadow: 1,
+                                '&:hover': { bgcolor: 'secondary.main', color: 'white' },
+                            }}
+                        >
+                            <FavoriteBorder fontSize="small" />
+                        </IconButton>
+                        <IconButton
+                            size="small"
+                            onClick={(e) => { e.stopPropagation(); navigate(`/product/${product.slug}`); }}
+                            sx={{
+                                p: { xs: 1.25 },
+                                bgcolor: 'white', boxShadow: 1,
+                                '&:hover': { bgcolor: 'primary.main', color: 'white' },
+                            }}
+                        >
+                            <Visibility fontSize="small" />
+                        </IconButton>
+                    </Box>
+                )}
 
                 {/* Image — flatter aspect ratio on mobile so the card doesn't run tall;
                     unchanged on desktop. The aspect ratio lives on this wrapping Box
@@ -221,25 +250,29 @@ export default function ProductCard({ product, showFlashBadge }) {
                     reserving ~40px of card height for a button that duplicates
                     "tap the card" (which already routes to the product page). Dropping
                     it from the mobile layout is most of what buys back the 2-cards-per-
-                    screen target; tapping the card is still the way to act on it. */}
-                <Button
-                    className="quick-add"
-                    size="small"
-                    variant="contained"
-                    color="secondary"
-                    startIcon={<ShoppingCart fontSize="small" />}
-                    onClick={handleQuickAdd}
-                    sx={{
-                        display: { xs: 'none', md: 'flex' },
-                        mx: 1.5, mb: 1.5,
-                        opacity: { md: 0 },
-                        transform: { md: 'translateY(10px)' },
-                        transition: 'all 0.3s ease',
-                        fontWeight: 600,
-                    }}
-                >
-                    Add to Cart
-                </Button>
+                    screen target; tapping the card is still the way to act on it.
+                    Skipped entirely for affiliate items -- there's no cart to add to,
+                    the whole card is already the partner link. */}
+                {!isAffiliate && (
+                    <Button
+                        className="quick-add"
+                        size="small"
+                        variant="contained"
+                        color="secondary"
+                        startIcon={<ShoppingCart fontSize="small" />}
+                        onClick={handleQuickAdd}
+                        sx={{
+                            display: { xs: 'none', md: 'flex' },
+                            mx: 1.5, mb: 1.5,
+                            opacity: { md: 0 },
+                            transform: { md: 'translateY(10px)' },
+                            transition: 'all 0.3s ease',
+                            fontWeight: 600,
+                        }}
+                    >
+                        Add to Cart
+                    </Button>
+                )}
             </Card>
         </motion.div>
     );

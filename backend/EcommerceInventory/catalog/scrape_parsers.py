@@ -61,6 +61,10 @@ _PRICE_RE = re.compile(r"[\d,]+(?:\.\d+)?")
 # over the letters) so the intent is legible and future price-string tweaks
 # on either site can't accidentally break the other's parsing.
 _TK_PREFIX_RE = re.compile(r"tk\.?", re.IGNORECASE)
+# rokomari.com listing cards render brand as "Brand: X" (see
+# parse_rokomari_listing_cards) -- stripped so the affiliate picker gets a
+# bare brand name, same shape as every other adapter's `brand` field.
+_ROKOMARI_LISTING_BRAND_PREFIX_RE = re.compile(r"^brand:\s*", re.IGNORECASE)
 
 
 def parse_bdt_price(text):
@@ -647,6 +651,26 @@ def parse_fabrilife_listing(html, base_url):
 #   every page, not this product's text, and must not be used.
 # - Prices are formatted "TK. 554" / "TK.554" (see the ``_TK_PREFIX_RE``
 #   handling in ``parse_bdt_price`` above), not with the ৳ symbol.
+#
+# Listing CARD fields (as opposed to the product-page fields above) --
+# ``parse_rokomari_listing_cards`` below, the affiliate picker's cheap path
+# (see services_scrape_import.browse_candidates's detail=False branch, added
+# to fix a live 502: fetching each of up to 12 product pages individually
+# through polite_get at 1 req/sec took ~30s, past Render's gateway timeout).
+# Each ``.product-card-wrapper`` (same card the URL-only parser above already
+# selects) also carries, with NO further fetch:
+# - Title: ``h4.book-title``.
+# - Brand: ``p.book-author``, text "Brand: X" -- the "Brand: " prefix is
+#   stripped.
+# - Price: ``p.book-price`` holding ``strike.original-price`` (crossed-out
+#   original, only when discounted) plus the current price as the element's
+#   remaining bare text -- deliberately the SAME selector pair the big
+#   comment above warns is reused by a product page's "Related/Similar
+#   Products" carousel; that ambiguity only matters on a product page, and
+#   this function only ever runs against a listing page.
+# - Image: ``div.book-img img`` -- ``data-src`` (the real, lazy-loaded photo)
+#   is used over ``src`` (a shared placeholder, ``non-book-default-image.png``
+#   until the browser scrolls the card into view).
 # ---------------------------------------------------------------------------
 
 
@@ -735,3 +759,80 @@ def parse_rokomari_listing(html, base_url):
         if link:
             urls.append(urljoin(base_url, link["href"]))
     return _dedupe_preserve_order(urls)
+
+
+def _extract_rokomari_listing_brand(card):
+    el = card.select_one(".book-author")
+    if el is None:
+        return ""
+    return _ROKOMARI_LISTING_BRAND_PREFIX_RE.sub("", el.get_text(strip=True)).strip()
+
+
+def _extract_rokomari_listing_price(card):
+    """Same original/discount convention as _extract_rokomari_prices: returns
+    (price, discount_price) where price is the original (pre-discount) value
+    and discount_price is the lower, current one -- None for discount_price
+    when the item isn't discounted."""
+    wrap = card.select_one(".book-price")
+    if wrap is None:
+        return None, None
+    original = wrap.select_one(".original-price")
+    original_val = parse_bdt_price(original.get_text()) if original else None
+    full_text = wrap.get_text(" ", strip=True)
+    if original is not None:
+        # The current price is whatever text is left in .book-price after
+        # removing the <strike> original's own text -- the markup has no
+        # separate element for it (unlike the product-page price block).
+        remainder = full_text.replace(original.get_text(" ", strip=True), "", 1).strip()
+    else:
+        remainder = full_text
+    current_val = parse_bdt_price(remainder)
+    if original_val is not None and current_val is not None:
+        return original_val, current_val
+    if current_val is not None:
+        return current_val, None
+    return original_val, None
+
+
+def _extract_rokomari_listing_image(card):
+    img = card.select_one(".book-img img")
+    if img is None:
+        return None
+    src = img.get("data-src") or img.get("src")
+    return _strip_query(src) if src else None
+
+
+def parse_rokomari_listing_cards(html, base_url):
+    """Parse a rokomari.com category/search listing page into structured
+    candidate dicts (source_url, name, brand, price, discount_price, images)
+    using ONLY the listing card markup -- no per-product fetch. Sibling to
+    parse_rokomari_listing (which returns bare URLs for the per-product-
+    detail-fetching path the catalog importer still uses); this is the cheap
+    path for the affiliate picker -- see the module comment above and
+    services_scrape_import.browse_candidates's detail=False branch."""
+    soup = BeautifulSoup(html, "html.parser")
+    out = []
+    seen_urls = set()
+    for card in soup.select(".product-card-wrapper"):
+        link = card.find("a", href=True)
+        if not link:
+            continue
+        url = urljoin(base_url, link["href"])
+        if url in seen_urls:
+            continue
+        seen_urls.add(url)
+
+        title_el = card.select_one(".book-title")
+        name = title_el.get_text(strip=True) if title_el else ""
+        price, discount_price = _extract_rokomari_listing_price(card)
+        image = _extract_rokomari_listing_image(card)
+
+        out.append({
+            "source_url": url,
+            "name": name,
+            "brand": _extract_rokomari_listing_brand(card),
+            "price": price,
+            "discount_price": discount_price,
+            "images": [image] if image else [],
+        })
+    return out
