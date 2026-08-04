@@ -157,7 +157,9 @@ class AdminExportTests(TestCase):
         staff = make_staff()
         customer = make_customer()
         preset = PrintablePreset.objects.create(name="Tee", base_price=Decimal("100"))
-        area = PrintArea.objects.create(name="Front", price=Decimal("20"))
+        # The 0002 data migration seeds these areas, so tests must update the
+        # seeded row rather than assume an empty table.
+        area, _ = PrintArea.objects.update_or_create(name="Front", defaults={"price": Decimal("20")})
         pr = create_print_request(
             customer, preset=preset, print_area_ids=[area.id], quantity=2, brief="x",
             roster_lines=[{"player_name": "Alice", "number": "7", "size": "M", "quantity": 1}],
@@ -193,7 +195,9 @@ class AdminConfigCrudTests(TestCase):
 
         res = self.client.delete(f"/api/print/admin/print-areas/{area_id}/")
         self.assertEqual(res.status_code, 200)
-        self.assertEqual(PrintArea.objects.count(), 0)
+        # Reference areas are seeded by the 0002 migration, so assert the
+        # created row is gone rather than that the table is empty.
+        self.assertFalse(PrintArea.objects.filter(id=area_id).exists())
 
     def test_preset_crud(self):
         product = make_product()
@@ -203,7 +207,8 @@ class AdminConfigCrudTests(TestCase):
             {"name": "Polo", "base_price": "400.00", "product": product.id}, format="json",
         )
         self.assertEqual(res.status_code, 201, res.content)
-        self.assertEqual(PrintablePreset.objects.get().product_id, product.id)
+        self.assertEqual(
+            PrintablePreset.objects.get(name="Polo").product_id, product.id)
 
     def test_pricing_config_get_and_update(self):
         auth(self.client, self.staff)

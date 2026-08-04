@@ -304,7 +304,11 @@ class AffiliateAdminAuthorizationTests(TestCase):
         auth(self.client, self.admin)
         res = self.client.get("/api/store/admin/affiliate/")
         self.assertEqual(res.status_code, 200)
-        self.assertEqual(len(res.data["data"]), 1)
+        self.assertEqual(len(res.data["data"]["products"]), 1)
+        # The picker needs the source's categories even when a browse would
+        # fail, so they ride along with the list rather than only appearing
+        # after a successful search.
+        self.assertIn("categories", res.data["data"])
 
     def test_admin_can_update_placement_and_schedule(self):
         auth(self.client, self.admin)

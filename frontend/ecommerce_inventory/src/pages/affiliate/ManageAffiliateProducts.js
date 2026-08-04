@@ -66,6 +66,7 @@ export default function ManageAffiliateProducts() {
     // ---- Search Rokomari tab ----
     const [query, setQuery] = useState("");
     const [categoryPath, setCategoryPath] = useState("");
+    const [sourceCategories, setSourceCategories] = useState([]);
     const [candidates, setCandidates] = useState([]);
     const [browsed, setBrowsed] = useState(false);
     const [browseError, setBrowseError] = useState("");
@@ -77,7 +78,7 @@ export default function ManageAffiliateProducts() {
     const handleSearch = useCallback(async () => {
         const trimmed = query.trim();
         if (!trimmed && !categoryPath) {
-            setBrowseError("Type a search term or a Rokomari category path.");
+            setBrowseError("Pick a category or type a search term.");
             return;
         }
         setBrowseError("");
@@ -142,7 +143,9 @@ export default function ManageAffiliateProducts() {
         setManageLoading(true);
         const res = await callApi({ url: "store/admin/affiliate/", rawError: true });
         if (res?.status === 200) {
-            setProducts(res.data.data || []);
+            const payload = res.data.data || {};
+            setProducts(payload.products || []);
+            setSourceCategories(payload.categories || []);
             setManageError("");
         } else {
             setManageError(res?.data?.message || "Could not load affiliate products.");
@@ -245,10 +248,17 @@ export default function ManageAffiliateProducts() {
                             </Grid>
                             <Grid item xs={12} sm={4}>
                                 <TextField
-                                    fullWidth size="small" label="...or a Rokomari category path"
+                                    fullWidth size="small" label="...or pick a Rokomari category"
+                                    select
+                                    SelectProps={{ native: true }}
                                     value={categoryPath} onChange={(e) => setCategoryPath(e.target.value)}
-                                    placeholder="product/category/2618/perfume"
-                                />
+                                    helperText="Categories come from the import source config."
+                                >
+                                    <option value="">— none —</option>
+                                    {sourceCategories.map((c) => (
+                                        <option key={c.path} value={c.path}>{c.label}</option>
+                                    ))}
+                                </TextField>
                             </Grid>
                             <Grid item xs={12} sm={3}>
                                 <Button

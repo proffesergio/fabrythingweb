@@ -20,6 +20,19 @@ export const PRINT_TERMS = {
     artwork: 'AI or SVG vector files reproduce best. No file? Describe what you want — we design it for you.',
 };
 
+/**
+ * Optional image per item. Deliberately EMPTY for now: the obvious source
+ * would be Fabrilife's own corporate product photography, and lifting a
+ * competitor's copyrighted studio shots for our marketing page is not
+ * something to do quietly. Items without an image render a clean typographic
+ * tile, which reads as intentional rather than broken.
+ *
+ * To add real photos: drop files in `public/print/` and map them here, e.g.
+ *   'Round Neck T-Shirt': '/print/round-neck-tee.jpg'
+ * Product shots we own, or licensed stock, are both fine.
+ */
+export const PRINT_IMAGES = {};
+
 export const PRINT_CATEGORIES = [
     {
         key: 'apparel',

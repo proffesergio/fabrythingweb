@@ -54,7 +54,17 @@ beforeEach(() => {
         data: { data: { candidates: [candidate], categories: [], listing_product_count: 1, fetch_failures: 0 } },
     };
     mockBulkAddResult = { status: 200, data: { data: { created: [5], skipped: [], total: 1 } } };
-    mockListResult = { status: 200, data: { data: [affiliateProduct] } };
+    // The list endpoint returns {products, categories} — categories ride
+    // along so the picker can offer a dropdown even when a browse would fail.
+    mockListResult = {
+        status: 200,
+        data: {
+            data: {
+                products: [affiliateProduct],
+                categories: [{ path: 'product/category/2355/beauty-health', label: 'Beauty & Health' }],
+            },
+        },
+    };
 });
 
 test('searching Rokomari shows a candidate with its price', async () => {
