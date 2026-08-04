@@ -70,6 +70,7 @@ export default function ManageAffiliateProducts() {
     const [candidates, setCandidates] = useState([]);
     const [browsed, setBrowsed] = useState(false);
     const [browseError, setBrowseError] = useState("");
+    const [diagnostic, setDiagnostic] = useState(null);
     const [selected, setSelected] = useState(new Set());
     const [addingLinkType, setAddingLinkType] = useState("CART");
     const [adding, setAdding] = useState(false);
@@ -269,7 +270,34 @@ export default function ManageAffiliateProducts() {
                                 </Button>
                             </Grid>
                         </Grid>
-                        {browseError && <Alert severity="warning" sx={{ mt: 2 }}>{browseError}</Alert>}
+                        {browseError && (
+                            <Alert
+                                severity="warning"
+                                sx={{ mt: 2 }}
+                                action={
+                                    <Button color="inherit" size="small" onClick={async () => {
+                                        setDiagnostic({ running: true });
+                                        const res = await callApi({
+                                            url: "store/admin/affiliate/diagnose/",
+                                            params: { path: categoryPath || undefined },
+                                            rawError: true,
+                                        });
+                                        setDiagnostic(res?.data?.data || { error: "Diagnostic failed" });
+                                    }}>
+                                        Diagnose
+                                    </Button>
+                                }
+                            >
+                                {browseError}
+                            </Alert>
+                        )}
+                        {diagnostic && (
+                            <Alert severity="info" sx={{ mt: 1 }} onClose={() => setDiagnostic(null)}>
+                                <Typography variant="caption" component="pre" sx={{ whiteSpace: 'pre-wrap', m: 0 }}>
+                                    {diagnostic.running ? 'Fetching…' : JSON.stringify(diagnostic, null, 2)}
+                                </Typography>
+                            </Alert>
+                        )}
                     </Card>
 
                     {loading && <LinearProgress sx={{ mb: 2 }} />}
