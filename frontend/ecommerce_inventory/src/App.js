@@ -57,6 +57,8 @@ import CustomerAccount from './storefront/pages/CustomerAccount';
 import CustomPrintingPage from './storefront/pages/CustomPrintingPage';
 import PrintRequestDetail from './storefront/pages/PrintRequestDetail';
 import DealsPage from './storefront/pages/DealsPage';
+import LegalPage from './storefront/pages/legal/LegalPage';
+import { PRIVACY, SHIPPING, TERMS } from './storefront/pages/legal/content';
 import { useMemo, useState } from 'react';
 
 // Vendor (Restaurant-role) dashboard imports
@@ -154,6 +156,11 @@ function App() {
           {path:"account/orders",element:<ProtectedRoute element={<CustomerAccount/>}/>},
           {path:"custom-printing",element:<CustomPrintingPage/>},
           {path:"deals",element:<DealsPage/>},
+          // Public, login-free URLs — both app stores require a reachable
+          // privacy policy link, and it must not sit behind auth.
+          {path:"privacy",element:<LegalPage doc={PRIVACY}/>},
+          {path:"terms",element:<LegalPage doc={TERMS}/>},
+          {path:"shipping",element:<LegalPage doc={SHIPPING}/>},
           // Not ProtectedRoute: an anonymous visitor can still land here (e.g. a
           // shared link) and the page itself prompts login for the parts that need it.
           {path:"custom-printing/requests/:id",element:<ProtectedRoute element={<PrintRequestDetail/>}/>},
