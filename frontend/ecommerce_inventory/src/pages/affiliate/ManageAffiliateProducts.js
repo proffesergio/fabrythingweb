@@ -71,6 +71,11 @@ export default function ManageAffiliateProducts() {
     const [browsed, setBrowsed] = useState(false);
     const [browseError, setBrowseError] = useState("");
     const [diagnostic, setDiagnostic] = useState(null);
+    // Manual add exists because rokomari.com is behind Cloudflare bot
+    // protection that 403s our server: browsing/importing cannot work from
+    // production, but link-building needs only the productId from a URL the
+    // owner pastes from his own browser. No fetch involved.
+    const [manual, setManual] = useState(null);
     const [selected, setSelected] = useState(new Set());
     const [addingLinkType, setAddingLinkType] = useState("CART");
     const [adding, setAdding] = useState(false);
@@ -270,6 +275,13 @@ export default function ManageAffiliateProducts() {
                                 </Button>
                             </Grid>
                         </Grid>
+                        <Button
+                            size="small" sx={{ mt: 1 }}
+                            onClick={() => setManual({ url: "", title: "", brand: "", image: "",
+                                original_price: "", current_price: "", link_type: "CART", parsed: null, error: "" })}
+                        >
+                            Add a product manually
+                        </Button>
                         {browseError && (
                             <Alert
                                 severity="warning"
