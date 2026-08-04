@@ -230,13 +230,16 @@ class PublicCatalogEndpointTests(TestCase):
 
     def test_presets_and_areas_are_public(self):
         PrintablePreset.objects.create(name="Tee", base_price=Decimal("300"), is_active=True)
-        PrintArea.objects.create(name="Front", price=Decimal("50"), is_active=True)
+        PrintArea.objects.update_or_create(
+            name="Front", defaults={"price": Decimal("50"), "is_active": True})
+        # Seeded reference rows exist too, so assert the endpoint is public
+        # and includes what this test created — not an exact table count.
         res = self.client.get("/api/print/presets/")
         self.assertEqual(res.status_code, 200)
-        self.assertEqual(len(res.data["data"]), 1)
+        self.assertIn("Tee", [p["name"] for p in res.data["data"]])
         res = self.client.get("/api/print/print-areas/")
         self.assertEqual(res.status_code, 200)
-        self.assertEqual(len(res.data["data"]), 1)
+        self.assertIn("Front", [a["name"] for a in res.data["data"]])
 
     def test_quote_endpoint_is_public_and_matches_service(self):
         preset = PrintablePreset.objects.create(name="Tee", base_price=Decimal("300"))

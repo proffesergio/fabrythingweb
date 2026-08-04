@@ -66,7 +66,7 @@ class StatusTransitionTests(TestCase):
 
     def test_approval_falls_back_to_computed_quote_if_never_priced(self):
         preset = PrintablePreset.objects.create(name="Tee", base_price=Decimal("300"))
-        area = PrintArea.objects.create(name="Front", price=Decimal("50"))
+        area, _ = PrintArea.objects.update_or_create(name="Front", defaults={"price": Decimal("50")})
         r = create_print_request(self.customer, preset=preset, print_area_ids=[area.id], quantity=2, brief="x")
         r.transition_to(PrintRequest.Status.IN_DESIGN)
         r.transition_to(PrintRequest.Status.PROOF_READY)
@@ -158,8 +158,8 @@ class PricingTests(TestCase):
 
     def test_print_areas_add_to_unit_price(self):
         preset = PrintablePreset.objects.create(name="Tee", base_price=Decimal("100"))
-        front = PrintArea.objects.create(name="Front", price=Decimal("50"))
-        back = PrintArea.objects.create(name="Back", price=Decimal("70"))
+        front, _ = PrintArea.objects.update_or_create(name="Front", defaults={"price": Decimal("50")})
+        back, _ = PrintArea.objects.update_or_create(name="Back", defaults={"price": Decimal("70")})
         quote = compute_quote(preset=preset, print_areas=[front, back], quantity=1)
         self.assertEqual(quote["unit_price"], Decimal("220"))
 

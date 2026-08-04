@@ -20,7 +20,7 @@ from rest_framework.permissions import AllowAny
 from rest_framework.views import APIView
 from rest_framework_simplejwt.authentication import JWTAuthentication
 
-from catalog.models import ImportSourceCategory
+from catalog.models import ImportSource, ImportSourceCategory
 from catalog.services_import import import_image
 from catalog.services_scrape_import import (
     LISTING_ONLY_LIMIT,
@@ -93,7 +93,10 @@ class AdminAffiliateSearchView(APIView):
             result = browse_candidates(
                 ROKOMARI_SOURCE_SLUG, category_path=category_path, query=query, limit=limit, detail=False)
         except SourceFetchError as e:
-            return renderResponse(data=str(e), message='Could not fetch that listing', status=502)
+            # str(e) on a requests HTTPError is e.g. "403 Client Error:
+            # Forbidden for url: ..." -- the reason belongs in `message` so it
+            # is visible in the admin panel without expanding a console array.
+            return renderResponse(data=str(e), message=f'Could not fetch that listing: {e}', status=502)
         except UnsupportedSearchError as e:
             return renderResponse(data={'q': [str(e)]}, message='Validation error', status=400)
         except (ValueError, DisabledSourceError) as e:
@@ -167,6 +170,25 @@ class AdminAffiliateBulkAddView(APIView):
             message='Bulk add finished')
 
 
+def _rokomari_categories():
+    """The seeded rokomari ImportSourceCategory rows, for the picker's
+    dropdown. Returned by the list endpoint rather than only by a successful
+    browse: an admin needs to be able to CHOOSE a category precisely when
+    browsing is failing, and a free-text path field invites typing our own
+    taxonomy slug (`beauty-health`) instead of the source path
+    (`product/category/2355/beauty-health`), which fetches a 404."""
+    try:
+        source = ImportSource.objects.filter(slug=ROKOMARI_SOURCE_SLUG).first()
+        if not source:
+            return []
+        return [
+            {'path': c.source_path, 'label': c.label or c.source_path}
+            for c in source.categories.all()
+        ]
+    except Exception:  # noqa: BLE001 -- a picker convenience must never 500 the list
+        return []
+
+
 class AdminAffiliateListCreateView(APIView):
     authentication_classes = [JWTAuthentication]
     permission_classes = [IsPlatformStaff]
@@ -174,7 +196,9 @@ class AdminAffiliateListCreateView(APIView):
     def get(self, request):
         qs = AffiliateProduct.objects.all().prefetch_related('grid_categories')
         data = AffiliateProductAdminSerializer(qs, many=True, context={'request': request}).data
-        return renderResponse(data=data, message='Affiliate products retrieved')
+        return renderResponse(
+            data={'products': data, 'categories': _rokomari_categories()},
+            message='Affiliate products retrieved')
 
     def post(self, request):
         serializer = AffiliateProductAdminSerializer(data=request.data, context={'request': request})
