@@ -21,6 +21,7 @@ from rest_framework.views import APIView
 from rest_framework_simplejwt.authentication import JWTAuthentication
 
 from catalog.models import ImportSource, ImportSourceCategory
+from catalog.scrape_parsers import parse_rokomari_listing_cards
 from catalog.services_import import import_image
 from catalog.services_scrape_import import (
     LISTING_ONLY_LIMIT,
@@ -319,3 +320,56 @@ class AffiliateClickRedirectView(APIView):
             from django.http import Http404
             raise Http404
         return HttpResponseRedirect(target)
+
+
+class AdminAffiliateDiagnosticView(APIView):
+    """GET /api/store/admin/affiliate/diagnose/?path=product/category/2355/beauty-health
+
+    One raw fetch, reporting exactly what the SERVER sees. Every rokomari
+    browse has been failing in production with a 502 while the identical URL
+    returns 200 with 60 product cards from a developer machine -- the classic
+    signature of the host blocking datacenter IPs. Guessing at that from the
+    outside wastes deploy cycles; this answers it in one request.
+
+    Returns the upstream status, elapsed time, response size and the first
+    bytes of the body (enough to recognise a Cloudflare challenge or a block
+    page) instead of collapsing everything into "could not fetch".
+    """
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsPlatformStaff]
+
+    def get(self, request):
+        import time as _time
+
+        import requests
+
+        from tools.scrape.common import UA
+
+        source = ImportSource.objects.filter(slug=ROKOMARI_SOURCE_SLUG).first()
+        base = (source.base_url if source else 'https://www.rokomari.com/')
+        path = request.query_params.get('path') or 'product/category/2355/beauty-health'
+        url = base + path.lstrip('/')
+
+        started = _time.monotonic()
+        try:
+            r = requests.get(url, headers=UA, timeout=20)
+            body = r.text or ''
+            return renderResponse(data={
+                'url': url,
+                'status': r.status_code,
+                'elapsed_ms': int((_time.monotonic() - started) * 1000),
+                'bytes': len(body),
+                'server': r.headers.get('server'),
+                'content_type': r.headers.get('content-type'),
+                'body_head': body[:400],
+                # The parser is the real test: a 200 that yields zero cards
+                # means we were served something other than the listing.
+                'cards_parsed': len(parse_rokomari_listing_cards(body, base)) if r.status_code == 200 else 0,
+            }, message='Diagnostic complete')
+        except Exception as e:  # noqa: BLE001 -- reporting the failure IS the point
+            return renderResponse(data={
+                'url': url,
+                'error_type': type(e).__name__,
+                'error': str(e),
+                'elapsed_ms': int((_time.monotonic() - started) * 1000),
+            }, message='Fetch raised', status=200)

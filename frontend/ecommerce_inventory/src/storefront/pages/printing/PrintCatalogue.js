@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Box, Card, CardContent, Grid, Paper, Typography } from '@mui/material';
+import useApi from '../../../hooks/APIHandler';
 import { PRINT_CATEGORIES, PRINT_IMAGES, PRINT_TERMS } from './catalogue';
 
 /**
@@ -16,6 +17,32 @@ import { PRINT_CATEGORIES, PRINT_IMAGES, PRINT_TERMS } from './catalogue';
  * photography.
  */
 export default function PrintCatalogue() {
+    const { callApi } = useApi();
+    const [uploaded, setUploaded] = useState([]);
+
+    // Items the owner has uploaded in the admin take precedence: they are his
+    // own photography, so they can carry real pictures. The static list in
+    // catalogue.js remains the fallback so the page is never empty before he
+    // has uploaded anything.
+    useEffect(() => {
+        let cancelled = false;
+        (async () => {
+            const res = await callApi({ url: 'print/showcase/', rawError: true });
+            if (!cancelled && res?.status === 200) setUploaded(res.data?.data || []);
+        })();
+        return () => { cancelled = true; };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
+    const groups = uploaded.length
+        ? PRINT_CATEGORIES.map((cat) => ({
+            ...cat,
+            items: uploaded
+                .filter((u) => u.category === cat.key)
+                .map((u) => ({ name: u.name, note: u.note, image: u.image })),
+        })).filter((cat) => cat.items.length)
+        : PRINT_CATEGORIES;
+
     return (
         <Box sx={{ mb: 5 }}>
             <Typography variant="h6" fontWeight={700} gutterBottom>
@@ -43,7 +70,7 @@ export default function PrintCatalogue() {
                 </Grid>
             </Paper>
 
-            {PRINT_CATEGORIES.map((cat) => (
+            {groups.map((cat) => (
                 <Box key={cat.key} sx={{ mb: 4 }}>
                     <Typography variant="subtitle1" fontWeight={700}>{cat.title}</Typography>
                     <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
@@ -64,7 +91,9 @@ export default function PrintCatalogue() {
 }
 
 function PrintItemCard({ item }) {
-    const image = PRINT_IMAGES[item.name];
+    // An uploaded item carries its own image; the static list falls back to
+    // the PRINT_IMAGES map, then to a typographic tile.
+    const image = item.image || PRINT_IMAGES[item.name];
     return (
         <Card variant="outlined" sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
             <Box

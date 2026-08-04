@@ -287,3 +287,42 @@ class PrintRosterLine(TimeStamped):
 
     def __str__(self):
         return f"{self.player_name} #{self.number} ({self.size}) x{self.quantity}"
+
+
+class PrintShowcaseItem(TimeStamped):
+    """A garment/product shown on the public Custom Printing page so a client
+    can see what we can print before writing a brief.
+
+    Separate from ``PrintablePreset`` on purpose: a preset is a *sellable*
+    configuration with sizes, colours and a base price that a request can be
+    submitted against, while a showcase item is purely a picture and a name
+    ("we can also do mugs, caps, tote bags"). Conflating them would force the
+    owner to invent sizes and prices for a coffee mug just to show it exists.
+
+    ``image`` is a URL produced by the normal upload endpoint
+    (``POST /api/uploads/`` -> ``core.storage.save_file`` -> a content-addressed
+    ``core.ImageBlob`` served from ``/api/media/<sha>/``), so showcase photos
+    survive Render's ephemeral filesystem like every other image here. Blank is
+    allowed -- the page falls back to a typographic tile.
+    """
+
+    CATEGORY_CHOICES = [
+        ("apparel", "Apparel"),
+        ("headwear-bags", "Headwear & bags"),
+        ("drinkware", "Drinkware"),
+        ("office", "Office & stationery"),
+        ("accessories-tech", "Accessories & tech"),
+    ]
+
+    name = models.CharField(max_length=120)
+    category = models.CharField(max_length=32, choices=CATEGORY_CHOICES, default="apparel")
+    note = models.CharField(max_length=160, blank=True, default="")
+    image = models.URLField(max_length=500, blank=True, default="")
+    is_active = models.BooleanField(default=True)
+    display_order = models.IntegerField(default=0)
+
+    class Meta:
+        ordering = ["display_order", "name"]
+
+    def __str__(self):
+        return self.name

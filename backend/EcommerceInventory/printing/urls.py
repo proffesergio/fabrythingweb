@@ -2,6 +2,9 @@ from django.urls import path
 from rest_framework.routers import DefaultRouter
 
 from printing.views import (
+    AdminPrintShowcaseDetailView,
+    AdminPrintShowcaseListCreateView,
+    PrintShowcaseListView,
     PrintablePresetListView, PrintAreaListView, PrintProofDecisionView, PrintQuoteView,
     PrintReferenceImageUploadView, PrintRequestDetailView, PrintRequestListCreateView,
     PrintRosterLineDetailView, PrintRosterLineListCreateView,
@@ -14,6 +17,9 @@ from printing.views_admin import (
 
 urlpatterns = [
     # Public (no auth): the storefront "Custom Printing" form's option lists + live quote.
+    path("showcase/", PrintShowcaseListView.as_view(), name="print_showcase"),
+    path("admin/showcase/", AdminPrintShowcaseListCreateView.as_view(), name="admin_print_showcase"),
+    path("admin/showcase/<int:pk>/", AdminPrintShowcaseDetailView.as_view(), name="admin_print_showcase_detail"),
     path("presets/", PrintablePresetListView.as_view(), name="print_presets"),
     path("print-areas/", PrintAreaListView.as_view(), name="print_areas"),
     path("quote/", PrintQuoteView.as_view(), name="print_quote"),

@@ -16,8 +16,13 @@ from rest_framework_simplejwt.authentication import JWTAuthentication
 
 from core.helpers import renderResponse
 from core.storage import save_file
-from printing.models import PrintArea, PrintablePreset, PrintProof, PrintRequest, PrintRosterLine
+from printing.permissions import IsPrintStaff
+from printing.models import (
+    PrintArea, PrintablePreset, PrintProof, PrintRequest,
+    PrintRosterLine, PrintShowcaseItem,
+)
 from printing.serializers import (
+    PrintShowcaseItemSerializer,
     PrintablePresetSerializer, PrintAreaSerializer, PrintRequestCreateSerializer,
     PrintRequestDetailSerializer, PrintRequestListSerializer, PrintRosterLineSerializer,
     ProofDecisionSerializer, QuoteRequestSerializer,
@@ -238,3 +243,59 @@ class PrintProofDecisionView(APIView):
 
         print_request.refresh_from_db()
         return renderResponse(data=PrintRequestDetailSerializer(print_request).data, message="Decision recorded")
+
+
+class PrintShowcaseListView(APIView):
+    """GET /api/print/showcase/ -- public. What we can print, for the Custom
+    Printing page. Active items only, in display order."""
+    authentication_classes = []
+    permission_classes = []
+
+    def get(self, request):
+        items = PrintShowcaseItem.objects.filter(is_active=True)
+        return renderResponse(
+            data=PrintShowcaseItemSerializer(items, many=True).data,
+            message="Showcase retrieved")
+
+
+class AdminPrintShowcaseListCreateView(APIView):
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsPrintStaff]
+
+    def get(self, request):
+        items = PrintShowcaseItem.objects.all()
+        return renderResponse(
+            data=PrintShowcaseItemSerializer(items, many=True).data,
+            message="Showcase items retrieved")
+
+    def post(self, request):
+        serializer = PrintShowcaseItemSerializer(data=request.data)
+        if not serializer.is_valid():
+            return renderResponse(data=serializer.errors, message="Validation error", status=400)
+        serializer.save()
+        return renderResponse(data=serializer.data, message="Showcase item created", status=201)
+
+
+class AdminPrintShowcaseDetailView(APIView):
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsPrintStaff]
+
+    def _get(self, pk):
+        return PrintShowcaseItem.objects.filter(pk=pk).first()
+
+    def patch(self, request, pk):
+        item = self._get(pk)
+        if not item:
+            return renderResponse(data=None, message="Not found", status=404)
+        serializer = PrintShowcaseItemSerializer(item, data=request.data, partial=True)
+        if not serializer.is_valid():
+            return renderResponse(data=serializer.errors, message="Validation error", status=400)
+        serializer.save()
+        return renderResponse(data=serializer.data, message="Showcase item updated")
+
+    def delete(self, request, pk):
+        item = self._get(pk)
+        if not item:
+            return renderResponse(data=None, message="Not found", status=404)
+        item.delete()
+        return renderResponse(data=None, message="Showcase item deleted")

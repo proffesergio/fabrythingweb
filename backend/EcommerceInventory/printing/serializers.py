@@ -3,10 +3,17 @@ from decimal import Decimal
 from rest_framework import serializers
 
 from printing.models import (
+    PrintShowcaseItem,
     PrintArea, PrintablePreset, PrintPricingConfig, PrintProof, PrintRequest, PrintRosterLine,
 )
 
 MAX_REFERENCE_IMAGES = 10
+
+
+class PrintShowcaseItemSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = PrintShowcaseItem
+        fields = ["id", "name", "category", "note", "image", "is_active", "display_order"]
 
 
 class PrintAreaSerializer(serializers.ModelSerializer):

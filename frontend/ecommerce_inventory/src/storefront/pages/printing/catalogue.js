@@ -15,7 +15,7 @@ export const PRINT_TERMS = {
     // Straight from Fabrilife's corporate page — the industry norm here. State
     // it up front rather than letting a client submit a 5-piece brief and be
     // disappointed.
-    minimumOrder: '50 pieces when the fabric and colour are already in stock',
+    minimumOrder: '20 pieces (10 for selected items) when the fabric and colour are in stock',
     turnaround: '10–14 days from the approved work order',
     artwork: 'AI or SVG vector files reproduce best. No file? Describe what you want — we design it for you.',
 };
