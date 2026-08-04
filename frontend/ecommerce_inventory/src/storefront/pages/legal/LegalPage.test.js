@@ -54,9 +54,16 @@ test('shipping conditions state the charge is shown before confirming', () => {
     expect(screen.getByText(/always shown before you confirm an order/i)).toBeInTheDocument();
 });
 
-// A published policy carrying an invented company name or licence number is
-// worse than a visible blank — this guards the placeholders until replaced.
-test('unfilled owner placeholders are still visibly marked', () => {
-    renderDoc(TERMS);
-    expect(screen.getAllByText(/\[LEGAL ENTITY NAME\]|\[TRADE LICENCE NO\.\]/).length).toBeGreaterThan(0);
+// The owner has filled in the real entity and licence. This now guards the
+// opposite thing: that no unreplaced placeholder ever ships. Checked against
+// the whole rendered text because JSX splits `{SUPPORT.entity} —
+// {SUPPORT.address}` across several text nodes.
+test('no unfilled placeholder is published', () => {
+    const { container } = renderDoc(TERMS);
+    expect(container.textContent).not.toMatch(/\[[A-Z][A-Z .]+\]/);
+});
+
+test('the terms identify the operating company and its trade licence', () => {
+    const { container } = renderDoc(TERMS);
+    expect(container.textContent).toMatch(/operated by .+ \(trade licence .+\)/);
 });

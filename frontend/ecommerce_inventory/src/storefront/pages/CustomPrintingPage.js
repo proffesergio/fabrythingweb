@@ -7,6 +7,7 @@ import { Add, Delete, Visibility } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import useApi from '../../hooks/APIHandler';
 import { isAuthenticated } from '../../utils/Helper';
+import PrintCatalogue from './printing/PrintCatalogue';
 
 const STATUS_COLORS = {
     SUBMITTED: 'default', IN_DESIGN: 'info', PROOF_READY: 'warning',
@@ -126,6 +127,8 @@ export default function CustomPrintingPage() {
                 Tell us what you need -- a team jersey, a logo tee, anything. Our designer will draw it up
                 and send you a proof to approve before we print.
             </Typography>
+
+            <PrintCatalogue />
 
             <Tabs value={tab} onChange={(_, v) => setTab(v)} sx={{ mb: 3 }}>
                 <Tab label="Submit a Request" />

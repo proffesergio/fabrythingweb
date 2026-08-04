@@ -33,7 +33,7 @@ patching the module attribute since browse and import both need several
 fetches (a listing + N product pages) rather than one.
 """
 import json
-from urllib.parse import quote
+from urllib.parse import quote, urlparse
 
 from django.utils.text import slugify
 
@@ -196,8 +196,33 @@ def _rokomari_listing_url(source, category_path=None, query=None):
     value the site's own search form actually submits) works."""
     base = source.base_url
     if category_path:
-        return base + category_path.strip().lstrip("/")
+        return base + _as_relative_path(category_path, base)
     return base + f"search?term={quote(query)}&search_type=ALL"
+
+
+def _as_relative_path(category_path, base):
+    """Normalise whatever the admin typed into a path relative to ``base``.
+
+    Pasting the full browser URL is the obvious thing to do, and it used to
+    produce ``https://www.rokomari.com/https://www.rokomari.com/product/...``
+    -- a 404 that surfaced to the admin panel as an opaque 502. Accept both an
+    absolute URL on this source's host and a bare path.
+    """
+    value = (category_path or "").strip()
+    if value.startswith(("http://", "https://")):
+        parsed = urlparse(value)
+        base_host = urlparse(base).netloc
+        # Only trust an absolute URL that belongs to this source; anything else
+        # is a mistake (or an attempt to make us fetch a third-party host).
+        if base_host and parsed.netloc and parsed.netloc != base_host:
+            raise ValueError(
+                f"That URL is not on {base_host}. Paste a link from {base_host}, "
+                "or pick a category from the list."
+            )
+        value = parsed.path
+        if parsed.query:
+            value = f"{value}?{parsed.query}"
+    return value.lstrip("/")
 
 
 def _candidate_from_product(url, parsed):

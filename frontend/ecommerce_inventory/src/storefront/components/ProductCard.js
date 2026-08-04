@@ -3,6 +3,7 @@ import { Card, CardMedia, CardContent, Typography, Box, Rating, Button, IconButt
 import { ShoppingCart, FavoriteBorder, Visibility } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import { taka } from '../format';
 
 // `affiliate` is opt-in: pass { goUrl, label } to render an affiliate item
 // through this same card instead of forking a second component (see
@@ -41,7 +42,7 @@ export default function ProductCard({ product, showFlashBadge, affiliate = null 
     const showFreeDelivery = isFreeShippingPromo || shippingFee === 0;
     const shippingText = showFreeDelivery
         ? 'Free delivery'
-        : (shippingFee != null ? `+৳${shippingFee.toLocaleString()} delivery` : null);
+        : (shippingFee != null ? `+${taka(shippingFee)} delivery` : null);
 
     const imageUrl = Array.isArray(product.image) && product.image.length > 0
         ? product.image[0]
@@ -90,19 +91,17 @@ export default function ProductCard({ product, showFlashBadge, affiliate = null 
                         </Box>
                     )}
                     {hasDiscount && (
-                        <motion.div
-                            animate={showFlashBadge ? { scale: [1, 1.08, 1] } : {}}
-                            transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}
-                        >
-                            <Box sx={{
-                                bgcolor: showFlashBadge ? '#ff1744' : 'secondary.main',
-                                color: 'white', px: 1, py: 0.25,
-                                borderRadius: 1, fontSize: '0.75rem', fontWeight: 700,
-                                boxShadow: showFlashBadge ? '0 2px 8px rgba(255,23,68,0.4)' : 'none',
-                            }}>
-                                -{discountPct}%
-                            </Box>
-                        </motion.div>
+                        /* Static by design: the badge used to run an infinite
+                           scale pulse, which drew the eye away from the product
+                           and never stopped. Colour alone carries the emphasis. */
+                        <Box sx={{
+                            bgcolor: showFlashBadge ? '#ff1744' : 'secondary.main',
+                            color: 'white', px: 1, py: 0.25,
+                            borderRadius: 1, fontSize: '0.75rem', fontWeight: 700,
+                            boxShadow: showFlashBadge ? '0 2px 8px rgba(255,23,68,0.4)' : 'none',
+                        }}>
+                            -{discountPct}%
+                        </Box>
                     )}
                     {isNew && !hasDiscount && (
                         <Box sx={{
@@ -216,11 +215,11 @@ export default function ProductCard({ product, showFlashBadge, affiliate = null 
 
                     <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 1, mt: 'auto' }}>
                         <Typography variant="h6" sx={{ fontWeight: 700, fontSize: { xs: '0.95rem', md: '1.1rem' }, color: hasDiscount ? 'secondary.main' : 'text.primary' }}>
-                            ৳{price?.toLocaleString()}
+                            {taka(price)}
                         </Typography>
                         {hasDiscount && (
                             <Typography variant="body2" sx={{ textDecoration: 'line-through', color: 'text.secondary', fontSize: '0.85rem' }}>
-                                ৳{product.initial_selling_price?.toLocaleString()}
+                                {taka(product.initial_selling_price)}
                             </Typography>
                         )}
                     </Box>
