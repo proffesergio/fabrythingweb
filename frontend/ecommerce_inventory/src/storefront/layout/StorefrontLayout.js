@@ -463,8 +463,26 @@ export default function StorefrontLayout({ toggleDarkMode, darkMode }) {
                                 </Grid>
                                 <Grid item xs={6} md={3}>
                                     <Typography variant="subtitle2" fontWeight={700} gutterBottom>Customer Service</Typography>
-                                    {['Shipping & Delivery', 'Returns & Exchanges', 'Size Guide'].map(item => (
-                                        <Typography key={item} variant="body2" sx={{ mb: 0.5, color: 'rgba(255,255,255,0.6)' }}>{item}</Typography>
+                                    {/* These were plain text before — dead labels that looked
+                                        like links. They now point at the real policy pages,
+                                        which the app stores also require to be publicly reachable. */}
+                                    {[
+                                        { label: 'Delivery & Shipping', to: '/shipping' },
+                                        { label: 'Privacy Policy', to: '/privacy' },
+                                        { label: 'Terms of Use', to: '/terms' },
+                                    ].map(item => (
+                                        <Typography
+                                            key={item.to}
+                                            component={Link}
+                                            to={item.to}
+                                            variant="body2"
+                                            sx={{
+                                                display: 'block', mb: 0.5, color: 'rgba(255,255,255,0.6)',
+                                                textDecoration: 'none', '&:hover': { color: '#A5B4FC' },
+                                            }}
+                                        >
+                                            {item.label}
+                                        </Typography>
                                     ))}
                                 </Grid>
                                 <Grid item xs={12} md={3}>
