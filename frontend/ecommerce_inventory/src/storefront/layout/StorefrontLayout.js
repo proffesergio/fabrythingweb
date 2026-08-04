@@ -23,6 +23,8 @@ import BrandLogo from '../../components/BrandLogo';
 import MessengerButton from '../components/MessengerButton';
 import WhatsAppButton from '../../components/WhatsAppButton';
 import ChatWidget from '../components/ChatWidget';
+import { LanguageProvider, useLanguage } from '../i18n/LanguageContext';
+import { LANGUAGES } from '../i18n/strings';
 
 // Highlighted "Food" nav entry pointing at `/food`. Two separate motions, and
 // only two: the icon blinks (opacity) and the background gradient slides
@@ -85,7 +87,32 @@ export function getActiveBottomNavTab(pathname) {
     return false;
 }
 
-export default function StorefrontLayout({ toggleDarkMode, darkMode }) {
+function LanguageSwitcher() {
+    const { lang, setLang } = useLanguage();
+    return (
+        <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center' }}>
+            {LANGUAGES.map((l) => (
+                <Typography
+                    key={l.code}
+                    component="button"
+                    onClick={() => setLang(l.code)}
+                    aria-label={l.label}
+                    aria-pressed={lang === l.code}
+                    variant="caption"
+                    sx={{
+                        border: 'none', background: 'none', cursor: 'pointer', p: 0.5,
+                        fontWeight: lang === l.code ? 800 : 400,
+                        color: lang === l.code ? 'primary.main' : 'text.secondary',
+                    }}
+                >
+                    {l.label}
+                </Typography>
+            ))}
+        </Box>
+    );
+}
+
+function StorefrontLayoutInner({ toggleDarkMode, darkMode }) {
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
     const [searchOpen, setSearchOpen]         = useState(false);
     const [categories, setCategories]         = useState([]);
@@ -356,6 +383,7 @@ export default function StorefrontLayout({ toggleDarkMode, darkMode }) {
                                     mode={darkMode ? 'dark' : 'light'}
                                     height={24}
                                 />
+                                <LanguageSwitcher />
                                 <IconButton size="small" onClick={toggleDarkMode}>
                                     {darkMode ? <LightMode fontSize="small" /> : <DarkMode fontSize="small" />}
                                 </IconButton>
@@ -548,5 +576,15 @@ export default function StorefrontLayout({ toggleDarkMode, darkMode }) {
                 </Box>
             </Box>
         </>
+    );
+}
+
+export default function StorefrontLayout(props) {
+    // Provider wraps the layout so every storefront page (and the switcher
+    // itself) can read the language.
+    return (
+        <LanguageProvider>
+            <StorefrontLayoutInner {...props} />
+        </LanguageProvider>
     );
 }

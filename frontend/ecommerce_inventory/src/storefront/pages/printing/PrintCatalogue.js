@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { Box, Card, CardContent, Grid, Paper, Typography } from '@mui/material';
 import useApi from '../../../hooks/APIHandler';
-import { PRINT_CATEGORIES, PRINT_IMAGES, PRINT_TERMS } from './catalogue';
+import { useT } from '../../i18n/LanguageContext';
+import { PRINT_CATEGORIES, PRINT_IMAGES } from './catalogue';
 
 /**
  * Visual showcase of what we can print, shown above the request form so a
@@ -17,6 +18,7 @@ import { PRINT_CATEGORIES, PRINT_IMAGES, PRINT_TERMS } from './catalogue';
  * photography.
  */
 export default function PrintCatalogue() {
+    const t = useT();
     const { callApi } = useApi();
     const [uploaded, setUploaded] = useState([]);
 
@@ -46,35 +48,34 @@ export default function PrintCatalogue() {
     return (
         <Box sx={{ mb: 5 }}>
             <Typography variant="h6" fontWeight={700} gutterBottom>
-                What we can print for you
+                {t('printing.showcase.title')}
             </Typography>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                Anything below can be branded with your logo, artwork or team details. Pick what you
-                have in mind and describe it in the form — you do not need a design ready.
+                {t('printing.showcase.intro')}
             </Typography>
 
             <Paper variant="outlined" sx={{ p: 2, mb: 3, bgcolor: 'action.hover' }}>
                 <Grid container spacing={2}>
                     <Grid item xs={12} sm={4}>
-                        <Typography variant="caption" color="text.secondary">Minimum order</Typography>
-                        <Typography variant="body2" fontWeight={600}>{PRINT_TERMS.minimumOrder}</Typography>
+                        <Typography variant="caption" color="text.secondary">{t('printing.terms.minimum')}</Typography>
+                        <Typography variant="body2" fontWeight={600}>{t('printing.terms.minimumValue')}</Typography>
                     </Grid>
                     <Grid item xs={12} sm={4}>
-                        <Typography variant="caption" color="text.secondary">Turnaround</Typography>
-                        <Typography variant="body2" fontWeight={600}>{PRINT_TERMS.turnaround}</Typography>
+                        <Typography variant="caption" color="text.secondary">{t('printing.terms.turnaround')}</Typography>
+                        <Typography variant="body2" fontWeight={600}>{t('printing.terms.turnaroundValue')}</Typography>
                     </Grid>
                     <Grid item xs={12} sm={4}>
-                        <Typography variant="caption" color="text.secondary">Artwork</Typography>
-                        <Typography variant="body2" fontWeight={600}>{PRINT_TERMS.artwork}</Typography>
+                        <Typography variant="caption" color="text.secondary">{t('printing.terms.artwork')}</Typography>
+                        <Typography variant="body2" fontWeight={600}>{t('printing.terms.artworkValue')}</Typography>
                     </Grid>
                 </Grid>
             </Paper>
 
             {groups.map((cat) => (
                 <Box key={cat.key} sx={{ mb: 4 }}>
-                    <Typography variant="subtitle1" fontWeight={700}>{cat.title}</Typography>
+                    <Typography variant="subtitle1" fontWeight={700}>{t(`printing.cat.${cat.key}`)}</Typography>
                     <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
-                        {cat.blurb}
+                        {t(`printing.cat.${cat.key}.blurb`)}
                     </Typography>
 
                     <Grid container spacing={2}>

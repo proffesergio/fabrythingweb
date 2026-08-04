@@ -8,6 +8,7 @@ import { useNavigate } from 'react-router-dom';
 import useApi from '../../hooks/APIHandler';
 import { isAuthenticated } from '../../utils/Helper';
 import PrintCatalogue from './printing/PrintCatalogue';
+import { useT } from '../i18n/LanguageContext';
 
 const STATUS_COLORS = {
     SUBMITTED: 'default', IN_DESIGN: 'info', PROOF_READY: 'warning',
@@ -22,6 +23,7 @@ const EMPTY_ROSTER_LINE = { player_name: '', number: '', size: '', quantity: 1 }
 // own request history. This is NOT an upload-and-print tool -- the optional
 // reference image is just a hint for the owner, not the final artwork.
 export default function CustomPrintingPage() {
+    const t = useT();
     const [tab, setTab] = useState(0);
     const { callApi, loading } = useApi();
     const navigate = useNavigate();
@@ -122,17 +124,16 @@ export default function CustomPrintingPage() {
 
     return (
         <Container maxWidth="lg" sx={{ py: 3 }}>
-            <Typography variant="h4" sx={{ mb: 1 }}>Custom Printing</Typography>
+            <Typography variant="h4" sx={{ mb: 1 }}>{t('printing.title')}</Typography>
             <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
-                Tell us what you need -- a team jersey, a logo tee, anything. Our designer will draw it up
-                and send you a proof to approve before we print.
+                {t('printing.intro')}
             </Typography>
 
             <PrintCatalogue />
 
             <Tabs value={tab} onChange={(_, v) => setTab(v)} sx={{ mb: 3 }}>
-                <Tab label="Submit a Request" />
-                <Tab label="My Requests" />
+                <Tab label={t('printing.tab.submit')} />
+                <Tab label={t('printing.tab.mine')} />
             </Tabs>
 
             {tab === 0 && (
