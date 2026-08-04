@@ -433,3 +433,37 @@ class RokomariImportFlowTests(TestCase):
         # discount_price=current(554), same convention as every other adapter.
         self.assertEqual(product.base_price, 590.0)
         self.assertIsNotNone(product.discount_price)
+
+
+class RokomariCategoryPathNormalisationTests(TestCase):
+    """Pasting the full browser URL is the obvious thing an admin does, and it
+    used to build `https://www.rokomari.com/https://www.rokomari.com/...` --
+    a 404 that reached the admin panel as an opaque 502."""
+
+    def _url(self, category_path):
+        from catalog.models import ImportSource
+        from catalog.services_scrape_import import _rokomari_listing_url
+        return _rokomari_listing_url(ImportSource.objects.get(slug="rokomari"), category_path=category_path)
+
+    def test_a_pasted_absolute_url_is_normalised(self):
+        self.assertEqual(
+            self._url("https://www.rokomari.com/product/category/2355/beauty-health"),
+            "https://www.rokomari.com/product/category/2355/beauty-health",
+        )
+
+    def test_a_bare_path_still_works(self):
+        self.assertEqual(
+            self._url("product/category/2355/beauty-health"),
+            "https://www.rokomari.com/product/category/2355/beauty-health",
+        )
+
+    def test_a_leading_slash_is_tolerated(self):
+        self.assertEqual(
+            self._url("/product/category/2355/beauty-health"),
+            "https://www.rokomari.com/product/category/2355/beauty-health",
+        )
+
+    def test_a_url_on_another_host_is_refused(self):
+        # Never let a pasted link make us fetch a third-party host.
+        with self.assertRaises(ValueError):
+            self._url("https://evil.example.com/product/category/1/x")

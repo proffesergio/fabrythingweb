@@ -7,6 +7,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
 import { selectCartItems, selectCartTotal, removeFromCart, updateQuantity, clearCart } from '../../redux/reducer/cartSlice';
 import useApi from '../../hooks/APIHandler';
+import { taka } from '../format';
 
 export default function CartPage() {
     const items = useSelector(selectCartItems);
@@ -99,7 +100,7 @@ export default function CartPage() {
                                 </Grid>
                                 <Grid item xs={4} sm={2}>
                                     <Typography variant="subtitle2" fontWeight={700}>
-                                        ৳{(item.price * item.quantity).toLocaleString()}
+                                        {taka(item.price * item.quantity)}
                                     </Typography>
                                 </Grid>
                                 <Grid item xs={2} sm={1}>
@@ -123,7 +124,7 @@ export default function CartPage() {
                         <Divider sx={{ mb: 2 }} />
                         <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
                             <Typography color="text.secondary">Subtotal</Typography>
-                            <Typography fontWeight={600}>৳{subtotal.toLocaleString()}</Typography>
+                            <Typography fontWeight={600}>{taka(subtotal)}</Typography>
                         </Box>
                         <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
                             <Typography color="text.secondary">Delivery</Typography>
@@ -134,7 +135,7 @@ export default function CartPage() {
                         <Divider sx={{ my: 2 }} />
                         <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3 }}>
                             <Typography variant="h6">Total</Typography>
-                            <Typography variant="h6" fontWeight={800}>৳{total.toLocaleString()}</Typography>
+                            <Typography variant="h6" fontWeight={800}>{taka(total)}</Typography>
                         </Box>
                         <Button
                             variant="contained"

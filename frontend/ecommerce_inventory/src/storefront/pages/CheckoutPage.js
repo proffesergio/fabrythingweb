@@ -15,6 +15,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { selectCartItems, selectCartTotal, clearCart } from '../../redux/reducer/cartSlice';
 import { isAuthenticated } from '../../utils/Helper';
 import useApi from '../../hooks/APIHandler';
+import { taka } from '../format';
 
 const STEPS = ['Delivery Details', 'Review & Confirm', 'Done'];
 
@@ -161,7 +162,7 @@ export default function CheckoutPage() {
         }
     };
 
-    const money = (n) => `৳${Number(n).toLocaleString()}`;
+    const money = (n) => taka(n);
     const goAuth = (mode) => navigate(`/auth/${mode}?redirect=/checkout`);
 
     // ── Confirmation ──

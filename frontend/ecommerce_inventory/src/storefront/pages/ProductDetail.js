@@ -10,6 +10,7 @@ import { useDispatch } from 'react-redux';
 import { addToCart } from '../../redux/reducer/cartSlice';
 import useApi from '../../hooks/APIHandler';
 import ProductCard from '../components/ProductCard';
+import { taka } from '../format';
 
 export default function ProductDetail() {
     const { slug } = useParams();
@@ -232,12 +233,12 @@ export default function ProductDetail() {
                             variant="h4"
                             sx={{ fontWeight: 800, fontSize: { xs: '1.6rem', md: '2rem' }, color: hasDiscount ? 'secondary.main' : 'text.primary' }}
                         >
-                            ৳{price?.toLocaleString()}
+                            {taka(price)}
                         </Typography>
                         {hasDiscount && (
                             <>
                                 <Typography variant="h6" sx={{ textDecoration: 'line-through', color: 'text.secondary' }}>
-                                    ৳{product.initial_selling_price?.toLocaleString()}
+                                    {taka(product.initial_selling_price)}
                                 </Typography>
                                 <Chip label={`-${product.discount_percentage}%`} color="secondary" size="small" />
                             </>
@@ -256,7 +257,7 @@ export default function ProductDetail() {
                         }}>
                             <LocalShipping fontSize="small" />
                             <Typography variant="body2" fontWeight={600}>
-                                {freeDelivery ? 'Free delivery' : `Delivery: ৳${shippingFee.toLocaleString()}`}
+                                {freeDelivery ? 'Free delivery' : `Delivery: ${taka(shippingFee)}`}
                             </Typography>
                         </Box>
                     )}
@@ -343,7 +344,7 @@ export default function ProductDetail() {
                         onClick={handleAddToCart}
                         sx={{ py: 1.5, mb: 2, fontSize: '1.1rem' }}
                     >
-                        {inStock ? `Add to Cart - ৳${(price * quantity)?.toLocaleString()}` : 'Out of Stock'}
+                        {inStock ? `Add to Cart - ${taka(price * quantity)}` : 'Out of Stock'}
                     </Button>
 
                     {/* Description */}
