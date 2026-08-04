@@ -32,7 +32,7 @@ from catalog.services_scrape_import import (
 )
 from core.helpers import renderResponse
 
-from .models import AffiliateProduct
+from .models import AffiliateConfig, AffiliateProduct
 from .permissions import IsPlatformStaff
 from .serializers_affiliate import AffiliateProductAdminSerializer, AffiliateProductPublicSerializer
 from .services_affiliate import UnsupportedProgramError, build_affiliate_link, extract_rokomari_product_id
@@ -322,6 +322,62 @@ class AffiliateClickRedirectView(APIView):
         return HttpResponseRedirect(target)
 
 
+class AdminAffiliateParseUrlView(APIView):
+    """POST /api/store/admin/affiliate/parse-url/  body: {"url": "..."}
+
+    Pure parsing, NO network fetch -- which is the whole point. rokomari.com
+    sits behind Cloudflare bot protection that answers this server's IP with a
+    403 "Just a moment..." interstitial, so the browse/import path cannot work
+    from here. Building the affiliate link, though, only needs the numeric
+    productId out of the URL, and that is pure string work.
+
+    So the owner pastes a product URL from his own browser (where the site
+    loads fine), we hand back the productId and a preview of the outbound link,
+    and he fills in title/price/image. Slower than scraping, but it works today
+    and does not fight anyone's bot protection.
+    """
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsPlatformStaff]
+
+    def post(self, request):
+        url = (request.data.get('url') or '').strip()
+        if not url:
+            return renderResponse(
+                data={'url': ['Paste a Rokomari product URL.']},
+                message='Validation error', status=400)
+
+        remote_id = extract_rokomari_product_id(url)
+        if not remote_id:
+            return renderResponse(
+                data={'url': [
+                    "That doesn't look like a Rokomari product page. It should "
+                    "look like https://www.rokomari.com/product/531074/..."
+                ]},
+                message='Validation error', status=400)
+
+        cfg = AffiliateConfig.get_solo()
+        preview = {
+            'cart': _preview_link(cfg, remote_id, 'CART'),
+            'product': _preview_link(cfg, remote_id, 'PRODUCT'),
+        }
+        return renderResponse(
+            data={'remote_product_id': remote_id, 'source_url': url, 'links': preview},
+            message='URL parsed')
+
+
+def _preview_link(cfg, remote_id, link_type):
+    """Build the outbound URL without needing a saved AffiliateProduct row --
+    the admin wants to see the link before committing the record."""
+    stub = AffiliateProduct(
+        program='rokomari', remote_product_id=remote_id,
+        source_url='', link_type=link_type, manual_short_link='',
+    )
+    try:
+        return build_affiliate_link(stub)
+    except UnsupportedProgramError as e:
+        return str(e)
+
+
 class AdminAffiliateDiagnosticView(APIView):
     """GET /api/store/admin/affiliate/diagnose/?path=product/category/2355/beauty-health
 
@@ -347,8 +403,15 @@ class AdminAffiliateDiagnosticView(APIView):
 
         source = ImportSource.objects.filter(slug=ROKOMARI_SOURCE_SLUG).first()
         base = (source.base_url if source else 'https://www.rokomari.com/')
-        path = request.query_params.get('path') or 'product/category/2355/beauty-health'
-        url = base + path.lstrip('/')
+        # `url=` tests an arbitrary address (e.g. the image CDN on a different
+        # host, which may not sit behind the same bot protection as the site);
+        # `path=` stays relative to the source's own base.
+        explicit = request.query_params.get('url')
+        if explicit:
+            url = explicit
+        else:
+            path = request.query_params.get('path') or 'product/category/2355/beauty-health'
+            url = base + path.lstrip('/')
 
         started = _time.monotonic()
         try:

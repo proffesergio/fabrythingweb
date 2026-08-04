@@ -461,3 +461,45 @@ class AffiliateAdminSearchAndBulkAddTests(TestCase):
         ]}
         res = self.client.post("/api/store/admin/affiliate/bulk-add/", payload, format="json")
         self.assertEqual(res.status_code, 400)
+
+
+class AffiliateParseUrlTests(TestCase):
+    """rokomari.com sits behind Cloudflare bot protection that 403s this
+    server, so browse/import cannot work from production. Building the
+    affiliate link needs only the productId from the URL — pure string work,
+    no fetch — which is what makes manual entry viable."""
+
+    def setUp(self):
+        self.client = APIClient()
+        self.admin = Users.objects.create_user(
+            username="pstaff", email="pstaff@x.com", password="x",
+            role="Admin", country="Bangladesh")
+
+    def _post(self, url):
+        auth(self.client, self.admin)
+        return self.client.post("/api/store/admin/affiliate/parse-url/", {"url": url}, format="json")
+
+    def test_extracts_product_id_and_previews_both_link_types(self):
+        res = self._post("https://www.rokomari.com/product/531074/skin-o-care-sunscreen")
+        self.assertEqual(res.status_code, 200, res.content)
+        data = res.data["data"]
+        self.assertEqual(data["remote_product_id"], "531074")
+        self.assertIn("531074", data["links"]["cart"])
+        self.assertIn("531074", data["links"]["product"])
+        # The affiliate identifiers must ride on every constructed link, or the
+        # click earns no commission.
+        self.assertIn("affId=", data["links"]["cart"])
+
+    def test_a_non_product_url_is_rejected_with_a_useful_message(self):
+        res = self._post("https://www.rokomari.com/product/category/3222/makeup")
+        self.assertEqual(res.status_code, 400)
+        self.assertIn("url", res.data["field_errors"])
+
+    def test_requires_staff(self):
+        customer = Users.objects.create_user(
+            username="cust_p", email="cust_p@x.com", password="x",
+            role="Customer", country="Bangladesh")
+        auth(self.client, customer)
+        res = self.client.post("/api/store/admin/affiliate/parse-url/",
+                               {"url": "https://www.rokomari.com/product/1/x"}, format="json")
+        self.assertEqual(res.status_code, 403)
