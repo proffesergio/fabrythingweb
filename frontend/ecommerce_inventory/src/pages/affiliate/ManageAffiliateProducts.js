@@ -30,6 +30,18 @@ const firstFieldError = (fieldErrors) => Object.values(fieldErrors || {})[0]?.[0
 
 const BULK_ADD_CAP = 12;
 
+// Manual entry is the path that actually works. rokomari.com answers this
+// server's IP with a Cloudflare challenge, so Search & Add above fails in
+// production no matter how the request is shaped — the owner pastes a URL
+// from his own browser instead, and we do pure string parsing on it.
+const EMPTY_MANUAL_FORM = {
+    url: "", remote_product_id: "", links: null,
+    title: "", brand: "", image: "", original_price: "", current_price: "",
+    link_type: "CART", manual_short_link: "",
+    show_in_sidebar: true, show_on_deals_page: true,
+    show_in_category_grid: false, grid_category_ids: [], is_active: true,
+};
+
 const EMPTY_EDIT_FORM = {
     id: null,
     title: "", brand: "", image: "", original_price: "", current_price: "",
@@ -76,6 +88,10 @@ export default function ManageAffiliateProducts() {
     // production, but link-building needs only the productId from a URL the
     // owner pastes from his own browser. No fetch involved.
     const [manual, setManual] = useState(null);
+    const [manualErrors, setManualErrors] = useState({});
+    const [looking, setLooking] = useState(false);
+    const [creating, setCreating] = useState(false);
+    const [uploading, setUploading] = useState(false);
     const [selected, setSelected] = useState(new Set());
     const [addingLinkType, setAddingLinkType] = useState("CART");
     const [adding, setAdding] = useState(false);
@@ -133,6 +149,94 @@ export default function ManageAffiliateProducts() {
             loadProducts();
         } else {
             toast.error(firstFieldError(res?.data?.field_errors) || res?.data?.message || "Bulk-add failed");
+        }
+    };
+
+    // ---- Manual entry ----
+
+    // Pure server-side string parsing: hands back the numeric productId and a
+    // preview of the outbound link. No fetch of rokomari.com happens, which is
+    // exactly why this path works where Search & Add cannot.
+    const lookUpUrl = async () => {
+        setManualErrors({});
+        setLooking(true);
+        const res = await callApi({
+            url: "store/admin/partner-picks/parse-url/", method: "POST",
+            body: { url: manual.url }, rawError: true,
+        });
+        setLooking(false);
+        if (res?.status === 200) {
+            const data = res.data.data || {};
+            setManual((m) => ({
+                ...m,
+                remote_product_id: data.remote_product_id || "",
+                links: data.links || null,
+                // Only prefill the source URL; title/price/image cannot be
+                // known without fetching the page, so the owner types them.
+                url: data.source_url || m.url,
+            }));
+        } else {
+            setManualErrors(res?.data?.field_errors || res?.data?.data || {});
+            toast.error(res?.data?.message || "Could not read that URL");
+        }
+    };
+
+    const uploadManualImage = async (file) => {
+        if (!file) return;
+        setUploading(true);
+        const body = new FormData();
+        body.append("image", file);
+        const res = await callApi({
+            url: "uploads/", method: "POST", body,
+            header: { "Content-Type": "multipart/form-data" }, rawError: true, silent: true,
+        });
+        setUploading(false);
+        const url = res?.data?.urls?.[0];
+        if (url) setManual((m) => ({ ...m, image: url }));
+        else toast.error("Upload failed — try again");
+    };
+
+    const createManual = async () => {
+        // remote_product_id is what every constructed link is built from, so a
+        // row without one can only ever produce a dead link. Look up first.
+        if (!manual.remote_product_id) {
+            setManualErrors({ url: ["Paste the product URL and press Look up first."] });
+            return;
+        }
+        if (!manual.title.trim()) {
+            setManualErrors({ title: ["Give the product a title."] });
+            return;
+        }
+        setManualErrors({});
+        setCreating(true);
+        const res = await callApi({
+            url: "store/admin/partner-picks/", method: "POST", rawError: true,
+            body: {
+                program: "rokomari",
+                remote_product_id: manual.remote_product_id,
+                source_url: manual.url,
+                title: manual.title, brand: manual.brand, image: manual.image,
+                original_price: manual.original_price || null,
+                current_price: manual.current_price || null,
+                link_type: manual.link_type,
+                manual_short_link: manual.manual_short_link,
+                is_active: manual.is_active,
+                show_in_sidebar: manual.show_in_sidebar,
+                show_on_deals_page: manual.show_on_deals_page,
+                show_in_category_grid: manual.show_in_category_grid,
+                grid_category_ids: manual.grid_category_ids,
+            },
+        });
+        setCreating(false);
+        if (res?.status === 200 || res?.status === 201) {
+            toast.success("Affiliate product added");
+            setManual(null);
+            loadProducts();
+        } else if (res?.data?.field_errors) {
+            setManualErrors(res.data.field_errors);
+            toast.error("Please fix the highlighted fields");
+        } else {
+            toast.error(res?.data?.message || "Could not add the product");
         }
     };
 
@@ -277,8 +381,7 @@ export default function ManageAffiliateProducts() {
                         </Grid>
                         <Button
                             size="small" sx={{ mt: 1 }}
-                            onClick={() => setManual({ url: "", title: "", brand: "", image: "",
-                                original_price: "", current_price: "", link_type: "CART", parsed: null, error: "" })}
+                            onClick={() => { setManual({ ...EMPTY_MANUAL_FORM }); setManualErrors({}); }}
                         >
                             Add a product manually
                         </Button>
@@ -498,6 +601,142 @@ export default function ManageAffiliateProducts() {
                 </Box>
             )}
 
+            <Dialog open={!!manual} onClose={() => setManual(null)} maxWidth="sm" fullWidth>
+                <DialogTitle>Add a Rokomari product manually</DialogTitle>
+                <DialogContent>
+                    {manual && (
+                        <Stack spacing={2} sx={{ mt: 1 }}>
+                            <Alert severity="info">
+                                Rokomari blocks our server from reading its pages, so the title,
+                                price and image cannot be fetched automatically — paste them in
+                                below. Only the product id is read from the URL.
+                            </Alert>
+                            <Stack direction="row" spacing={1} alignItems="flex-start">
+                                <TextField
+                                    label="Rokomari product URL" fullWidth value={manual.url}
+                                    onChange={(e) => setManual((m) => ({ ...m, url: e.target.value }))}
+                                    placeholder="https://www.rokomari.com/product/531074/…"
+                                    error={!!manualErrors.url} helperText={manualErrors.url?.[0]}
+                                />
+                                <Button
+                                    variant="outlined" sx={{ mt: 1 }} disabled={looking || !manual.url.trim()}
+                                    onClick={lookUpUrl}
+                                >
+                                    {looking ? <CircularProgress size={20} /> : "Look up"}
+                                </Button>
+                            </Stack>
+
+                            {manual.remote_product_id && (
+                                <Alert severity="success">
+                                    <Typography variant="body2">
+                                        Product id <strong>{manual.remote_product_id}</strong>
+                                    </Typography>
+                                    {manual.links && (
+                                        <Typography variant="caption" sx={{ wordBreak: "break-all" }}>
+                                            Link it will use: {manual.links[manual.link_type === "CART" ? "cart" : "product"]}
+                                        </Typography>
+                                    )}
+                                </Alert>
+                            )}
+
+                            <TextField
+                                label="Title" fullWidth value={manual.title}
+                                onChange={(e) => setManual((m) => ({ ...m, title: e.target.value }))}
+                                error={!!manualErrors.title} helperText={manualErrors.title?.[0]}
+                            />
+                            <TextField
+                                label="Brand" fullWidth value={manual.brand}
+                                onChange={(e) => setManual((m) => ({ ...m, brand: e.target.value }))}
+                            />
+                            <Stack direction="row" spacing={2}>
+                                <TextField
+                                    label="Original price" fullWidth value={manual.original_price}
+                                    onChange={(e) => setManual((m) => ({ ...m, original_price: e.target.value }))}
+                                />
+                                <TextField
+                                    label="Current price" fullWidth value={manual.current_price}
+                                    onChange={(e) => setManual((m) => ({ ...m, current_price: e.target.value }))}
+                                />
+                            </Stack>
+
+                            <Stack direction="row" spacing={1} alignItems="center">
+                                <TextField
+                                    label="Image URL" fullWidth value={manual.image}
+                                    onChange={(e) => setManual((m) => ({ ...m, image: e.target.value }))}
+                                    placeholder="Right-click the product photo on Rokomari → Copy image address"
+                                />
+                                <Button component="label" variant="outlined" disabled={uploading} sx={{ mt: 1 }}>
+                                    {uploading ? <CircularProgress size={20} /> : "Upload"}
+                                    <input hidden type="file" accept="image/*"
+                                        onChange={(e) => uploadManualImage(e.target.files?.[0])} />
+                                </Button>
+                            </Stack>
+                            {manual.image && (
+                                <Avatar variant="rounded" src={manual.image} sx={{ width: 72, height: 72 }} />
+                            )}
+
+                            <TextField
+                                select label="Link type" fullWidth value={manual.link_type}
+                                onChange={(e) => setManual((m) => ({ ...m, link_type: e.target.value }))}
+                            >
+                                <MenuItem value="CART">Cart link (quick-cart)</MenuItem>
+                                <MenuItem value="PRODUCT">Product page link</MenuItem>
+                            </TextField>
+                            <TextField
+                                label="Affiliate short link (optional — overrides the constructed URL)"
+                                fullWidth value={manual.manual_short_link}
+                                onChange={(e) => setManual((m) => ({ ...m, manual_short_link: e.target.value }))}
+                                placeholder="https://rkmri.co/…"
+                                helperText="Paste the link generated in your Rokomari affiliate dashboard. Safest option: it is the exact link Rokomari attributes to you."
+                            />
+
+                            <Divider />
+                            <Typography variant="subtitle2">Placement</Typography>
+                            <Stack direction="row" spacing={2} flexWrap="wrap">
+                                <FormControlLabel
+                                    control={<Switch checked={!!manual.show_in_sidebar}
+                                        onChange={(e) => setManual((m) => ({ ...m, show_in_sidebar: e.target.checked }))} />}
+                                    label="Sidebar / section widget"
+                                />
+                                <FormControlLabel
+                                    control={<Switch checked={!!manual.show_on_deals_page}
+                                        onChange={(e) => setManual((m) => ({ ...m, show_on_deals_page: e.target.checked }))} />}
+                                    label="Deals page"
+                                />
+                                <FormControlLabel
+                                    control={<Switch checked={!!manual.show_in_category_grid}
+                                        onChange={(e) => setManual((m) => ({ ...m, show_in_category_grid: e.target.checked }))} />}
+                                    label="Category grid"
+                                />
+                            </Stack>
+                            <Autocomplete
+                                multiple
+                                disabled={!manual.show_in_category_grid}
+                                options={flatOurCategories}
+                                getOptionLabel={(c) => c.name}
+                                isOptionEqualToValue={(a, b) => a.id === b.id}
+                                value={flatOurCategories.filter((c) => manual.grid_category_ids.includes(c.id))}
+                                onChange={(_, values) => setManual((m) => ({ ...m, grid_category_ids: values.map((v) => v.id) }))}
+                                renderInput={(params) => (
+                                    <TextField {...params} label="Which categories to inject into" placeholder="Choose categories…" />
+                                )}
+                            />
+                            <FormControlLabel
+                                control={<Switch checked={!!manual.is_active}
+                                    onChange={(e) => setManual((m) => ({ ...m, is_active: e.target.checked }))} />}
+                                label="Active"
+                            />
+                        </Stack>
+                    )}
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={() => setManual(null)}>Cancel</Button>
+                    <Button variant="contained" disabled={creating} onClick={createManual}>
+                        {creating ? <CircularProgress size={20} /> : "Add product"}
+                    </Button>
+                </DialogActions>
+            </Dialog>
+
             <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} maxWidth="sm" fullWidth>
                 <DialogTitle>Edit Affiliate Product</DialogTitle>
                 <DialogContent>
@@ -521,6 +760,37 @@ export default function ManageAffiliateProducts() {
                                 onChange={(e) => setForm({ ...form, current_price: e.target.value })}
                             />
                         </Stack>
+                        {/* Without this the card renders a blank tile: nothing
+                            else in the admin can set an affiliate image. */}
+                        <Stack direction="row" spacing={1} alignItems="center">
+                            <TextField
+                                label="Image URL" fullWidth value={form.image}
+                                onChange={(e) => setForm({ ...form, image: e.target.value })}
+                            />
+                            <Button component="label" variant="outlined" disabled={uploading} sx={{ mt: 1 }}>
+                                {uploading ? <CircularProgress size={20} /> : "Upload"}
+                                <input hidden type="file" accept="image/*"
+                                    onChange={async (e) => {
+                                        const file = e.target.files?.[0];
+                                        if (!file) return;
+                                        setUploading(true);
+                                        const body = new FormData();
+                                        body.append("image", file);
+                                        const res = await callApi({
+                                            url: "uploads/", method: "POST", body,
+                                            header: { "Content-Type": "multipart/form-data" },
+                                            rawError: true, silent: true,
+                                        });
+                                        setUploading(false);
+                                        const url = res?.data?.urls?.[0];
+                                        if (url) setForm((f) => ({ ...f, image: url }));
+                                        else toast.error("Upload failed — try again");
+                                    }} />
+                            </Button>
+                        </Stack>
+                        {form.image && (
+                            <Avatar variant="rounded" src={form.image} sx={{ width: 72, height: 72 }} />
+                        )}
                         <TextField
                             label="Commission amount (optional)" fullWidth value={form.commission_amount}
                             onChange={(e) => setForm({ ...form, commission_amount: e.target.value })}

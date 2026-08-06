@@ -34,6 +34,22 @@ jest.mock('../../hooks/APIHandler', () => () => ({
         if (opts.url === 'products/categories/') {
             return { status: 200, data: { data: { data: categoryTree } } };
         }
+        if (opts.url === 'store/admin/partner-picks/parse-url/') {
+            // Mirrors AdminAffiliateParseUrlView: pure parsing, no fetch.
+            return {
+                status: 200,
+                data: {
+                    data: {
+                        remote_product_id: '531074',
+                        source_url: opts.body.url,
+                        links: {
+                            cart: 'https://www.rokomari.com/cart?productId=531074&affId=Ma8A710222i0iRo',
+                            product: 'https://www.rokomari.com/product/531074/?affId=Ma8A710222i0iRo',
+                        },
+                    },
+                },
+            };
+        }
         if (opts.url === 'store/admin/partner-picks/search/') return mockSearchResult;
         if (opts.url === 'store/admin/partner-picks/bulk-add/') return mockBulkAddResult;
         if (opts.url === 'store/admin/partner-picks/' && (opts.method === undefined || opts.method === 'GET')) {
@@ -110,4 +126,106 @@ test('editing a product opens the dialog with its manual_short_link field', asyn
     fireEvent.click(screen.getByLabelText('Edit'));
     expect(await screen.findByText('Edit Affiliate Product')).toBeInTheDocument();
     expect(screen.getByDisplayValue('Perfume A')).toBeInTheDocument();
+});
+
+// --- Manual entry -------------------------------------------------------
+//
+// Rokomari sits behind Cloudflare, so the server cannot fetch a product page
+// and the search/bulk-add path fails in production. Manual entry is therefore
+// the ONLY working way to get a product live. The backend half (parse-url +
+// create) shipped and was tested; the button that should drive it set state
+// nothing rendered, so it did nothing at all — these pin the wiring.
+
+const openManual = () => {
+    fireEvent.click(screen.getByText('Add a product manually'));
+};
+
+test('the manual entry button actually opens a form', async () => {
+    render(<ManageAffiliateProducts />);
+    openManual();
+
+    await waitFor(() =>
+        expect(screen.getByLabelText(/Rokomari product URL/i)).toBeInTheDocument());
+});
+
+test('looking up a pasted URL calls parse-url and shows the product id', async () => {
+    render(<ManageAffiliateProducts />);
+    openManual();
+
+    fireEvent.change(await screen.findByLabelText(/Rokomari product URL/i), {
+        target: { value: 'https://www.rokomari.com/product/531074/perfume-a' },
+    });
+    fireEvent.click(screen.getByText('Look up'));
+
+    await waitFor(() => {
+        const call = mockCalls.find((c) => c.url === 'store/admin/partner-picks/parse-url/');
+        expect(call).toBeTruthy();
+        expect(call.body.url).toContain('531074');
+    });
+    // Exact match: the id also appears inside the link preview, so a regex
+    // would match two nodes.
+    expect(await screen.findByText('531074')).toBeInTheDocument();
+});
+
+test('creating posts every field the owner filled in, including the short link', async () => {
+    render(<ManageAffiliateProducts />);
+    openManual();
+
+    fireEvent.change(await screen.findByLabelText(/Rokomari product URL/i), {
+        target: { value: 'https://www.rokomari.com/product/531074/perfume-a' },
+    });
+    fireEvent.click(screen.getByText('Look up'));
+    // Wait for the parsed id to actually render, not merely for the request to
+    // have been issued — the form is only complete once the id is in state.
+    expect(await screen.findByText('531074')).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText('Title'), { target: { value: 'Perfume A' } });
+    fireEvent.change(screen.getByLabelText(/Image URL/i), {
+        target: { value: 'https://img.example/p.jpg' },
+    });
+    fireEvent.change(screen.getByLabelText(/short link/i), {
+        target: { value: 'https://rkmri.co/R5MEpp0p0IEI/' },
+    });
+    fireEvent.click(screen.getByText('Add product'));
+
+    await waitFor(() => {
+        const post = mockCalls.find(
+            (c) => c.url === 'store/admin/partner-picks/' && c.method === 'POST');
+        expect(post).toBeTruthy();
+        expect(post.body.remote_product_id).toBe('531074');
+        expect(post.body.title).toBe('Perfume A');
+        expect(post.body.image).toBe('https://img.example/p.jpg');
+        // The money field: a pasted rkmri.co link overrides the constructed
+        // URL, and it is what actually earns commission.
+        expect(post.body.manual_short_link).toBe('https://rkmri.co/R5MEpp0p0IEI/');
+    });
+});
+
+test('creating is blocked until the URL has been looked up', async () => {
+    render(<ManageAffiliateProducts />);
+    openManual();
+
+    fireEvent.change(screen.getByLabelText('Title'), { target: { value: 'No id yet' } });
+    fireEvent.click(screen.getByText('Add product'));
+
+    await waitFor(() => {
+        expect(mockCalls.some(
+            (c) => c.url === 'store/admin/partner-picks/' && c.method === 'POST')).toBe(false);
+    });
+});
+
+test('the edit dialog can set a product image', async () => {
+    render(<ManageAffiliateProducts />);
+    fireEvent.click(screen.getByText('Manage'));
+    fireEvent.click(await screen.findByLabelText('Edit'));
+
+    fireEvent.change(await screen.findByLabelText(/Image URL/i), {
+        target: { value: 'https://img.example/edited.jpg' },
+    });
+    fireEvent.click(screen.getByText('Save'));
+
+    await waitFor(() => {
+        const patch = mockCalls.find((c) => c.method === 'PATCH');
+        expect(patch.body.image).toBe('https://img.example/edited.jpg');
+    });
 });
