@@ -89,6 +89,24 @@ if [ -n "$PURGE_DEMO_CATALOG" ]; then
   fi
 fi
 
+# One-off: clear random-stock-photo placeholder images off CATEGORY rows (the
+# products were handled by PURGE_DEMO_CATALOG above; three categories still
+# serve loremflickr tiles). Only ever blanks an image field — no row is deleted
+# and no real photo is touched — but it is still a write to live data, so it
+# follows the same two-stage pattern as the purges above:
+#   1. set CLEAR_PLACEHOLDER_MEDIA=report -> deploy, read the list in the log
+#   2. set CLEAR_PLACEHOLDER_MEDIA=apply  -> deploy again to clear them
+#   3. REMOVE the variable.
+# Idempotent: once cleared there is nothing left to match, so a forgotten
+# variable changes nothing on later deploys.
+if [ -n "$CLEAR_PLACEHOLDER_MEDIA" ]; then
+  echo "CLEAR_PLACEHOLDER_MEDIA=$CLEAR_PLACEHOLDER_MEDIA — placeholder category imagery:"
+  python manage.py clear_placeholder_media            # always print the dry run first
+  if [ "$CLEAR_PLACEHOLDER_MEDIA" = "apply" ]; then
+    python manage.py clear_placeholder_media --apply || echo "WARNING: clear_placeholder_media failed (non-fatal)"
+  fi
+fi
+
 # Delivery geography: the 13 Bancharampur unions + their villages. Runs on every
 # deploy but is CREATE-ONLY — it adds anything missing and never overwrites a
 # zone/village the admin has edited (see seed_bancharampur --force-update, and
