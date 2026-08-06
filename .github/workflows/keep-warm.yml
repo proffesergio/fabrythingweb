@@ -1,0 +1,54 @@
+# Keep the Render free-tier API awake during shopping hours.
+#
+# Render's free plan spins a web service down after ~15 minutes with no
+# traffic. The next request then pays a full Django + gunicorn cold boot
+# (~50s), and while that happens Render's edge answers from outside the
+# application — so the response carries no CORS headers, the browser blocks
+# it, and the storefront sees a request that produced no response at all.
+# That is the "Couldn't reach the server" state in hooks/APIHandler.js: a
+# real customer meets it as a shop that appears broken on first click.
+#
+# THIS IS A STOPGAP, NOT A FIX. It narrows the window; it cannot close it —
+# a schedule can be late, GitHub disables cron on repos with no activity for
+# 60 days, and any gap longer than the spin-down still lets the service
+# sleep. The actual fix for a shop taking money is a paid Render instance
+# that never sleeps. Delete this workflow the day that happens.
+name: keep-warm
+
+on:
+  schedule:
+    # Every 10 minutes, 03:00–19:00 UTC = 09:00–01:00 Bangladesh time, which
+    # covers the hours customers actually shop. Deliberately NOT every 10
+    # minutes around the clock: that is ~4300 runs a month against a 2000
+    # minute free budget, and nobody is browsing at 4am local.
+    - cron: "*/10 3-19 * * *"
+  # So the schedule can be verified without waiting for the next tick.
+  workflow_dispatch: {}
+
+# A slow cold start must not stack up overlapping runs.
+concurrency:
+  group: keep-warm
+  cancel-in-progress: true
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Ping the health endpoint
+        run: |
+          # /api/health/ is the right target: it also touches the database,
+          # so this wakes Neon's compute (which suspends on its own idle
+          # timer) rather than only the web process. --max-time 90 because a
+          # genuine cold boot legitimately takes ~50s and must be waited out,
+          # not reported as a failure.
+          code=$(curl -sS -o /tmp/health.json -w '%{http_code}' --max-time 90 \
+                   https://fabrythingweb.onrender.com/api/health/) || true
+          echo "HTTP $code"
+          cat /tmp/health.json || true
+          echo
+          # Fail the run on anything but 200 so a genuinely down API shows up
+          # as a red X in the Actions tab instead of passing silently. Note
+          # /api/health/ answers 503 when the DB schema lags the deployed
+          # code — that is exactly the signal worth being loud about.
+          test "$code" = "200"
