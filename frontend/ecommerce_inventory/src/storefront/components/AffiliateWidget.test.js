@@ -12,10 +12,10 @@ function respond(data) {
 const ITEM_A = {
     id: 1, program: 'rokomari', program_label: 'Rokomari', title: 'Perfume A', brand: 'Brand',
     image: '/api/media/a/', original_price: '590.00', current_price: '554.00',
-    link_type: 'CART', go_url: '/api/store/affiliate/1/go/', display_order: 0,
+    link_type: 'CART', go_url: '/api/store/partner-picks/1/r/', display_order: 0,
 };
 const ITEM_B = {
-    ...ITEM_A, id: 2, title: 'Perfume B', go_url: '/api/store/affiliate/2/go/',
+    ...ITEM_A, id: 2, title: 'Perfume B', go_url: '/api/store/partner-picks/2/r/',
 };
 
 function setVisibilityState(state) {
@@ -51,7 +51,7 @@ test('renders nothing while there are no items', async () => {
     mockCallApi.mockReturnValue(respond([]));
     const { container } = render(<AffiliateWidget placement="sidebar" />);
     await waitFor(() => expect(mockCallApi).toHaveBeenCalledWith({
-        url: 'store/affiliate/', params: { placement: 'sidebar' },
+        url: 'store/partner-picks/', params: { placement: 'sidebar' },
     }));
     expect(container).toBeEmptyDOMElement();
 });
@@ -60,7 +60,7 @@ test('fetches by category instead of placement when category is passed', async (
     mockCallApi.mockReturnValue(respond([ITEM_A]));
     render(<AffiliateWidget category="beauty-health" />);
     await waitFor(() => expect(mockCallApi).toHaveBeenCalledWith({
-        url: 'store/affiliate/', params: { category: 'beauty-health' },
+        url: 'store/partner-picks/', params: { category: 'beauty-health' },
     }));
 });
 
@@ -69,7 +69,7 @@ test('every item is badged as a partner link and opens in a new tab safely', asy
     render(<AffiliateWidget placement="sidebar" />);
 
     const link = await screen.findByRole('link', { name: /shop now/i });
-    expect(link).toHaveAttribute('href', '/api/store/affiliate/1/go/');
+    expect(link).toHaveAttribute('href', '/api/store/partner-picks/1/r/');
     expect(link).toHaveAttribute('target', '_blank');
     expect(link).toHaveAttribute('rel', 'noopener noreferrer');
     expect(screen.getByText(/via Rokomari/i)).toBeInTheDocument();

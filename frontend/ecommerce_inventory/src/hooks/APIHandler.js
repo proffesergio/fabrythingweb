@@ -50,7 +50,16 @@ function useApi(){
                 } else if (err.response?.data?.errors) {
                     toast.error(JSON.stringify(err.response.data.errors));
                 } else if (!err.response) {
-                    toast.error("Network error - is the backend running?");
+                    // No response object at all means the request never completed:
+                    // the server was asleep (Render's free plan spins down after
+                    // ~15 min idle and its edge answers without CORS headers, which
+                    // the browser then blocks), the connection dropped, or an
+                    // extension cancelled it. The browser deliberately refuses to
+                    // tell JS which — they are indistinguishable from here. So say
+                    // what the customer can act on instead of accusing the backend:
+                    // a cold start is by far the most common cause and it fixes
+                    // itself on a retry a few seconds later.
+                    toast.error("Couldn't reach the server — it may be waking up. Please retry in a few seconds.");
                 }
             }
             setError(err)

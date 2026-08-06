@@ -15,7 +15,7 @@ function prefersReducedMotion() {
 
 /**
  * Rotating sidebar/section widget for affiliate products (GET
- * /api/store/affiliate/?placement=sidebar, or a specific ?category=<slug>
+ * /api/store/partner-picks/?placement=sidebar, or a specific ?category=<slug>
  * when `category` is passed instead). One item is shown at a time and
  * auto-advances every ROTATE_MS -- but:
  *
@@ -37,7 +37,7 @@ export default function AffiliateWidget({ placement = 'sidebar', category = null
     useEffect(() => {
         let mounted = true;
         const params = category ? { category } : { placement };
-        callApi({ url: 'store/affiliate/', params }).then((res) => {
+        callApi({ url: 'store/partner-picks/', params }).then((res) => {
             if (mounted) setItems(res?.data?.data || []);
         });
         return () => { mounted = false; };

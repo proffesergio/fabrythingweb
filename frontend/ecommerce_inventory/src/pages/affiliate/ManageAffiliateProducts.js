@@ -90,7 +90,7 @@ export default function ManageAffiliateProducts() {
         setBrowseError("");
         setAddResults(null);
         const res = await callApi({
-            url: "store/admin/affiliate/search/", method: "GET", rawError: true,
+            url: "store/admin/partner-picks/search/", method: "GET", rawError: true,
             params: { q: trimmed || undefined, category: categoryPath || undefined },
         });
         if (res?.status === 200) {
@@ -122,7 +122,7 @@ export default function ManageAffiliateProducts() {
             images: c.images, link_type: addingLinkType,
         }));
         const res = await callApi({
-            url: "store/admin/affiliate/bulk-add/", method: "POST", rawError: true,
+            url: "store/admin/partner-picks/bulk-add/", method: "POST", rawError: true,
             body: { candidates: chosen },
         });
         setAdding(false);
@@ -147,7 +147,7 @@ export default function ManageAffiliateProducts() {
 
     const loadProducts = useCallback(async () => {
         setManageLoading(true);
-        const res = await callApi({ url: "store/admin/affiliate/", rawError: true });
+        const res = await callApi({ url: "store/admin/partner-picks/", rawError: true });
         if (res?.status === 200) {
             const payload = res.data.data || {};
             setProducts(payload.products || []);
@@ -186,7 +186,7 @@ export default function ManageAffiliateProducts() {
             show_in_category_grid: form.show_in_category_grid, grid_category_ids: form.grid_category_ids,
         };
         const res = await callApi({
-            url: `store/admin/affiliate/${form.id}/`, method: "PATCH", body: payload, rawError: true,
+            url: `store/admin/partner-picks/${form.id}/`, method: "PATCH", body: payload, rawError: true,
         });
         setSaving(false);
         if (res?.status === 200) {
@@ -203,7 +203,7 @@ export default function ManageAffiliateProducts() {
 
     const remove = async (p) => {
         if (!window.confirm(`Delete "${p.title}"?`)) return;
-        const res = await callApi({ url: `store/admin/affiliate/${p.id}/`, method: "DELETE", rawError: true });
+        const res = await callApi({ url: `store/admin/partner-picks/${p.id}/`, method: "DELETE", rawError: true });
         if (res?.status === 200) { toast.success("Deleted"); loadProducts(); }
         else toast.error(res?.data?.message || "Could not delete");
     };
@@ -215,7 +215,7 @@ export default function ManageAffiliateProducts() {
         [next[index], next[swapWith]] = [next[swapWith], next[index]];
         setProducts(next); // optimistic
         const res = await callApi({
-            url: "store/admin/affiliate/reorder/", method: "POST",
+            url: "store/admin/partner-picks/reorder/", method: "POST",
             body: { order: next.map((p) => p.id) }, rawError: true,
         });
         if (res?.status === 200) setProducts(res.data.data || next);
@@ -290,7 +290,7 @@ export default function ManageAffiliateProducts() {
                                     <Button color="inherit" size="small" onClick={async () => {
                                         setDiagnostic({ running: true });
                                         const res = await callApi({
-                                            url: "store/admin/affiliate/diagnose/",
+                                            url: "store/admin/partner-picks/diagnose/",
                                             params: { path: categoryPath || undefined },
                                             rawError: true,
                                         });

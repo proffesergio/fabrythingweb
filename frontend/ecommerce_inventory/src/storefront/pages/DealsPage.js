@@ -5,13 +5,13 @@ import useApi from '../../hooks/APIHandler';
 import ProductCard from '../components/ProductCard';
 
 /** Dedicated Deals page -- every AffiliateProduct with show_on_deals_page=True,
- * active and inside its scheduling window (GET /api/store/affiliate/?placement=deals).
+ * active and inside its scheduling window (GET /api/store/partner-picks/?placement=deals).
  *
  * Renders through the SAME ProductCard the storefront uses for its own
  * products (image tile proportions, price/discount treatment, the mobile
  * card-height work) via ProductCard's `affiliate` prop, instead of a
  * separately-styled layout. The "via <Program>" partner badge and the
- * click-tracking redirect (/api/store/affiliate/<id>/go/, opened in a new
+ * click-tracking redirect (/api/store/partner-picks/<id>/go/, opened in a new
  * tab with rel="noopener noreferrer") still apply -- see ProductCard.js.
  */
 
@@ -38,7 +38,7 @@ export default function DealsPage() {
 
     useEffect(() => {
         let mounted = true;
-        callApi({ url: 'store/affiliate/', params: { placement: 'deals' } }).then((res) => {
+        callApi({ url: 'store/partner-picks/', params: { placement: 'deals' } }).then((res) => {
             if (mounted) setItems(res?.data?.data || []);
         });
         return () => { mounted = false; };

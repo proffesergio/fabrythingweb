@@ -34,9 +34,9 @@ jest.mock('../../hooks/APIHandler', () => () => ({
         if (opts.url === 'products/categories/') {
             return { status: 200, data: { data: { data: categoryTree } } };
         }
-        if (opts.url === 'store/admin/affiliate/search/') return mockSearchResult;
-        if (opts.url === 'store/admin/affiliate/bulk-add/') return mockBulkAddResult;
-        if (opts.url === 'store/admin/affiliate/' && (opts.method === undefined || opts.method === 'GET')) {
+        if (opts.url === 'store/admin/partner-picks/search/') return mockSearchResult;
+        if (opts.url === 'store/admin/partner-picks/bulk-add/') return mockBulkAddResult;
+        if (opts.url === 'store/admin/partner-picks/' && (opts.method === undefined || opts.method === 'GET')) {
             return mockListResult;
         }
         return { status: 200, data: { data: {} } };
@@ -73,7 +73,7 @@ test('searching Rokomari shows a candidate with its price', async () => {
     fireEvent.click(screen.getByText('Search'));
 
     await waitFor(() => expect(screen.getByText('Perfume A')).toBeInTheDocument());
-    const searchCall = mockCalls.find((c) => c.url === 'store/admin/affiliate/search/');
+    const searchCall = mockCalls.find((c) => c.url === 'store/admin/partner-picks/search/');
     expect(searchCall.params.q).toBe('perfume');
 });
 
@@ -86,8 +86,8 @@ test('selecting a candidate and adding posts it with the chosen link type', asyn
     fireEvent.click(screen.getByText('Perfume A').closest('.MuiCard-root'));
     fireEvent.click(screen.getByText(/Add 1 selected/));
 
-    await waitFor(() => expect(mockCalls.some((c) => c.url === 'store/admin/affiliate/bulk-add/')).toBe(true));
-    const bulkCall = mockCalls.find((c) => c.url === 'store/admin/affiliate/bulk-add/');
+    await waitFor(() => expect(mockCalls.some((c) => c.url === 'store/admin/partner-picks/bulk-add/')).toBe(true));
+    const bulkCall = mockCalls.find((c) => c.url === 'store/admin/partner-picks/bulk-add/');
     expect(bulkCall.body.candidates).toHaveLength(1);
     expect(bulkCall.body.candidates[0].remote_product_id).toBe('531074');
     expect(bulkCall.body.candidates[0].link_type).toBe('CART');

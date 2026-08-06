@@ -50,6 +50,42 @@ from .views_affiliate import (
     PublicAffiliateListView,
 )
 
+def affiliate_routes(public, click, admin, suffix=''):
+    """Every affiliate route, rendered under one naming scheme.
+
+    Called twice: once for the canonical ad-blocker-safe paths and once for
+    the legacy `affiliate`/`go` ones. Building both from a single list is the
+    point -- a new affiliate endpoint added to only one of two hand-written
+    blocks would 404 for whichever clients are on the other scheme, and
+    nothing would catch it until a customer's click earned no commission.
+
+    `suffix` keeps the two sets' URL names distinct. The canonical set is
+    registered LAST and takes the bare names, because `reverse()` resolves a
+    duplicated name to the final match -- that is what makes the `go_url` in
+    AffiliateProductPublicSerializer come out neutral.
+    """
+    return [
+        path(f'{public}/', PublicAffiliateListView.as_view(),
+             name=f'store_affiliate_list{suffix}'),
+        path(f'{public}/<int:pk>/{click}/', AffiliateClickRedirectView.as_view(),
+             name=f'store_affiliate_go{suffix}'),
+        path(f'admin/{admin}/parse-url/', AdminAffiliateParseUrlView.as_view(),
+             name=f'admin_affiliate_parse_url{suffix}'),
+        path(f'admin/{admin}/diagnose/', AdminAffiliateDiagnosticView.as_view(),
+             name=f'admin_affiliate_diagnose{suffix}'),
+        path(f'admin/{admin}/search/', AdminAffiliateSearchView.as_view(),
+             name=f'admin_affiliate_search{suffix}'),
+        path(f'admin/{admin}/bulk-add/', AdminAffiliateBulkAddView.as_view(),
+             name=f'admin_affiliate_bulk_add{suffix}'),
+        path(f'admin/{admin}/reorder/', AdminAffiliateReorderView.as_view(),
+             name=f'admin_affiliate_reorder{suffix}'),
+        path(f'admin/{admin}/', AdminAffiliateListCreateView.as_view(),
+             name=f'admin_affiliate{suffix}'),
+        path(f'admin/{admin}/<int:pk>/', AdminAffiliateDetailView.as_view(),
+             name=f'admin_affiliate_detail{suffix}'),
+    ]
+
+
 urlpatterns = [
     # Public (no auth)
     path('config/', StoreConfigView.as_view(), name='store_config'),
@@ -58,8 +94,6 @@ urlpatterns = [
     path('products/', PublicProductListView.as_view(), name='store_products'),
     path('products/<slug:slug>/', PublicProductDetailView.as_view(), name='store_product_detail'),
     path('banners/', PublicBannerListView.as_view(), name='store_banners'),
-    path('affiliate/', PublicAffiliateListView.as_view(), name='store_affiliate_list'),
-    path('affiliate/<int:pk>/go/', AffiliateClickRedirectView.as_view(), name='store_affiliate_go'),
 
     # Customer Auth
     path('auth/signup/', CustomerSignupView.as_view(), name='store_signup'),
@@ -93,11 +127,9 @@ urlpatterns = [
     path('admin/banners/', AdminBannerListCreateView.as_view(), name='admin_banners'),
     path('admin/banners/reorder/', AdminBannerReorderView.as_view(), name='admin_banners_reorder'),
     path('admin/banners/<int:pk>/', AdminBannerDetailView.as_view(), name='admin_banner_detail'),
-    path('admin/affiliate/parse-url/', AdminAffiliateParseUrlView.as_view(), name='admin_affiliate_parse_url'),
-    path('admin/affiliate/diagnose/', AdminAffiliateDiagnosticView.as_view(), name='admin_affiliate_diagnose'),
-    path('admin/affiliate/search/', AdminAffiliateSearchView.as_view(), name='admin_affiliate_search'),
-    path('admin/affiliate/bulk-add/', AdminAffiliateBulkAddView.as_view(), name='admin_affiliate_bulk_add'),
-    path('admin/affiliate/reorder/', AdminAffiliateReorderView.as_view(), name='admin_affiliate_reorder'),
-    path('admin/affiliate/', AdminAffiliateListCreateView.as_view(), name='admin_affiliate'),
-    path('admin/affiliate/<int:pk>/', AdminAffiliateDetailView.as_view(), name='admin_affiliate_detail'),
 ]
+
+# Legacy first, canonical last -- see affiliate_routes() for why the order of
+# these two lines decides what `go_url` looks like.
+urlpatterns += affiliate_routes('affiliate', 'go', 'affiliate', suffix='_legacy')
+urlpatterns += affiliate_routes('partner-picks', 'r', 'partner-picks')

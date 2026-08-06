@@ -235,10 +235,12 @@ class AffiliatePublicListTests(TestCase):
         self.assertIn("Everywhere", deals_titles)
 
     def test_go_url_points_at_our_own_redirect_endpoint(self):
+        """Still our own endpoint (never a raw outbound link), but on the
+        ad-blocker-safe path -- see AdBlockerSafeRouteTests."""
         product = make_affiliate_product()
         res = self.client.get("/api/store/affiliate/")
         go_url = res.data["data"][0]["go_url"]
-        self.assertIn(f"/api/store/affiliate/{product.id}/go/", go_url)
+        self.assertIn(f"/api/store/partner-picks/{product.id}/r/", go_url)
 
     def test_partner_label_present_for_badging(self):
         make_affiliate_product()
@@ -503,3 +505,69 @@ class AffiliateParseUrlTests(TestCase):
         res = self.client.post("/api/store/admin/affiliate/parse-url/",
                                {"url": "https://www.rokomari.com/product/1/x"}, format="json")
         self.assertEqual(res.status_code, 403)
+
+
+# --- Ad-blocker-safe route aliases ---------------------------------------
+
+
+class AdBlockerSafeRouteTests(TestCase):
+    """uBlock Origin/AdBlock/Brave ship generic EasyList rules that cancel
+    requests whose path contains ``affiliate`` (and ``/go/``, a near-universal
+    affiliate-cloaker convention). A cancelled request is
+    ``net::ERR_BLOCKED_BY_CLIENT``: the browser never issues it, so the server
+    never sees the click and the commission is silently lost -- and in the
+    admin panel it surfaces as axios's no-response path, i.e. the misleading
+    "is the backend running?" toast.
+
+    So the *canonical* paths are neutral (``partner-picks``, ``/r/``) and the
+    old ``affiliate`` ones survive only as aliases, for already-cached
+    frontend bundles and any mobile build still pointing at them.
+    """
+
+    def setUp(self):
+        self.client = APIClient()
+
+    def test_public_list_served_on_neutral_path(self):
+        make_affiliate_product(title="Neutral Path Item")
+        res = self.client.get("/api/store/partner-picks/")
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual([p["title"] for p in res.data["data"]], ["Neutral Path Item"])
+
+    def test_click_redirect_served_on_neutral_path_and_counts(self):
+        product = make_affiliate_product(link_type="CART", remote_product_id="531074")
+        res = self.client.get(f"/api/store/partner-picks/{product.id}/r/")
+        self.assertEqual(res.status_code, 302)
+        self.assertIn("productId=531074", res.url)
+        product.refresh_from_db()
+        self.assertEqual(product.click_count, 1)
+
+    def test_go_url_handed_to_the_browser_carries_no_blockable_token(self):
+        """The whole point: the URL the storefront actually renders and the
+        customer actually clicks must survive an ad blocker."""
+        product = make_affiliate_product()
+        go_url = self.client.get("/api/store/partner-picks/").data["data"][0]["go_url"]
+        self.assertNotIn("affiliate", go_url)
+        self.assertNotIn("/go/", go_url)
+        self.assertIn(f"/api/store/partner-picks/{product.id}/r/", go_url)
+
+    def test_legacy_affiliate_paths_still_work(self):
+        """Vercel serves the previous bundle from an immutable cache for a
+        year, so the old paths cannot 404 the moment this deploys."""
+        product = make_affiliate_product()
+        self.assertEqual(self.client.get("/api/store/affiliate/").status_code, 200)
+        self.assertEqual(
+            self.client.get(f"/api/store/affiliate/{product.id}/go/").status_code, 302)
+
+    def test_admin_endpoints_served_on_neutral_path(self):
+        admin = Users.objects.create_user(
+            username="pp-admin", email="pp@x.com", password="x",
+            role="Admin", country="Bangladesh")
+        auth(self.client, admin)
+        self.assertEqual(self.client.get("/api/store/admin/partner-picks/").status_code, 200)
+
+    def test_admin_neutral_path_still_rejects_a_customer(self):
+        customer = Users.objects.create_user(
+            username="pp-cust", email="ppc@x.com", password="x",
+            role="Customer", country="Bangladesh")
+        auth(self.client, customer)
+        self.assertEqual(self.client.get("/api/store/admin/partner-picks/").status_code, 403)

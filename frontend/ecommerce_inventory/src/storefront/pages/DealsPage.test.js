@@ -9,7 +9,7 @@ import DealsPage from './DealsPage';
 const ITEM = {
     id: 1, program: 'rokomari', program_label: 'Rokomari', title: 'Perfume A', brand: 'Brand',
     image: '/api/media/a/', original_price: '590.00', current_price: '554.00',
-    link_type: 'CART', go_url: '/api/store/affiliate/1/go/', display_order: 0,
+    link_type: 'CART', go_url: '/api/store/partner-picks/1/r/', display_order: 0,
 };
 
 const renderPage = () => render(<MemoryRouter><DealsPage /></MemoryRouter>);
@@ -21,7 +21,7 @@ test('fetches the deals placement and renders each item through the shared produ
     renderPage();
 
     await waitFor(() => expect(mockCallApi).toHaveBeenCalledWith({
-        url: 'store/affiliate/', params: { placement: 'deals' },
+        url: 'store/partner-picks/', params: { placement: 'deals' },
     }));
     expect(await screen.findByText('Perfume A')).toBeInTheDocument();
     expect(screen.getByText(/via rokomari/i)).toBeInTheDocument();

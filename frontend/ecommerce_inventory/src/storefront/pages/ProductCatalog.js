@@ -89,7 +89,7 @@ export default function ProductCatalog() {
     useEffect(() => {
         if (!filters.category) { setAffiliateGridItems([]); return undefined; }
         let mounted = true;
-        callApi({ url: 'store/affiliate/', params: { category: filters.category } }).then((res) => {
+        callApi({ url: 'store/partner-picks/', params: { category: filters.category } }).then((res) => {
             if (mounted) setAffiliateGridItems(res?.data?.data || []);
         });
         return () => { mounted = false; };
