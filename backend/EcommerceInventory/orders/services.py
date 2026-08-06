@@ -11,6 +11,7 @@ from django.db import transaction
 from rest_framework.exceptions import ValidationError
 
 from catalog.models import ProductVariant
+from core.email_alerts import send_email_alert_on_commit
 from core.models import StoreConfiguration
 from core.whatsapp import send_whatsapp_on_commit
 
@@ -141,11 +142,29 @@ def place_cod_order(*, customer, items, contact_name, contact_phone,
         reason="Order placed",
     )
 
-    # WhatsApp alert to the admin. Deferred to after this transaction commits
-    # (see send_whatsapp_on_commit) and a total no-op while the provider is
-    # unconfigured or no admin number has been set — never able to affect the
-    # order that was just placed.
-    admin_number = (StoreConfiguration.get_solo().whatsapp_admin_number or "").strip()
+    # Admin alerts. Both are deferred to after this transaction commits (the
+    # atomic block above still holds select_for_update locks on the variant
+    # rows) and both are incapable of raising, so a dead mailbox or a
+    # misconfigured provider can never roll back an order a customer just
+    # placed. Email is the live channel; WhatsApp stays inert until its
+    # credentials exist.
+    send_email_alert_on_commit(
+        (config.alert_email or "").strip(),
+        kind="store_order_admin", related_order=order.order_number,
+        subject=f"New order {order.order_number} — {total} {config.currency}",
+        body=(
+            f"A new Cash-on-Delivery order was just placed on {config.store_name}.\n\n"
+            f"Order:    {order.order_number}\n"
+            f"Customer: {contact_name}\n"
+            f"Phone:    {contact_phone}\n"
+            f"Items:    {len(order_items)}\n"
+            f"Total:    {total} {config.currency}\n\n"
+            f"Confirm and arrange delivery from the admin panel:\n"
+            f"https://www.fabrything.com/admin/manage/store/orders\n"
+        ),
+    )
+
+    admin_number = (config.whatsapp_admin_number or "").strip()
     send_whatsapp_on_commit(
         admin_number, kind="store_order_admin", related_order=order.order_number,
         template_name=STORE_ORDER_ADMIN_TEMPLATE,

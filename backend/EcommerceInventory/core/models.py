@@ -28,7 +28,7 @@ class StoreConfiguration(models.Model):
     cod_enabled = models.BooleanField(default=True)
     currency = models.CharField(max_length=3, default="BDT")
     store_name = models.CharField(max_length=120, default="Fabrything")
-    support_phone = models.CharField(max_length=20, blank=True, default="")
+    support_phone = models.CharField(max_length=20, blank=True, default="8801842168117")
     # Where WhatsApp order alerts land (core.whatsapp). This is a *number*, not
     # a credential, so it lives here rather than in an env var — the owner can
     # change it from the admin panel without a redeploy. The Cloud API token
@@ -36,6 +36,15 @@ class StoreConfiguration(models.Model):
     # destination number is not a security incident the way a leaked token is.
     # International format, digits only, no leading "+" (e.g. "8801XXXXXXXXX").
     whatsapp_admin_number = models.CharField(max_length=20, blank=True, default="")
+    # Where email order alerts land (core.email_alerts) — the ACTIVE channel,
+    # since WhatsApp/SMS are still waiting on credentials. Same split as the
+    # number above: the destination is an admin-editable setting, the SMTP
+    # credentials are env vars. Blank switches email alerts off entirely.
+    alert_email = models.EmailField(
+        blank=True, default="fabrything@gmail.com",
+        help_text="Mailbox that receives a notification for every new order. "
+                  "Leave blank to disable email alerts.",
+    )
     # Facebook Messenger deep link (m.me). Meta discontinued the embeddable
     # Customer Chat Plugin in 2024, so the storefront button just opens
     # https://m.me/<this value> in a new tab instead of an in-page widget.

@@ -185,6 +185,32 @@ CORS_ALLOW_ALL_ORIGINS = False
 CORS_ALLOWED_ORIGINS = env_list("CORS_ALLOWED_ORIGINS", "http://localhost:3000")
 
 
+# --- Email (admin order alerts — core/email_alerts.py) -----------------------
+# Email is the ACTIVE alert channel (WhatsApp and SMS ship dormant pending
+# credentials). Set EMAIL_HOST_USER + EMAIL_HOST_PASSWORD in the Render
+# dashboard to switch on real delivery. For Gmail that password must be a
+# 16-character **App Password** (Google rejects the account password over SMTP
+# and has done since 2022); generating one requires 2-Step Verification on the
+# account first.
+#
+# Without credentials we fall back to the console backend rather than the
+# Django default (SMTP to localhost:25, which does not exist on Render and
+# would make every alert a logged connection-refused). The alert path still
+# runs end to end, it just prints instead of sending — see core/email_alerts.py.
+EMAIL_HOST = os.getenv("EMAIL_HOST", "smtp.gmail.com")
+EMAIL_PORT = int(os.getenv("EMAIL_PORT", "587"))
+EMAIL_USE_TLS = env_bool("EMAIL_USE_TLS", True)
+EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER", "")
+EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD", "")
+EMAIL_TIMEOUT = int(os.getenv("EMAIL_TIMEOUT", "10"))
+DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", EMAIL_HOST_USER or "no-reply@fabrything.com")
+EMAIL_BACKEND = os.getenv(
+    "EMAIL_BACKEND",
+    "django.core.mail.backends.smtp.EmailBackend" if EMAIL_HOST_USER and EMAIL_HOST_PASSWORD
+    else "django.core.mail.backends.console.EmailBackend",
+)
+
+
 # --- AWS S3 (optional, falls back to local media) ---------------------------
 AWS_ACCESS_KEY_ID = os.getenv("AWS_ACCESS_KEY_ID")
 AWS_ACESS_KEY_SECRET = os.getenv("AWS_ACESS_KEY_SECRET")
