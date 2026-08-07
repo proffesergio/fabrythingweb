@@ -250,6 +250,9 @@ def _candidate_from_product(url, parsed):
         "discount_price": parsed.get("discount_price"),
         "images": parsed.get("images") or [],
         "already_have": already_have,
+        # None means "unknown", not "over the counter". Only the medicine
+        # adapters set this; every other source leaves it absent.
+        "requires_prescription": parsed.get("requires_prescription"),
     }
 
 
@@ -268,6 +271,9 @@ def _candidate_from_card(card):
         "discount_price": card.get("discount_price"),
         "images": card.get("images") or [],
         "already_have": already_have,
+        # A listing card carries no prescription marker (it only exists on the
+        # product page), so this stays None until a detailed browse fetches it.
+        "requires_prescription": card.get("requires_prescription"),
     }
 
 

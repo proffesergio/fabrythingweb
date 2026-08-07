@@ -135,3 +135,43 @@ class AroggaImportTests(TestCase):
         product = Products.objects.get(id=results[0]["product_id"])
         # An empty source_url keeps it out of sync_source_prices.
         self.assertEqual(product.source_url or "", "")
+
+
+class PrescriptionVisibleBeforeImportTests(TestCase):
+    """The picker must say which candidates are prescription-only BEFORE the
+    owner imports them.
+
+    Without this the flag is invisible until after the fact: the products land
+    silently blocked at checkout (rx_sales_enabled is off until a DGDA licence
+    exists) and the only way to notice is to wonder why they never sell.
+    """
+
+    def setUp(self):
+        self.category_html = (FIXTURES / "arogga_category.html").read_text(encoding="utf-8")
+        self.rx_html = (FIXTURES / "arogga_product_rx.html").read_text(encoding="utf-8")
+
+    def test_detailed_browse_reports_the_prescription_flag(self):
+        def fake_fetch(url):
+            return self.category_html if "/category/" in url else self.rx_html
+
+        out = browse_candidates("arogga", category_path="category/medicine/6322/medicine",
+                                fetch=fake_fetch, detail=True)
+        self.assertTrue(out["candidates"])
+        self.assertTrue(all(c["requires_prescription"] is True for c in out["candidates"]))
+
+    def test_listing_only_browse_reports_unknown_not_false(self):
+        # A listing card carries no prescription marker. Reporting False would
+        # be a positive claim that the item is over-the-counter, which is the
+        # dangerous direction to be wrong in -- so it stays None ("unknown")
+        # and the UI can say so.
+        out = browse_candidates("arogga", category_path="category/healthcare/5987/healthcare",
+                                fetch=lambda url: self.category_html, detail=False)
+        self.assertTrue(out["candidates"])
+        self.assertTrue(all(c["requires_prescription"] is None for c in out["candidates"]))
+
+    def test_non_medicine_sources_are_unaffected(self):
+        # Every other adapter omits the key entirely; the candidate shape must
+        # still carry it so one UI can render every source.
+        from catalog.services_scrape_import import _candidate_from_product
+        c = _candidate_from_product("https://x/y", {"name": "Laptop", "price": 100})
+        self.assertIsNone(c["requires_prescription"])

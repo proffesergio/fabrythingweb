@@ -97,6 +97,16 @@ const ImportProducts = () => {
 
     const activeSource = useMemo(() => sources.find((s) => s.slug === source) || null, [sources, source]);
     const searchSupported = !!activeSource?.supports_search;
+    // Only the medicine adapter reports a prescription flag; for every other
+    // source the field is absent and the Rx chips must not be rendered.
+    const isMedicineSource = activeSource?.adapter_key === "arogga";
+    // A listing page carries name/price/image for the whole category in ONE
+    // request but cannot say whether an item needs a prescription -- that
+    // marker only exists on the product page. Checking this fetches each
+    // product (≈1s each, rate-limited) to find out. Default ON for a medicine
+    // source: importing medicines without knowing their Rx status is the one
+    // mistake that matters here.
+    const [withRxStatus, setWithRxStatus] = useState(true);
     const sourceCategoriesFromApi = useMemo(() => (
         (activeSource?.categories || []).map((c) => (
             { path: c.source_path, label: c.label || c.source_path, our_category: c.our_category_slug }
@@ -156,7 +166,12 @@ const ImportProducts = () => {
         setResults(null);
         const res = await callApi({
             url: "products/admin/import/browse/", method: "GET", rawError: true,
-            params: { source, category: categoryPath || undefined, q: trimmedQuery || undefined },
+            params: {
+                source, category: categoryPath || undefined, q: trimmedQuery || undefined,
+                // The backend defaults detail=true; only a medicine source is
+                // given the choice, and only there does it change the answer.
+                detail: isMedicineSource ? String(withRxStatus) : undefined,
+            },
         });
         if (res?.status === 200) {
             const data = res.data.data;
@@ -177,7 +192,7 @@ const ImportProducts = () => {
             const fieldMessage = firstFieldError(res?.data?.field_errors);
             setBrowseError(fieldMessage || res?.data?.message || "Could not fetch that listing.");
         }
-    }, [source, activeSource, categoryPath, query, searchSupported]); // eslint-disable-line react-hooks/exhaustive-deps
+    }, [source, activeSource, categoryPath, query, searchSupported, isMedicineSource, withRxStatus]); // eslint-disable-line react-hooks/exhaustive-deps
 
     const toggleSelected = (url) => {
         setSelected((prev) => {
@@ -188,6 +203,17 @@ const ImportProducts = () => {
     };
 
     const IMPORT_CAP = 12;
+
+    // What the owner is about to import, medicine-wise. Counted from the
+    // candidates actually ticked, not the whole page.
+    const selectedCandidates = useMemo(
+        () => candidates.filter((c) => selected.has(c.source_url)),
+        [candidates, selected],
+    );
+    const selectedRxCount = selectedCandidates.filter((c) => c.requires_prescription === true).length;
+    const selectedUnknownRxCount = isMedicineSource
+        ? selectedCandidates.filter((c) => c.requires_prescription === null).length
+        : 0;
 
     const handleImport = async () => {
         if (selected.size === 0 || !targetCategory) return;
@@ -396,6 +422,22 @@ const ImportProducts = () => {
                                 </Button>
                             </Grid>
                         </Grid>
+                        {isMedicineSource && (
+                            <FormControlLabel
+                                sx={{ mt: 1 }}
+                                control={
+                                    <Checkbox
+                                        checked={withRxStatus}
+                                        onChange={(e) => setWithRxStatus(e.target.checked)}
+                                    />
+                                }
+                                label={
+                                    withRxStatus
+                                        ? "Check prescription status (opens each product — slower, ~1s per item)"
+                                        : "Fast listing only — prescription status will show as unknown"
+                                }
+                            />
+                        )}
                         {activeSource?.notes && !activeSource.is_enabled && (
                             <Alert severity="info" sx={{ mt: 2 }}>{activeSource.notes}</Alert>
                         )}
@@ -456,14 +498,45 @@ const ImportProducts = () => {
                                                     </Typography>
                                                 )}
                                             </Stack>
-                                            {c.already_have && (
-                                                <Chip size="small" label="Already in store" sx={{ mt: 1 }} />
-                                            )}
+                                            <Stack direction="row" spacing={0.5} sx={{ mt: 1, flexWrap: "wrap", gap: 0.5 }}>
+                                                {c.already_have && (
+                                                    <Chip size="small" label="Already in store" />
+                                                )}
+                                                {/* Medicines. `true` = the source page says it needs a
+                                                    prescription, so it will import blocked at checkout
+                                                    until rx_sales_enabled is on. `null` = a listing-only
+                                                    browse, which cannot know -- said plainly rather than
+                                                    shown as over-the-counter. */}
+                                                {c.requires_prescription === true && (
+                                                    <Chip size="small" color="error" variant="outlined"
+                                                          label="Prescription required" />
+                                                )}
+                                                {c.requires_prescription === null && isMedicineSource && (
+                                                    <Chip size="small" variant="outlined"
+                                                          label="Rx status unknown" />
+                                                )}
+                                            </Stack>
                                         </Card>
                                     </Grid>
                                 ))}
                             </Grid>
 
+                            {selectedRxCount > 0 && (
+                                <Alert severity="warning" sx={{ mb: 2 }}>
+                                    {selectedRxCount} of the {selected.size} selected item
+                                    {selected.size === 1 ? " is" : "s are"} prescription-only. They will
+                                    import, but stay blocked at checkout until prescription sales are
+                                    switched on in Store Configuration — which needs a DGDA licence.
+                                </Alert>
+                            )}
+                            {selectedUnknownRxCount > 0 && (
+                                <Alert severity="info" sx={{ mb: 2 }}>
+                                    Prescription status is unknown for {selectedUnknownRxCount} selected
+                                    item{selectedUnknownRxCount === 1 ? "" : "s"} (fast listing browse).
+                                    Tick “Check prescription status” and fetch again to find out before
+                                    importing.
+                                </Alert>
+                            )}
                             <Card variant="outlined" sx={{ p: 2, mb: 2 }}>
                                 <Grid container spacing={2} alignItems="center">
                                     <Grid item xs={12} sm={4}>
