@@ -6,7 +6,12 @@ catalog/test_admin_product_import.py.
 """
 from pathlib import Path
 
+from unittest.mock import patch
+
 from django.test import TestCase
+from rest_framework.test import APIRequestFactory, force_authenticate
+
+from catalog.controllers.ProductImportController import AdminBrowseImportCandidatesView
 
 from accounts.models import Users
 from catalog.models import Categories, ImportSource, Products
@@ -175,3 +180,42 @@ class PrescriptionVisibleBeforeImportTests(TestCase):
         from catalog.services_scrape_import import _candidate_from_product
         c = _candidate_from_product("https://x/y", {"name": "Laptop", "price": 100})
         self.assertIsNone(c["requires_prescription"])
+
+
+class BrowseDetailParamTests(TestCase):
+    """The browse view must honour ?detail=.
+
+    The picker offers a "check prescription status" toggle, which is only
+    meaningful if the API acts on it: detail=false is the one-request listing
+    path, detail=true opens each product page. The view ignored the parameter
+    entirely, so the fast path was unreachable and every browse paid the
+    per-product fetch cost.
+    """
+    def setUp(self):
+        self.factory = APIRequestFactory()
+        self.owner = Users.objects.create_user(
+            username="browseowner", email="bo@example.com", password="x",
+            role="Super Admin", country="Bangladesh")
+
+    def _browse(self, params):
+        request = self.factory.get("/api/products/admin/import/browse/", params)
+        force_authenticate(request, user=self.owner)
+        with patch("catalog.controllers.ProductImportController.browse_candidates") as mocked:
+            mocked.return_value = {"candidates": [], "categories": [],
+                                   "listing_product_count": 0, "fetch_failures": 0}
+            AdminBrowseImportCandidatesView.as_view()(request)
+            return mocked.call_args
+
+    def test_detail_false_is_passed_through(self):
+        self.assertIs(self._browse({"source": "arogga", "category": "c", "detail": "false"}).kwargs["detail"], False)
+
+    def test_detail_true_is_passed_through(self):
+        self.assertIs(self._browse({"source": "arogga", "category": "c", "detail": "true"}).kwargs["detail"], True)
+
+    def test_defaults_to_detailed_when_absent(self):
+        # The safe default for a medicine source: a detailed browse is the only
+        # one that can report prescription status at all.
+        self.assertIs(self._browse({"source": "arogga", "category": "c"}).kwargs["detail"], True)
+
+    def test_unrecognised_value_falls_back_to_detailed(self):
+        self.assertIs(self._browse({"source": "arogga", "category": "c", "detail": "banana"}).kwargs["detail"], True)

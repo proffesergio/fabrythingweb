@@ -77,8 +77,17 @@ class AdminBrowseImportCandidatesView(APIView):
         except (TypeError, ValueError):
             limit = BROWSE_LIMIT
 
+        # `detail` drives whether each product page is opened. It is the
+        # difference between one request for a whole category and one request
+        # PER product, and for a medicine source it is the difference between
+        # knowing an item is prescription-only and not. Anything other than an
+        # explicit "false" means detailed: guessing wrong towards "fast" would
+        # silently report every medicine's Rx status as unknown.
+        detail = str(request.query_params.get('detail', 'true')).strip().lower() != 'false'
+
         try:
-            result = browse_candidates(source.slug, category_path=category_path, query=query, limit=limit)
+            result = browse_candidates(source.slug, category_path=category_path, query=query,
+                                       limit=limit, detail=detail)
         except SourceFetchError as e:
             return renderResponse(data=str(e), message='Could not fetch that listing', status=502)
         except UnsupportedSearchError as e:
