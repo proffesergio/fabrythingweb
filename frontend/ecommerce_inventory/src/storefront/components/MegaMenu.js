@@ -6,19 +6,9 @@ import {
 import { Apps, Whatshot, FiberNew, Storefront as StorefrontIcon } from '@mui/icons-material';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
+import { CATEGORY_META, metaFor } from './categoryMeta';
 
 // Emoji glyph + accent colour per category slug (AliExpress-style colourful tiles).
-const CATEGORY_META = {
-    'mens-fashion':       { icon: '👔', color: '#4F46E5' },
-    'womens-fashion':     { icon: '👗', color: '#EC4899' },
-    'shoes':              { icon: '👟', color: '#F59E0B' },
-    'watches':            { icon: '⌚', color: '#0EA5E9' },
-    'eyewear':            { icon: '🕶️', color: '#8B5CF6' },
-    'wallets-bags':       { icon: '👜', color: '#B45309' },
-    'home-appliances':    { icon: '🏠', color: '#10B981' },
-    'skincare-cosmetics': { icon: '💄', color: '#E85D4A' },
-};
-const metaFor = (slug) => CATEGORY_META[slug] || { icon: '🛍️', color: '#4F46E5' };
 
 const quickLinks = [
     { label: 'Home',         path: '/',                    icon: <StorefrontIcon fontSize="small" /> },

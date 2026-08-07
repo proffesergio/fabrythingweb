@@ -2,14 +2,15 @@ import React, { useEffect, useState } from 'react';
 import {
     Box, Container, Grid, Typography, Button, Rating, Chip, Divider,
     Tab, Tabs, IconButton, Dialog, DialogTitle, DialogContent, Paper,
-    Table, TableHead, TableBody, TableRow, TableCell, Skeleton, Breadcrumbs,
+    Table, TableHead, TableBody, TableRow, TableCell, Skeleton, Breadcrumbs, Alert,
 } from '@mui/material';
-import { ShoppingCart, Add, Remove, NavigateNext, LocalShipping } from '@mui/icons-material';
+import { ShoppingCart, Add, Remove, NavigateNext, LocalShipping, MedicalInformation } from '@mui/icons-material';
 import { useParams, Link } from 'react-router-dom';
 import { useDispatch } from 'react-redux';
 import { addToCart } from '../../redux/reducer/cartSlice';
 import useApi from '../../hooks/APIHandler';
 import ProductCard from '../components/ProductCard';
+import { SUPPORT } from './legal/content';
 import { taka } from '../format';
 
 export default function ProductDetail() {
@@ -74,7 +75,20 @@ export default function ProductDetail() {
         ? variantSizes
         : (Array.isArray(product.available_sizes) ? product.available_sizes : []);
     const inStock = selectedVariant ? selectedVariant.in_stock : false;
-    const specs = product.specifications && typeof product.specifications === 'object' ? product.specifications : {};
+    const rawSpecs = product.specifications && typeof product.specifications === 'object' ? product.specifications : {};
+    // Pharmacy lines carry their detail in dedicated columns, not in the
+    // free-form `specifications` blob -- an imported medicine has an empty blob
+    // and would otherwise render "No specifications available" while the API
+    // was serving generic name, strength and dosage form all along.
+    const medicineSpecs = {
+        ...(product.generic_name ? { 'Generic name': product.generic_name } : {}),
+        ...(product.strength ? { Strength: product.strength } : {}),
+        ...(product.dosage_form ? { 'Dosage form': product.dosage_form } : {}),
+        ...(product.pack_size ? { 'Pack size': product.pack_size } : {}),
+        ...(product.manufacturer ? { Manufacturer: product.manufacturer } : {}),
+        ...(product.brand ? { Brand: product.brand } : {}),
+    };
+    const specs = { ...medicineSpecs, ...rawSpecs };
     const highlights = Array.isArray(product.highlights) ? product.highlights : [];
     const sizeChart = product.size_chart && typeof product.size_chart === 'object' ? product.size_chart : {};
     // Fashion-only, and never an empty table: a size chart is only shown at
@@ -333,18 +347,36 @@ export default function ProductDetail() {
                         )}
                     </Box>
 
+                    {/* A prescription-only medicine cannot be checked out while
+                        StoreConfiguration.rx_sales_enabled is off (no DGDA
+                        licence). Saying so here beats letting the customer fill
+                        a cart and discover it at the payment step. */}
+                    {product.requires_prescription && (
+                        <Alert severity="info" icon={<MedicalInformation />} sx={{ mb: 2 }}>
+                            <Typography variant="subtitle2" fontWeight={700}>
+                                Prescription medicine
+                            </Typography>
+                            <Typography variant="body2">
+                                This item needs a valid prescription. Online sale is not open yet —
+                                call us on {SUPPORT.whatsapp} to order it.
+                            </Typography>
+                        </Alert>
+                    )}
+
                     {/* Add to Cart */}
                     <Button
                         variant="contained"
                         color="secondary"
                         size="large"
                         fullWidth
-                        disabled={!inStock}
+                        disabled={!inStock || product.requires_prescription}
                         startIcon={<ShoppingCart />}
                         onClick={handleAddToCart}
                         sx={{ py: 1.5, mb: 2, fontSize: '1.1rem' }}
                     >
-                        {inStock ? `Add to Cart - ${taka(price * quantity)}` : 'Out of Stock'}
+                        {product.requires_prescription
+                            ? 'Prescription required'
+                            : inStock ? `Add to Cart - ${taka(price * quantity)}` : 'Out of Stock'}
                     </Button>
 
                     {/* Description */}
