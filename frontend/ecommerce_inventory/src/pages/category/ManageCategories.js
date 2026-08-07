@@ -13,6 +13,7 @@ import ExpanableRow from "./ExpandableRow";
 import RenderImage from "../../components/RenderImage";
 import { Close, PanoramaRounded } from "@mui/icons-material";
 import Image from "../../components/Image";
+import { devLog } from '../../utils/devLog';
 
 const ManageCategories = () => {
     const [data,setData]=useState([]);
@@ -60,7 +61,7 @@ const ManageCategories = () => {
     }
 
     const onDeleteClick=(params)=>{
-        console.log(params);
+        devLog(params);
     }
     const onEditClick=(params)=>{
         navigate(`/admin/form/category/${params.row.id}`)

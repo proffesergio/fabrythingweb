@@ -7,6 +7,7 @@ import { Delete } from '@mui/icons-material';
 import Button from '@mui/material/Button';
 import { toast } from 'react-toastify';
 import { checkIsJson, getFileMimeTypeFromFileName, getFileNameFromUrl } from '../utils/Helper';
+import { devLog } from '../utils/devLog';
 
 const FileInputComponent = ({field}) => {
     const {register,formState:{errors},watch,setValue,resetField} = useFormContext();
@@ -96,7 +97,7 @@ const FileInputComponent = ({field}) => {
 
     useEffect(()=>{
         if(!selectedFiles.length && watch(field.name) && Array.from(watch(field.name)).filter((item)=>item instanceof File).length>0){
-            console.log(watch(field.name));
+            devLog(watch(field.name));
             const fileArray=Array.from(watch(field.name)).filter((item)=>item instanceof File) || [];
             setSelectedFiles(fileArray);
             const preview=fileArray.map((file,index)=>({
@@ -104,7 +105,7 @@ const FileInputComponent = ({field}) => {
                 name:file.name,
                 type:file.type.split('/')[0]
             }))
-            console.log(preview);
+            devLog(preview);
             setFilePreviews(preview);
             setFileUploaded(false);
         }

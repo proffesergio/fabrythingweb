@@ -4,6 +4,7 @@ import React, { useEffect, useState } from "react";
 import useApi from "../../hooks/APIHandler";
 import { set } from "react-hook-form";
 import { toast } from "react-toastify";
+import { devLog } from '../../utils/devLog';
 
 const ManageUserPermission = ({id}) => {
 
@@ -14,7 +15,7 @@ const ManageUserPermission = ({id}) => {
 
     const savePermission=async()=>{
         let response=await callApi({url:`auth/userpermission/${id}/`,method:'POST',body:permissions});
-        console.log(response);
+        devLog(response);
         toast.success("Permission Updated Successfully");
         await fetchPermission();
     }

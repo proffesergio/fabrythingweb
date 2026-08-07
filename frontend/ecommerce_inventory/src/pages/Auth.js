@@ -12,6 +12,7 @@ import BrandLogo from '../components/BrandLogo';
 import { toast } from 'react-toastify';
 import { useDispatch } from 'react-redux';
 import { login } from '../redux/reducer/IsLoggedInReducer';
+import { devLog } from '../utils/devLog';
 
 const Auth = () => {
   const [themeMode, setThemeMode] = useState('basic');
@@ -70,7 +71,7 @@ const Auth = () => {
 const doLogin = async(e) => {
     e.preventDefault();
     let response=await callApi({url:"auth/login/",method:"POST",body:{username:e.target.username.value,password:e.target.password.value}});
-    console.log(response);
+    devLog(response);
     if(response?.data?.access){
       localStorage.setItem("token",response.data.access);
           toast.success("Login Successfully");

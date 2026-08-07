@@ -4,6 +4,7 @@ import useApi from "../../hooks/APIHandler";
 import React, { useEffect, useState } from "react";
 import { Add, Save } from "@mui/icons-material";
 import { toast } from "react-toastify";
+import { devLog } from '../../utils/devLog';
 
 const ManageModuleUrls = () => {
     const navigate=useNavigate();
@@ -28,9 +29,9 @@ const ManageModuleUrls = () => {
     }
 
     const saveUrls=async()=>{
-        console.log(moduleUrls);
+        devLog(moduleUrls);
         let response=await callApi({url:'moduleUrls/',method:'post',body:moduleUrls});
-        console.log(response);
+        devLog(response);
         toast.success(response.data.message);
         fetchModuleUrls();
     }

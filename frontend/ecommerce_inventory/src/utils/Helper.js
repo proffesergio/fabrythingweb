@@ -5,6 +5,7 @@ import StepTextAreaComponents from '../components/StepTextAreaComponents';
 import StepJsonComponents from '../components/StepJsonComponents';
 import StepFileComponents from '../components/StepFileComponents';
 import StepTextComponents from '../components/StepTextComponents';
+import { devLog } from './devLog';
 
 
 export const isAuthenticated=()=>{
@@ -16,7 +17,7 @@ export const isAuthenticated=()=>{
     try{
         const decodedToken=jwtDecode(token);
         const currentTime=Date.now()/1000;
-        console.log(decodedToken);
+        devLog(decodedToken);
         if(decodedToken.exp<currentTime){
             localStorage.removeItem("token");
         }

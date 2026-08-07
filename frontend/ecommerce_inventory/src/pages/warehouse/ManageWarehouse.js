@@ -15,6 +15,7 @@ import ViewCompactIcon from '@mui/icons-material/ViewCompact';
 import Image from "../../components/Image";
 import RackAndShelfCard from "./RackAndShelfCard";
 import DynamicForm from "../DynamicForm";
+import { devLog } from '../../utils/devLog';
 
 const ManageWarhouse = () => {
     const [data,setData]=useState([]);
@@ -73,11 +74,11 @@ const ManageWarhouse = () => {
     }
 
     const onEditClick=(params)=>{
-        console.log(params);
+        devLog(params);
         navigate(`/form/warehouse/${params.row.id}`)
     }
     const onAddClick=(params)=>{
-        console.log(params);
+        devLog(params);
         navigate('/form/warehouse')
     }
 
@@ -145,7 +146,7 @@ const ManageWarhouse = () => {
     }
 
     const onEditClickRackAndShelf=(id)=>{
-        console.log(id);
+        devLog(id);
         setSelectedRackShelfId(id);
         setShowViewRackAndShelf(false);
         setShowAddRackAndShelf(true);

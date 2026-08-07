@@ -5,8 +5,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import ProductCard from './ProductCard';
 
 const tabs = [
-    { label: 'Trending', icon: <TrendingUp />, key: 'trending' },
     { label: 'New Arrivals', icon: <FiberNew />, key: 'newArrivals' },
+    { label: 'Trending', icon: <TrendingUp />, key: 'trending' },
     { label: 'Best Sellers', icon: <Star />, key: 'bestSellers' },
 ];
 

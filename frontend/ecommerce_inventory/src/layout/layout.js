@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { CssBaseline, ThemeProvider, createTheme, AppBar, Toolbar, IconButton, Typography, Drawer, List, ListItem, ListItemText, Collapse, Divider, Card, CardContent, Fab, Box, Hidden, InputBase, Avatar, Menu, MenuItem, ListItemIcon, BottomNavigation, BottomNavigationAction, Link } from '@mui/material';
 import { getModuleIcon } from './moduleIcons';
+import { isExpandable, resolveMenuTarget, toAdminPath } from './sidebarNav';
 import { LightMode, DarkMode, Menu as MenuIcon, ExpandLess, ExpandMore, Search as SearchIcon, AccountCircle, Settings as SettingsIcon, Notifications as NotificationsIcon, Logout, Home, Code as CodeIcon, Public as PublicIcon, Business as BusinessIcon, AlternateEmail as AlternateEmailIcon, AutoAwesomeTwoTone, Circle, AddCircleOutlineOutlined, DashboardOutlined, ShoppingCartOutlined, StorefrontOutlined, GroupOutlined, InventoryOutlined, CategoryOutlined, Category, ShoppingBasketOutlined, ShoppingBasketRounded, ReceiptOutlined, WarehouseOutlined, Map as MapIcon, ReceiptLong, Restaurant as RestaurantIcon, TwoWheeler, HowToReg, Payments, CloudDownloadOutlined } from '@mui/icons-material';
 import { ThemeProvider as Emotion10ThemeProvider } from '@emotion/react';
 import './style.scss';
@@ -27,7 +28,6 @@ const Layout = ({sidebarList,pageTitle,childPage}) => {
   // prefix test covers dashboard, restaurants, menu, orders, zones, riders and
   // payments without each page having to declare its own branding.
   const isFoodSection = location.pathname.startsWith('/admin/manage/food');
-  console.log(sidebarItems);
 
   useEffect(()=>{
     dispatch(triggerPageChange(location))
@@ -122,17 +122,18 @@ const Layout = ({sidebarList,pageTitle,childPage}) => {
 
   const drawerWidth = 280;
   const handleSidebarMenuClick=(sidebarItem)=>{
-    if(sidebarItem.submenus && sidebarItem.submenus.length>0){
+    // A container (Products, Orders, Inventory, Settings, Food, Custom
+    // Printing) is seeded with no module_url, so the old handler expanded it
+    // and stopped -- the page never changed and it read as a dead button.
+    // Expand AND open the first navigable child. See sidebarNav.js.
+    if(isExpandable(sidebarItem)){
       dispatch(expandItem({id:sidebarItem.id}));
     }
-    else{
-      dispatch(activateItem({item:sidebarItem}))
-      const url = sidebarItem.module_url;
-      if(!url) return;
-      // Prefix with /admin if not already prefixed
-      const adminUrl = url.startsWith('/admin') ? url : `/admin${url}`;
-      navigate(adminUrl);
-    }
+    const target = resolveMenuTarget(sidebarItem);
+    if(!target) return;
+    dispatch(activateItem({item:target}));
+    const adminUrl = toAdminPath(target.module_url);
+    if(adminUrl) navigate(adminUrl);
   }
 
   // Table lives in moduleIcons.js so it can be tested against the exact
@@ -163,8 +164,8 @@ const Layout = ({sidebarList,pageTitle,childPage}) => {
       </Box>
       <List sx={{ '& .MuiListItem-root': { transition: 'background-color 0.3s' } }}>
         {sidebarItems.map((sidebarItem) => (
-            <>
-            <ListItem key={sidebarItem.id} onClick={()=>handleSidebarMenuClick(sidebarItem)} sx={{ '&.Mui-selected': { backgroundColor: theme.palette.action.selected }, '&:hover': { backgroundColor: theme.palette.primary.light,borderRadius:'10px' } }} className={(sidebarItem?.active && sidebarItem.submenus.length===0)?"active-sidebar":""}>
+            <React.Fragment key={sidebarItem.id}>
+            <ListItem onClick={()=>handleSidebarMenuClick(sidebarItem)} sx={{ '&.Mui-selected': { backgroundColor: theme.palette.action.selected }, '&:hover': { backgroundColor: theme.palette.primary.light,borderRadius:'10px' } }} className={(sidebarItem?.active && sidebarItem.submenus.length===0)?"active-sidebar":""}>
                 <ListItemIcon>
                     {getIcon(sidebarItem.module_icon)}
                 </ListItemIcon>
@@ -190,7 +191,7 @@ const Layout = ({sidebarList,pageTitle,childPage}) => {
                 </Collapse>              
 
                 :""}
-            </>
+            </React.Fragment>
         ))}
 
       </List>

@@ -13,6 +13,7 @@ import { useForm } from 'react-hook-form';
 import { toast } from 'react-toastify';
 import { getFormTypes } from '../utils/Helper';
 import { useNavigate } from 'react-router-dom';
+import { devLog } from '../utils/devLog';
 const DynamicForm=({formNameVar,idVar,onSaveEvent})=>{
     const stepItems=getFormTypes();
     let {formName,id}=useParams();
@@ -81,7 +82,7 @@ const DynamicForm=({formNameVar,idVar,onSaveEvent})=>{
             }
         }
         catch(err){
-            console.log(err);
+            devLog(err);
         }
 
     }

@@ -13,6 +13,7 @@ import { set } from "react-hook-form";
 import React from "react";
 import ViewCompactIcon from '@mui/icons-material/ViewCompact';
 import Image from "../../components/Image";
+import { devLog } from '../../utils/devLog';
 
 const ManagePurchaseOrder = ({onProductSelected}) => {
     const [data,setData]=useState([]);
@@ -77,10 +78,10 @@ const ManagePurchaseOrder = ({onProductSelected}) => {
     }
 
     const onDeleteClick=(params)=>{
-        console.log(params);
+        devLog(params);
     }
     const onEditClick=(params)=>{
-        console.log(params);
+        devLog(params);
         navigate(`/create/po/${params.row.id}`)
     }
 

@@ -3,6 +3,7 @@ import axios from 'axios';
 import config from '../utils/config';
 import { toast } from 'react-toastify';
 import { getToken, clearToken, isTokenRejection } from '../utils/authToken';
+import { devLog } from '../utils/devLog';
 
 function useApi(){
     const [error,setError]=useState("");
@@ -22,7 +23,7 @@ function useApi(){
         header['Authorization']=token?`Bearer ${token}`:"";
         try{
             response=await axios.request({params:params,url:gUrl,method:method,data:body,headers:header});
-            console.log(`[API] ${method} ${gUrl} ->`, response?.status, response?.data);
+            devLog(`[API] ${method} ${gUrl} ->`, response?.status, response?.data);
         }
         catch(err){
             // The server rejected the token itself (revoked, re-signed, or from
@@ -35,15 +36,15 @@ function useApi(){
                 try{
                     response=await axios.request({params:params,url:gUrl,method:method,data:body,
                                                   headers:{...header,Authorization:""}});
-                    console.log(`[API] ${method} ${gUrl} (retried anonymously) ->`, response?.status);
+                    devLog(`[API] ${method} ${gUrl} (retried anonymously) ->`, response?.status);
                     setLoading(false);
                     return response;
                 }catch(retryErr){
                     err=retryErr;
                 }
             }
-            console.log(`[API ERROR] ${method} ${gUrl} ->`, err.message);
-            console.log('[API ERROR details]:', err.response?.data || err.request);
+            devLog(`[API ERROR] ${method} ${gUrl} ->`, err.message);
+            devLog('[API ERROR details]:', err.response?.data || err.request);
             if(!silent){
                 if(err.response?.data?.message){
                     toast.error(err.response.data.message);

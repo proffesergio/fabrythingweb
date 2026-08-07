@@ -28,6 +28,7 @@ import { Add, CheckCircle, Close, Delete, Save } from "@mui/icons-material";
 import JsonInputComponent from "../../components/JsonInputComponent";
 import { toast } from "react-toastify";
 import { useNavigate, useParams } from "react-router-dom";
+import { devLog } from '../../utils/devLog';
 
 const CreatePurchaseOrder = () => {
   const { error, loading, callApi } = useApi();
@@ -145,7 +146,7 @@ const CreatePurchaseOrder = () => {
   }
 
   const createOrder=async(e,status)=>{
-    console.log(methods.formState.errors);
+    devLog(methods.formState.errors);
     e.preventDefault();
     methods.setValue("status",status)
     if(status==="DRAFT"){
