@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { CssBaseline, ThemeProvider, createTheme, AppBar, Toolbar, IconButton, Typography, Drawer, List, ListItem, ListItemText, Collapse, Divider, Card, CardContent, Fab, Box, Hidden, InputBase, Avatar, Menu, MenuItem, ListItemIcon, BottomNavigation, BottomNavigationAction, Link } from '@mui/material';
+import { getModuleIcon } from './moduleIcons';
 import { LightMode, DarkMode, Menu as MenuIcon, ExpandLess, ExpandMore, Search as SearchIcon, AccountCircle, Settings as SettingsIcon, Notifications as NotificationsIcon, Logout, Home, Code as CodeIcon, Public as PublicIcon, Business as BusinessIcon, AlternateEmail as AlternateEmailIcon, AutoAwesomeTwoTone, Circle, AddCircleOutlineOutlined, DashboardOutlined, ShoppingCartOutlined, StorefrontOutlined, GroupOutlined, InventoryOutlined, CategoryOutlined, Category, ShoppingBasketOutlined, ShoppingBasketRounded, ReceiptOutlined, WarehouseOutlined, Map as MapIcon, ReceiptLong, Restaurant as RestaurantIcon, TwoWheeler, HowToReg, Payments, CloudDownloadOutlined } from '@mui/icons-material';
 import { ThemeProvider as Emotion10ThemeProvider } from '@emotion/react';
 import './style.scss';
@@ -134,58 +135,9 @@ const Layout = ({sidebarList,pageTitle,childPage}) => {
     }
   }
 
-  const getIcon = (icon) => {
-    switch (icon) {
-      case 'Add':
-        return <AddCircleOutlineOutlined />;
-      case 'Dashboard':
-        return <DashboardOutlined />;
-      case 'Store':
-        return <ShoppingCartOutlined />;
-      case 'Retail':
-        return <StorefrontOutlined />;
-      case 'Storefront':
-        return <StorefrontOutlined />;
-      case 'Restaurant':
-        return <RestaurantIcon />;
-      case 'Map':
-        return <MapIcon />;
-      case 'ReceiptLong':
-        return <ReceiptLong />;
-      case 'TwoWheeler':
-        return <TwoWheeler />;
-      case 'HowToReg':
-        return <HowToReg />;
-      case 'Payments':
-        return <Payments />;
-      case 'AccountCircle':
-        return <GroupOutlined />;
-      case 'Settings':
-        return <SettingsIcon />;
-      case 'Inventory':
-        return <InventoryOutlined />;
-      case 'CloudDownload':
-        return <CloudDownloadOutlined />;
-      case 'Category':
-        return <Category />;
-      case 'Redeem':
-        return <ShoppingBasketRounded />;
-      case 'Receipt':
-        return <ReceiptOutlined />;
-      case 'Warehouse':
-        return <WarehouseOutlined />;
-      case 'exams':
-        return <AccountCircle />;
-      case 'results':
-        return <AccountCircle />;
-      case 'attendance':
-        return <AccountCircle />;
-      case 'ecommerce':
-        return <BusinessIcon />;
-      default:
-        return <AccountCircle />;
-    }
-  }
+  // Table lives in moduleIcons.js so it can be tested against the exact
+  // icon names the backend seeds -- see moduleIcons.test.js.
+  const getIcon = (icon) => getModuleIcon(icon);
 
   const drawer = (
     <div

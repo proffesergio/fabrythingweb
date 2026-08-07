@@ -5,80 +5,90 @@ import {RouterProvider, createBrowserRouter} from 'react-router-dom'
 import ProtectedRoute from './utils/ProtectedRoute';
 import VendorRoute from './utils/VendorRoute';
 import {ToastContainer} from 'react-toastify';
-import Auth from './pages/Auth';
 import { useSelector } from 'react-redux';
 import { fetchSidebar } from './redux/reducer/sidebardata';
-import { useEffect } from 'react';
+import { Suspense, lazy, useEffect } from 'react';
 import { useDispatch } from 'react-redux';
-import DynamicForm from './pages/DynamicForm';
 import 'react-toastify/dist/ReactToastify.css';
 import './style/style.css';
-import ManageCategories from './pages/category/ManageCategories';
-import ManageProducts from './pages/products/ManageProducts';
-import ImportProducts from './pages/products/ImportProducts';
-import Error404Page from './pages/Error404Page';
-import ManageWarhouse from './pages/warehouse/ManageWarehouse';
-import ManageUsers from './pages/users/ManageUsers';
-import ManageModuleUrls from './pages/module/ManageModuleUrls';
-import CreatePurchaseOrder from './pages/purchaseorder/CreatePurchaseOrder';
-import ManagePurchaseOrder from './pages/purchaseorder/ManagePurchaseOrder';
-import ManageSalesOrder from './pages/salesorder/ManageSalesOrder';
-import ManageRestaurants from './pages/food/ManageRestaurants';
-import ManageZones from './pages/food/ManageZones';
-import FoodDashboard from './pages/food/FoodDashboard';
-import ManageFoodOrders from './pages/food/ManageFoodOrders';
-import FoodMenuManager from './pages/food/FoodMenuManager';
-import RestaurantDetailAdmin from './pages/food/RestaurantDetailAdmin';
-import ManageCustomers from './pages/customers/ManageCustomers';
-import ManageCoupons from './pages/food/ManageCoupons';
-import ManageRiders from './pages/food/ManageRiders';
-import FoodPayments from './pages/food/FoodPayments';
-import PartnerApplications from './pages/food/PartnerApplications';
-import RiderCash from './pages/food/RiderCash';
-import ChatInbox from './pages/chat/ChatInbox';
-import ManageBanners from './pages/banners/ManageBanners';
-import ManageAffiliateProducts from './pages/affiliate/ManageAffiliateProducts';
-import ManagePrintRequests from './pages/printing/ManagePrintRequests';
-import PrintSetup from './pages/printing/PrintSetup';
-import RiderDashboard from './rider/RiderDashboard';
-import RiderLogin from './rider/RiderLogin';
 
 // Storefront imports
 import { ThemeProvider } from '@mui/material/styles';
 import { getStorefrontTheme } from './storefront/theme';
 import StorefrontLayout from './storefront/layout/StorefrontLayout';
-import HomePage from './storefront/pages/HomePage';
-import ProductCatalog from './storefront/pages/ProductCatalog';
-import ProductDetail from './storefront/pages/ProductDetail';
-import CartPage from './storefront/pages/CartPage';
-import CheckoutPage from './storefront/pages/CheckoutPage';
-import CustomerAuth from './storefront/pages/CustomerAuth';
-import CustomerAccount from './storefront/pages/CustomerAccount';
-import CustomPrintingPage from './storefront/pages/CustomPrintingPage';
-import PrintRequestDetail from './storefront/pages/PrintRequestDetail';
-import DealsPage from './storefront/pages/DealsPage';
-import LegalPage from './storefront/pages/legal/LegalPage';
 import { PRIVACY, SHIPPING, TERMS } from './storefront/pages/legal/content';
 import { useMemo, useState } from 'react';
+import CircularProgress from '@mui/material/CircularProgress';
+import Box from '@mui/material/Box';
 
 // Vendor (Restaurant-role) dashboard imports
 import VendorLayout from './vendor/VendorLayout';
-import VendorRestaurant from './vendor/VendorRestaurant';
-import VendorMenu from './vendor/VendorMenu';
-import VendorOrders from './vendor/VendorOrders';
 
 // Food delivery app (separate themed experience mounted at /food)
 import { FoodThemeProvider } from './food/context/FoodThemeContext';
 import { FoodLocationProvider } from './food/context/FoodLocationContext';
 import FoodLayout from './food/layout/FoodLayout';
-import FoodHome from './food/pages/FoodHome';
-import RestaurantDetail from './food/pages/RestaurantDetail';
-import FoodCartPage from './food/pages/FoodCartPage';
-import BrowseRestaurants from './food/pages/BrowseRestaurants';
-import FoodCheckout from './food/pages/FoodCheckout';
-import FoodOrderTrack from './food/pages/FoodOrderTrack';
-import FoodMyOrders from './food/pages/FoodMyOrders';
-import BecomePartner from './food/pages/BecomePartner';
+
+// ── Code-split routes ────────────────────────────────────────────────
+// Every page below loads as its own chunk. Before this, App.js imported all
+// of them statically, so a customer opening the storefront homepage also
+// downloaded the admin panel, the vendor panel, the rider dashboard, the MUI
+// data grid, the charting library and the map before first paint.
+// Declared after the imports because `import/first` is an error in this
+// build, not a warning.
+const Auth = lazy(() => import('./pages/Auth'));
+const DynamicForm = lazy(() => import('./pages/DynamicForm'));
+const ManageCategories = lazy(() => import('./pages/category/ManageCategories'));
+const ManageProducts = lazy(() => import('./pages/products/ManageProducts'));
+const ImportProducts = lazy(() => import('./pages/products/ImportProducts'));
+const Error404Page = lazy(() => import('./pages/Error404Page'));
+const ManageWarhouse = lazy(() => import('./pages/warehouse/ManageWarehouse'));
+const ManageUsers = lazy(() => import('./pages/users/ManageUsers'));
+const ManageModuleUrls = lazy(() => import('./pages/module/ManageModuleUrls'));
+const CreatePurchaseOrder = lazy(() => import('./pages/purchaseorder/CreatePurchaseOrder'));
+const ManagePurchaseOrder = lazy(() => import('./pages/purchaseorder/ManagePurchaseOrder'));
+const ManageSalesOrder = lazy(() => import('./pages/salesorder/ManageSalesOrder'));
+const ManageRestaurants = lazy(() => import('./pages/food/ManageRestaurants'));
+const ManageZones = lazy(() => import('./pages/food/ManageZones'));
+const FoodDashboard = lazy(() => import('./pages/food/FoodDashboard'));
+const ManageFoodOrders = lazy(() => import('./pages/food/ManageFoodOrders'));
+const FoodMenuManager = lazy(() => import('./pages/food/FoodMenuManager'));
+const RestaurantDetailAdmin = lazy(() => import('./pages/food/RestaurantDetailAdmin'));
+const ManageCustomers = lazy(() => import('./pages/customers/ManageCustomers'));
+const ManageCoupons = lazy(() => import('./pages/food/ManageCoupons'));
+const ManageRiders = lazy(() => import('./pages/food/ManageRiders'));
+const FoodPayments = lazy(() => import('./pages/food/FoodPayments'));
+const PartnerApplications = lazy(() => import('./pages/food/PartnerApplications'));
+const RiderCash = lazy(() => import('./pages/food/RiderCash'));
+const ChatInbox = lazy(() => import('./pages/chat/ChatInbox'));
+const ManageBanners = lazy(() => import('./pages/banners/ManageBanners'));
+const ManageAffiliateProducts = lazy(() => import('./pages/affiliate/ManageAffiliateProducts'));
+const ManagePrintRequests = lazy(() => import('./pages/printing/ManagePrintRequests'));
+const PrintSetup = lazy(() => import('./pages/printing/PrintSetup'));
+const RiderDashboard = lazy(() => import('./rider/RiderDashboard'));
+const RiderLogin = lazy(() => import('./rider/RiderLogin'));
+const HomePage = lazy(() => import('./storefront/pages/HomePage'));
+const ProductCatalog = lazy(() => import('./storefront/pages/ProductCatalog'));
+const ProductDetail = lazy(() => import('./storefront/pages/ProductDetail'));
+const CartPage = lazy(() => import('./storefront/pages/CartPage'));
+const CheckoutPage = lazy(() => import('./storefront/pages/CheckoutPage'));
+const CustomerAuth = lazy(() => import('./storefront/pages/CustomerAuth'));
+const CustomerAccount = lazy(() => import('./storefront/pages/CustomerAccount'));
+const CustomPrintingPage = lazy(() => import('./storefront/pages/CustomPrintingPage'));
+const PrintRequestDetail = lazy(() => import('./storefront/pages/PrintRequestDetail'));
+const DealsPage = lazy(() => import('./storefront/pages/DealsPage'));
+const LegalPage = lazy(() => import('./storefront/pages/legal/LegalPage'));
+const VendorRestaurant = lazy(() => import('./vendor/VendorRestaurant'));
+const VendorMenu = lazy(() => import('./vendor/VendorMenu'));
+const VendorOrders = lazy(() => import('./vendor/VendorOrders'));
+const FoodHome = lazy(() => import('./food/pages/FoodHome'));
+const RestaurantDetail = lazy(() => import('./food/pages/RestaurantDetail'));
+const FoodCartPage = lazy(() => import('./food/pages/FoodCartPage'));
+const BrowseRestaurants = lazy(() => import('./food/pages/BrowseRestaurants'));
+const FoodCheckout = lazy(() => import('./food/pages/FoodCheckout'));
+const FoodOrderTrack = lazy(() => import('./food/pages/FoodOrderTrack'));
+const FoodMyOrders = lazy(() => import('./food/pages/FoodMyOrders'));
+const BecomePartner = lazy(() => import('./food/pages/BecomePartner'));
 
 // Wraps the storefront with a dark-mode-aware theme.
 // Lives inside the router so it re-renders cleanly on toggle.
@@ -123,6 +133,19 @@ function StorefrontAuthTheme({ children }) {
   return <ThemeProvider theme={theme}>{children}</ThemeProvider>;
 }
 
+// Shown while a route's JS chunk downloads. Every page below is code-split
+// (see the `lazy(...)` declarations above): before this, a customer opening
+// the storefront homepage also downloaded the admin panel, the vendor panel,
+// the rider dashboard, the data grid, the charting library and the map -- all
+// of it parsed before first paint.
+function RouteFallback() {
+  return (
+    <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '60vh' }}>
+      <CircularProgress />
+    </Box>
+  );
+}
+
 function App() {
   const {status,error,items}=useSelector(state=>state.sidebardata);
   const {isLoggedIn}=useSelector(state=>state.isLoggedInReducer);
@@ -140,7 +163,7 @@ function App() {
     }
   },[isLoggedIn])
 
-  const router=createBrowserRouter(
+  const router=useMemo(()=>createBrowserRouter(
     [
       // ── Storefront Routes ──
       {
@@ -254,11 +277,14 @@ function App() {
           {path:"*",element:<Error404Page/>},
         ]},
     ]
-  )
+  ), [])
 
   return (
     <>
-        <RouterProvider router={router}/>
+        {/* One boundary above the router catches every lazy route chunk. */}
+        <Suspense fallback={<RouteFallback/>}>
+          <RouterProvider router={router}/>
+        </Suspense>
         <ToastContainer position="bottom-right" theme='colored' autoclose={3000} hideProgressBar={false} style={{marginBottom:'30px'}}/>
     </>
   );
