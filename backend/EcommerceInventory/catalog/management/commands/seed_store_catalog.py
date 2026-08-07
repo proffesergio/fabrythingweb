@@ -96,6 +96,22 @@ TAXONOMY = [
         ("beauty-herbal-hair-care", "Herbal Hair Care", "Herbal & natural hair care.", []),
         ("beauty-deodorant", "Deodorant", "Deodorants & antiperspirants.", []),
     ]),
+    # Receives the arogga.com mapping (see
+    # catalog/migrations/0013_enable_arogga_import_source.py). Kept separate
+    # from `beauty-health`, which is cosmetics/personal care: these are
+    # pharmacy lines, and `health-medicine` in particular holds items that may
+    # carry Products.requires_prescription and are therefore blocked at
+    # checkout until StoreConfiguration.rx_sales_enabled is turned on.
+    ("health", "Health & Pharmacy", "Medicines, supplements and healthcare essentials.", [
+        ("health-medicine", "Medicine", "Prescription and over-the-counter medicines.", []),
+        ("health-healthcare", "Healthcare Devices", "Thermometers, BP monitors & medical devices.", []),
+        ("health-supplement", "Supplements", "Vitamins, minerals & nutritional supplements.", []),
+        ("health-baby-mom-care", "Baby & Mom Care", "Baby and maternal care essentials.", []),
+        ("health-herbal", "Herbal", "Herbal and ayurvedic remedies.", []),
+        ("health-food-nutrition", "Food & Nutrition", "Nutritional food, drinks & snacks.", []),
+        ("health-sexual-wellness", "Sexual Wellness", "Sexual wellness and family planning.", []),
+        ("health-home-care", "Home Care", "Sanitisers, cleaners & home hygiene.", []),
+    ]),
 ]
 
 # Legacy top-level slugs from seed_bd_store, adopted into the new tree in place

@@ -127,13 +127,18 @@ class SeededImportSourcesTests(TestCase):
             },
         )
 
-    def test_arogga_seeded_disabled_with_reason(self):
+    def test_arogga_enabled_with_the_jsonld_adapter(self):
+        """0008 seeded arogga disabled ("client-rendered ... zero prices");
+        0013 enabled it after re-verifying that product AND category pages
+        server-render schema.org JSON-LD. This pins the post-0013 state."""
         source = ImportSource.objects.get(slug="arogga")
-        self.assertFalse(source.is_enabled)
-        self.assertEqual(source.adapter_key, "")
+        self.assertTrue(source.is_enabled)
+        self.assertEqual(source.adapter_key, "arogga")
+        # robots.txt disallows /search?, so this source browses by category only.
+        self.assertFalse(source.supports_search)
+        # Not a reseller partner -- must stay out of sync_source_prices.
         self.assertFalse(source.sets_source_url)
-        self.assertIn("client-rendered", source.notes)
-        self.assertEqual(source.categories.count(), 0)
+        self.assertGreater(source.categories.count(), 0)
 
 
 # --- Authorization -----------------------------------------------------------
@@ -219,14 +224,18 @@ class ImportSourceManagementTests(TestCase):
             role="Super Admin", country="Bangladesh")
 
     def test_cannot_enable_source_with_no_adapter(self):
+        # Needs a source that genuinely has no adapter. Arogga filled this role
+        # until 0013 gave it one, so the fixture is created here instead.
+        blank = ImportSource.objects.create(
+            name="Someday Store", slug="someday", base_url="https://someday.example/",
+            adapter_key="", is_enabled=False)
         request = self.factory.patch(
             "/api/products/admin/import/sources/", {"is_enabled": True}, format="json")
         force_authenticate(request, user=self.owner)
-        arogga = ImportSource.objects.get(slug="arogga")
-        res = AdminImportSourceDetailView.as_view()(request, pk=arogga.id)
+        res = AdminImportSourceDetailView.as_view()(request, pk=blank.id)
         self.assertEqual(res.status_code, 400)
-        arogga.refresh_from_db()
-        self.assertFalse(arogga.is_enabled)
+        blank.refresh_from_db()
+        self.assertFalse(blank.is_enabled)
 
     def test_can_add_a_new_source_and_its_category_mapping(self):
         request = self.factory.post("/api/products/admin/import/sources/", {

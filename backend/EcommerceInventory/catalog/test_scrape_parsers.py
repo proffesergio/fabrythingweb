@@ -11,6 +11,9 @@ from catalog.scrape_parsers import (
     parse_fabrilife_product,
     parse_opencart_listing,
     parse_opencart_product,
+    parse_arogga_listing,
+    parse_arogga_listing_cards,
+    parse_arogga_product,
     parse_rokomari_listing,
     parse_rokomari_listing_cards,
     parse_rokomari_product,
@@ -688,3 +691,105 @@ class RokomariListingCardsTests(SimpleTestCase):
         cards = parse_rokomari_listing_cards(html, "https://www.rokomari.com/")
         self.assertEqual(cards[0]["price"], 250.0)
         self.assertIsNone(cards[0]["discount_price"])
+
+
+# --- Arogga (schema.org JSON-LD) ---------------------------------------------
+#
+# Arogga was seeded DISABLED in migration 0008 with the note "www.arogga.com is
+# client-rendered ... zero prices in the raw HTML". That was re-verified on
+# 2026-08-07 and is no longer true: product and category pages both ship
+# server-rendered schema.org JSON-LD carrying name, brand, image, price and
+# availability. These fixtures are real payloads captured from live pages
+# (trimmed to three products), which is why this adapter parses JSON-LD rather
+# than CSS selectors -- structured data is far less brittle than a theme.
+
+class AroggaProductTests(SimpleTestCase):
+    """https://www.arogga.com/product/26017/savlon-multipurpose-antiseptic-cream-60g"""
+
+    def setUp(self):
+        self.html = (FIXTURES / "arogga_product.html").read_text(encoding="utf-8")
+        self.parsed = parse_arogga_product(self.html)
+
+    def test_extracts_name(self):
+        self.assertEqual(self.parsed["name"], "Savlon Multipurpose Antiseptic Cream 60g")
+
+    def test_extracts_price_as_float(self):
+        self.assertAlmostEqual(self.parsed["price"], 42.54)
+
+    def test_has_no_discount_price(self):
+        # Arogga's JSON-LD exposes one `offers.price`; there is no crossed-out
+        # original, so a discount must be reported as absent rather than
+        # invented from the same number.
+        self.assertIsNone(self.parsed["discount_price"])
+
+    def test_extracts_brand(self):
+        self.assertEqual(self.parsed["brand"], "Savlon")
+
+    def test_extracts_image(self):
+        self.assertTrue(self.parsed["images"])
+        self.assertTrue(self.parsed["images"][0].startswith("https://cdn2.arogga.com/"))
+
+    def test_otc_item_does_not_require_prescription(self):
+        self.assertFalse(self.parsed["requires_prescription"])
+
+    def test_reports_stock(self):
+        self.assertTrue(self.parsed["in_stock"])
+
+    def test_carries_source_category(self):
+        self.assertEqual(self.parsed["source_category"], "healthcare")
+
+
+class AroggaPrescriptionProductTests(SimpleTestCase):
+    """A `category: medicine` item whose page says it needs a prescription.
+
+    This flag is the whole reason the adapter reads the page body as well as
+    the JSON-LD: it drives Products.requires_prescription, which the checkout
+    gate blocks while StoreConfiguration.rx_sales_enabled is False (no DGDA
+    licence). Mis-parsing it would put prescription medicines on sale.
+    """
+
+    def setUp(self):
+        self.html = (FIXTURES / "arogga_product_rx.html").read_text(encoding="utf-8")
+        self.parsed = parse_arogga_product(self.html)
+
+    def test_flags_prescription_requirement(self):
+        self.assertTrue(self.parsed["requires_prescription"])
+
+    def test_still_extracts_the_commercial_fields(self):
+        self.assertIn("3-Geocef", self.parsed["name"])
+        self.assertEqual(self.parsed["source_category"], "medicine")
+
+    def test_out_of_stock_is_reported(self):
+        self.assertFalse(self.parsed["in_stock"])
+
+
+class AroggaListingTests(SimpleTestCase):
+    """A category page carries a CollectionPage -> mainEntity(ItemList) of full
+    Product entries, so ONE fetch yields complete candidates and the importer
+    never needs a per-product request to browse."""
+
+    def setUp(self):
+        self.html = (FIXTURES / "arogga_category.html").read_text(encoding="utf-8")
+        self.cards = parse_arogga_listing_cards(self.html, "https://www.arogga.com/")
+
+    def test_returns_every_product_in_the_list(self):
+        self.assertEqual(len(self.cards), 3)
+
+    def test_cards_carry_name_price_and_url(self):
+        first = self.cards[0]
+        self.assertEqual(first["name"], "Alcohol Pad")
+        self.assertAlmostEqual(first["price"], 74.0)
+        self.assertTrue(first["source_url"].startswith("https://www.arogga.com/product/"))
+
+    def test_cards_carry_images(self):
+        self.assertTrue(all(c["images"] for c in self.cards))
+
+    def test_urls_are_absolute_and_deduped(self):
+        urls = [c["source_url"] for c in self.cards]
+        self.assertEqual(len(urls), len(set(urls)))
+        self.assertTrue(all(u.startswith("https://") for u in urls))
+
+    def test_listing_urls_helper_returns_plain_links(self):
+        urls = parse_arogga_listing(self.html, "https://www.arogga.com/")
+        self.assertEqual(len(urls), 3)
+        self.assertTrue(all("/product/" in u for u in urls))

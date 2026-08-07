@@ -39,6 +39,9 @@ from django.utils.text import slugify
 
 from catalog.models import ImportSource, Products
 from catalog.scrape_parsers import (
+    parse_arogga_listing,
+    parse_arogga_listing_cards,
+    parse_arogga_product,
     parse_fabrilife_listing,
     parse_fabrilife_product,
     parse_opencart_listing,
@@ -188,6 +191,18 @@ def _opencart_listing_url(source, category_path=None, query=None):
     return base + f"index.php?route=product/search&search={query}&description=1"
 
 
+def _arogga_listing_url(source, category_path=None, query=None):
+    """category_path is a full ``category/<group>/<id>/<slug>`` path (see the
+    ImportSourceCategory rows seeded alongside the source).
+
+    There is no search branch: arogga.com's robots.txt disallows ``/search?``,
+    so the source is registered with supports_search=False and browse_candidates
+    rejects a query before reaching here.
+    """
+    base = source.base_url
+    return base + _as_relative_path(category_path or "", base)
+
+
 def _rokomari_listing_url(source, category_path=None, query=None):
     """category_path is a full ``product/category/<id>/<slug>`` path (see
     ImportSourceCategory rows / the 0009 data migration); search hits the
@@ -321,6 +336,26 @@ def browse_candidates(source_slug, *, category_path=None, query=None, limit=BROW
             raise SourceFetchError(str(e)) from e
         product_urls = parse_fabrilife_listing(listing_json, source.base_url or FABRILIFE_BASE_URL)[:limit]
         parser = parse_fabrilife_product
+    elif source.adapter_key == "arogga":
+        listing_url = _arogga_listing_url(source, category_path, query)
+        try:
+            listing_html = fetch(listing_url)
+        except Exception as e:  # noqa: BLE001 -- one bad listing must surface, not crash
+            raise SourceFetchError(str(e)) from e
+        if not detail:
+            # The category page's JSON-LD carries name/brand/image/price/stock
+            # for every card, so the whole picker is one request. It cannot
+            # carry the prescription flag -- that marker only exists on the
+            # product page -- which is exactly what `detail` buys.
+            cards = parse_arogga_listing_cards(listing_html, listing_url)[:limit]
+            return {
+                "candidates": [_candidate_from_card(c) for c in cards],
+                "categories": _source_categories(source),
+                "listing_product_count": len(cards),
+                "fetch_failures": 0,
+            }
+        product_urls = parse_arogga_listing(listing_html, listing_url)[:limit]
+        parser = parse_arogga_product
     elif source.adapter_key == "rokomari":
         listing_url = _rokomari_listing_url(source, category_path, query)
         # A single request either way (detail or not) -- the timeout that
@@ -385,6 +420,8 @@ def _entry_from_parsed(source, url, parsed):
         "specifications": parsed.get("specifications") or {},
         "brand": parsed.get("brand") or "",
         "images": (parsed.get("images") or [])[:3],
+        # Medicines: see catalog.services_import for why this must not be lost.
+        "requires_prescription": parsed.get("requires_prescription"),
     }
     if source.sets_source_url:
         # Only partner stores (explicit reseller permission) get source_url --
@@ -414,6 +451,8 @@ def import_candidates(source_slug, source_urls, category, domain_user, added_by_
     fetch = fetch or polite_get
     if source.adapter_key == "fabrilife":
         parser = parse_fabrilife_product
+    elif source.adapter_key == "arogga":
+        parser = parse_arogga_product
     elif source.adapter_key == "rokomari":
         parser = parse_rokomari_product
     else:

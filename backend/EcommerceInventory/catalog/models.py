@@ -253,6 +253,7 @@ ADAPTER_CHOICES = [
     ('opencart', 'OpenCart (potakait/canvasit)'),
     ('fabrilife', 'Fabrilife (Algolia)'),
     ('rokomari', 'Rokomari.com'),
+    ('arogga', 'Arogga.com (schema.org JSON-LD)'),
     ('', 'No adapter yet'),
 ]
 

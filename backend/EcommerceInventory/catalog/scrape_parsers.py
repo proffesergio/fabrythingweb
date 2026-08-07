@@ -836,3 +836,165 @@ def parse_rokomari_listing_cards(html, base_url):
             "images": [image] if image else [],
         })
     return out
+
+
+# --- arogga.com -------------------------------------------------------------
+#
+# Unlike every other adapter here, this one reads schema.org JSON-LD rather
+# than CSS selectors. Arogga server-renders a complete `Product` blob on each
+# product page and a `CollectionPage -> mainEntity(ItemList)` of full `Product`
+# entries on each category page, so:
+#
+#   * browsing a category costs ONE request and still yields name, brand,
+#     image, price and stock for every card -- no per-product fetch, and
+#   * a site restyle cannot break the parse, only a schema change can.
+#
+# Migration 0008 seeded this source disabled with the note "client-rendered ...
+# zero prices in the raw HTML". Re-verified 2026-08-07 against live pages: that
+# is no longer the case. See catalog/test_fixtures/arogga_*.html, which are
+# real captured payloads.
+
+# Arogga states this in the page body, not in the JSON-LD. It drives
+# Products.requires_prescription, which the checkout gate blocks while
+# StoreConfiguration.rx_sales_enabled is False -- so a miss here would put
+# prescription medicines on open sale. Matched case-insensitively against the
+# de-tagged body so surrounding markup changes don't defeat it.
+_RX_MARKER = "requires a prescription"
+
+
+def _arogga_ld_blocks(html):
+    """Every parseable ``application/ld+json`` payload on the page."""
+    soup = BeautifulSoup(html, "html.parser")
+    out = []
+    for tag in soup.find_all("script", attrs={"type": "application/ld+json"}):
+        raw = tag.string or tag.get_text() or ""
+        try:
+            out.append(json.loads(raw.strip()))
+        except (ValueError, TypeError):
+            # One malformed block must not hide the rest of the page.
+            continue
+    return out
+
+
+def _arogga_page_text(html):
+    """Body text with scripts stripped, for markers that live outside JSON-LD."""
+    without_scripts = re.sub(r"<script.*?</script>", " ", html, flags=re.S | re.I)
+    return " ".join(re.sub(r"<[^>]+>", " ", without_scripts).split())
+
+
+def _arogga_offer_price(product):
+    offers = product.get("offers") or {}
+    if isinstance(offers, list):
+        offers = offers[0] if offers else {}
+    price = offers.get("price")
+    try:
+        return float(price) if price not in (None, "") else None
+    except (TypeError, ValueError):
+        return None
+
+
+def _arogga_in_stock(product):
+    offers = product.get("offers") or {}
+    if isinstance(offers, list):
+        offers = offers[0] if offers else {}
+    return str(offers.get("availability", "")).rstrip("/").split("/")[-1] == "InStock"
+
+
+def _arogga_brand(product):
+    brand = product.get("brand")
+    if isinstance(brand, dict):
+        return (brand.get("name") or "").strip()
+    return (brand or "").strip() if isinstance(brand, str) else ""
+
+
+def _arogga_images(product):
+    image = product.get("image")
+    if isinstance(image, list):
+        return _dedupe_preserve_order([str(i) for i in image if i])
+    return [str(image)] if image else []
+
+
+def _arogga_product_fields(product, *, requires_prescription):
+    """One JSON-LD ``Product`` -> the dict shape the other adapters return."""
+    return {
+        "name": (product.get("name") or "").strip(),
+        "price": _arogga_offer_price(product),
+        # Arogga publishes a single `offers.price`. There is no crossed-out
+        # original, so reporting a discount would mean inventing one.
+        "discount_price": None,
+        "description": (product.get("description") or "").strip(),
+        "specifications": {},
+        "brand": _arogga_brand(product),
+        "images": _arogga_images(product),
+        "source_url": (product.get("url") or "").strip(),
+        "source_sku": str(product.get("sku") or "").strip(),
+        "source_category": (product.get("category") or "").strip(),
+        "in_stock": _arogga_in_stock(product),
+        "requires_prescription": requires_prescription,
+    }
+
+
+def parse_arogga_product(html):
+    """Parse one arogga.com product page. Pure function -- no network, no ORM."""
+    product = next((d for d in _arogga_ld_blocks(html) if d.get("@type") == "Product"), None)
+    if not product:
+        return {
+            "name": "", "price": None, "discount_price": None, "description": "",
+            "specifications": {}, "brand": "", "images": [], "source_url": "",
+            "source_sku": "", "source_category": "", "in_stock": False,
+            "requires_prescription": False,
+        }
+    rx = _RX_MARKER in _arogga_page_text(html).lower()
+    return _arogga_product_fields(product, requires_prescription=rx)
+
+
+def _arogga_listing_products(html):
+    """The ``Product`` entries of a category page's nested ItemList.
+
+    The list is NOT a top-level ItemList -- it hangs off
+    ``CollectionPage.mainEntity``, which is why a naive "find @type ItemList"
+    scan finds only the breadcrumb trail.
+    """
+    for block in _arogga_ld_blocks(html):
+        entity = block.get("mainEntity") if isinstance(block, dict) else None
+        candidates = []
+        if isinstance(entity, dict) and entity.get("@type") == "ItemList":
+            candidates = entity.get("itemListElement") or []
+        elif block.get("@type") == "ItemList":
+            candidates = block.get("itemListElement") or []
+        products = [
+            el["item"] for el in candidates
+            if isinstance(el, dict) and isinstance(el.get("item"), dict)
+            and el["item"].get("@type") == "Product"
+        ]
+        if products:
+            return products
+    return []
+
+
+def parse_arogga_listing_cards(html, base_url):
+    """Full candidates from a category page in a single request.
+
+    A listing card cannot know whether an item needs a prescription -- that
+    marker only exists on the product page -- so ``requires_prescription`` is
+    reported as ``None`` ("unknown") rather than ``False``, which would read as
+    a positive claim that the item is over-the-counter.
+    """
+    cards = []
+    for product in _arogga_listing_products(html):
+        fields = _arogga_product_fields(product, requires_prescription=None)
+        if fields["source_url"]:
+            fields["source_url"] = urljoin(base_url, fields["source_url"])
+        cards.append(fields)
+    seen, out = set(), []
+    for card in cards:
+        if card["source_url"] in seen:
+            continue
+        seen.add(card["source_url"])
+        out.append(card)
+    return out
+
+
+def parse_arogga_listing(html, base_url):
+    """Absolute product URLs from a category page (deduped, order preserved)."""
+    return [c["source_url"] for c in parse_arogga_listing_cards(html, base_url) if c["source_url"]]

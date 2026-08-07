@@ -90,7 +90,17 @@ class BrowseCandidatesTests(AdminProductImportTestBase):
         self.assertEqual(res.status_code, 403)
 
     def test_unknown_source_rejected(self):
-        res = self.browse({"source": "arogga", "category": "x"}, self.owner)
+        res = self.browse({"source": "nosuchsource", "category": "x"}, self.owner)
+        self.assertEqual(res.status_code, 400)
+
+    def test_disabled_source_rejected(self):
+        # Arogga used to be the stand-in for this case; it is enabled now
+        # (catalog/migrations/0013), so the disabled source is made explicitly.
+        from catalog.models import ImportSource
+        ImportSource.objects.create(name="Someday Store", slug="someday",
+                                    base_url="https://someday.example/",
+                                    adapter_key="", is_enabled=False)
+        res = self.browse({"source": "someday", "category": "x"}, self.owner)
         self.assertEqual(res.status_code, 400)
 
     def test_missing_category_and_query_rejected(self):

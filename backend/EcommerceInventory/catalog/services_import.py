@@ -147,6 +147,12 @@ def seed_product_entry(entry, category, domain_user, added_by_user=None, *,
         "base_price": price,
         "initial_selling_price": apply_markup(price),
         "discount_price": apply_markup(disc) if disc else None,
+        # Medicines only. Products.requires_prescription is what the checkout
+        # gate keys on while StoreConfiguration.rx_sales_enabled is False, so
+        # dropping it here would put prescription-only items on open sale.
+        # bool() because a listing card reports None ("unknown"), which must
+        # settle to False rather than raise.
+        "requires_prescription": bool(entry.get("requires_prescription")),
         "source_url": entry.get("source_url") or "",
         "source_price": price if entry.get("source_url") else None,
         "price_synced_at": timezone.now() if entry.get("source_url") else None,
