@@ -7,6 +7,7 @@ import {
 import { FilterList, Close } from '@mui/icons-material';
 import { useSearchParams } from 'react-router-dom';
 import useApi from '../../hooks/APIHandler';
+import useCachedApi from '../../hooks/useCachedApi';
 import ProductCard from '../components/ProductCard';
 import AffiliateWidget from '../components/AffiliateWidget';
 import AffiliateProductCard from '../components/AffiliateProductCard';
@@ -71,14 +72,15 @@ export default function ProductCatalog() {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [searchParams]);
 
-    const fetchCategories = async () => {
-        const res = await callApi({ url: 'store/categories/' });
-        if (res?.data?.data) setCategories(res.data.data);
-    };
+    // Categories drive the filter drawer and barely ever change, so they are
+    // read stale-while-revalidate: the filter list is usable on the very first
+    // frame instead of being empty until a (possibly cold) backend answers.
+    const { data: cachedCategories } = useCachedApi('store/categories/');
+    useEffect(() => {
+        if (Array.isArray(cachedCategories)) setCategories(cachedCategories);
+    }, [cachedCategories]);
 
     useEffect(() => { fetchProducts(); }, [fetchProducts]);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    useEffect(() => { fetchCategories(); }, []);
 
     // Category-grid injection: affiliate products tagged for the active
     // taxonomy category (AffiliateProduct.grid_categories +

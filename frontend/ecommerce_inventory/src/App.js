@@ -19,6 +19,8 @@ import StorefrontLayout from './storefront/layout/StorefrontLayout';
 import { PRIVACY, SHIPPING, TERMS } from './storefront/pages/legal/content';
 import { useMemo, useState } from 'react';
 import CircularProgress from '@mui/material/CircularProgress';
+import AppSplash from './storefront/components/AppSplash';
+import InstallPrompt from './storefront/components/InstallPrompt';
 import Box from '@mui/material/Box';
 
 // Vendor (Restaurant-role) dashboard imports
@@ -281,10 +283,13 @@ function App() {
 
   return (
     <>
+        {/* Installed-app only: covers the handover from the system splash. */}
+        <AppSplash/>
         {/* One boundary above the router catches every lazy route chunk. */}
         <Suspense fallback={<RouteFallback/>}>
           <RouterProvider router={router}/>
         </Suspense>
+        <InstallPrompt/>
         <ToastContainer position="bottom-right" theme='colored' autoclose={3000} hideProgressBar={false} style={{marginBottom:'30px'}}/>
     </>
   );

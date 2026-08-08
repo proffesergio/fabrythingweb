@@ -451,7 +451,7 @@ function StorefrontLayoutInner({ toggleDarkMode, darkMode }) {
                                         sx={{ mb: 2 }}
                                     />
                                     <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.6)', mb: 2 }}>
-                                        Bangladesh's destination for authentic branded fashion, footwear, watches, home appliances & beauty — with Cash on Delivery nationwide.
+                                        Authentic fashion, electronics and pharmacy essentials — plus hot food delivered across Bancharampur. Cash on Delivery nationwide.
                                     </Typography>
                                     <Box sx={{ display: 'flex', gap: 1 }}>
                                         <IconButton
@@ -477,11 +477,18 @@ function StorefrontLayoutInner({ toggleDarkMode, darkMode }) {
                                 </Grid>
                                 <Grid item xs={6} md={2}>
                                     <Typography variant="subtitle2" fontWeight={700} gutterBottom>Shop</Typography>
+                                    {/* Fallback slugs must exist in the live taxonomy
+                                        (seed_store_catalog TAXONOMY) — 'shoes' and
+                                        'watches' were left here from an older tree and
+                                        dead-ended in an empty shop whenever the category
+                                        fetch failed. */}
                                     {(categories.length ? categories.slice(0, 6) : [
-                                        { name: "Men's Fashion", slug: 'mens-fashion' },
-                                        { name: "Women's Fashion", slug: 'womens-fashion' },
-                                        { name: 'Shoes', slug: 'shoes' },
-                                        { name: 'Watches', slug: 'watches' },
+                                        { name: 'Fashion', slug: 'fashion' },
+                                        { name: 'Health & Pharmacy', slug: 'health' },
+                                        { name: 'Computers', slug: 'computers' },
+                                        { name: 'Gadgets', slug: 'gadgets' },
+                                        { name: 'Phones', slug: 'phones' },
+                                        { name: 'Beauty & Health', slug: 'beauty-health' },
                                     ]).map(cat => (
                                         <Typography key={cat.slug} component={Link} to={`/shop?category=${cat.slug}`}
                                             variant="body2" sx={{ display: 'block', mb: 0.5, color: 'rgba(255,255,255,0.6)', textDecoration: 'none', '&:hover': { color: '#A5B4FC' } }}>
@@ -513,11 +520,33 @@ function StorefrontLayoutInner({ toggleDarkMode, darkMode }) {
                                         </Typography>
                                     ))}
                                 </Grid>
+                                <Grid item xs={6} md={2}>
+                                    <Typography variant="subtitle2" fontWeight={700} gutterBottom>Food Delivery</Typography>
+                                    {[
+                                        { label: 'Order Food', to: '/food' },
+                                        { label: 'Browse Restaurants', to: '/food/restaurants' },
+                                        { label: 'My Food Orders', to: '/food/orders' },
+                                        { label: 'Become a Partner', to: '/food/partner' },
+                                    ].map(item => (
+                                        <Typography
+                                            key={item.to}
+                                            component={Link}
+                                            to={item.to}
+                                            variant="body2"
+                                            sx={{
+                                                display: 'block', mb: 0.5, color: 'rgba(255,255,255,0.6)',
+                                                textDecoration: 'none', '&:hover': { color: '#FCA5A5' },
+                                            }}
+                                        >
+                                            {item.label}
+                                        </Typography>
+                                    ))}
+                                </Grid>
                                 <Grid item xs={12} md={3}>
                                     <Typography variant="subtitle2" fontWeight={700} gutterBottom>Contact</Typography>
                                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
                                         <Phone fontSize="small" sx={{ color: 'rgba(255,255,255,0.6)' }} />
-                                        <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.6)' }}>+880 1XXX-XXXXXX</Typography>
+                                        <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.6)' }}>+880 1842-168117</Typography>
                                     </Box>
                                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                                         <Email fontSize="small" sx={{ color: 'rgba(255,255,255,0.6)' }} />
@@ -526,13 +555,46 @@ function StorefrontLayoutInner({ toggleDarkMode, darkMode }) {
                                 </Grid>
                             </Grid>
                             <Divider sx={{ my: 3, borderColor: 'rgba(255,255,255,0.12)' }} />
+                            <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 1.5, mb: 2 }}>
+                                <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.45)', mr: 0.5 }}>
+                                    How you can pay
+                                </Typography>
+                                {[
+                                    { label: 'Cash on Delivery', accent: '#22C55E' },
+                                    { label: 'bKash', accent: '#E2136E' },
+                                    { label: 'Nagad', accent: '#F60' },
+                                ].map(m => (
+                                    <Box
+                                        key={m.label}
+                                        sx={{
+                                            px: 1.25, py: 0.5, borderRadius: 1.5,
+                                            border: '1px solid rgba(255,255,255,0.16)',
+                                            bgcolor: 'rgba(255,255,255,0.04)',
+                                            display: 'flex', alignItems: 'center', gap: 0.75,
+                                        }}
+                                    >
+                                        <Box sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: m.accent }} />
+                                        <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.75)', fontWeight: 600 }}>
+                                            {m.label}
+                                        </Typography>
+                                    </Box>
+                                ))}
+                                {/* Stated plainly rather than implied by a row of logos:
+                                    the storefront takes cash only, and the mobile-wallet
+                                    options are recorded manually on food orders (there is
+                                    no card gateway). Badges that overstate what we accept
+                                    would be found out at the door. */}
+                                <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.4)' }}>
+                                    — bKash &amp; Nagad on food orders; shop orders are Cash on Delivery
+                                </Typography>
+                            </Box>
                             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 1 }}>
                                 <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.4)' }}>
                                     &copy; 2026 Fabrything. All rights reserved.
                                 </Typography>
-                                <Box sx={{ display: 'flex', gap: 2 }}>
-                                    <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.6)' }}>Cash on Delivery</Typography>
-                                </Box>
+                                <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.4)' }}>
+                                    Bancharampur, Brahmanbaria &middot; Delivering nationwide
+                                </Typography>
                             </Box>
                         </Container>
                     </Box>

@@ -1,6 +1,8 @@
 {
+  "id": "/",
+  "name": "Fabrything — Shop & Food Delivery",
   "short_name": "Fabrything",
-  "name": "Fabrything",
+  "description": "Shop fashion, electronics and pharmacy essentials, or order food for delivery in Bancharampur. Cash on Delivery nationwide.",
   "icons": [
     {
       "src": "favicon.ico",
@@ -11,17 +13,38 @@
       "src": "logo192.png",
       "type": "image/png",
       "sizes": "192x192",
-      "purpose": "any maskable"
+      "purpose": "any"
     },
     {
       "src": "logo512.png",
       "type": "image/png",
       "sizes": "512x512",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "maskable-192.png",
+      "type": "image/png",
+      "sizes": "192x192",
+      "purpose": "maskable"
+    },
+    {
+      "src": "maskable-512.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "maskable"
     }
   ],
-  "start_url": ".",
+  "shortcuts": [
+    { "name": "Shop", "short_name": "Shop", "url": "/shop", "icons": [{ "src": "logo192.png", "sizes": "192x192" }] },
+    { "name": "Order Food", "short_name": "Food", "url": "/food", "icons": [{ "src": "logo192.png", "sizes": "192x192" }] },
+    { "name": "My Orders", "short_name": "Orders", "url": "/account/orders", "icons": [{ "src": "logo192.png", "sizes": "192x192" }] }
+  ],
+  "start_url": "/",
+  "scope": "/",
   "display": "standalone",
-  "theme_color": "#000000",
-  "background_color": "#ffffff"
+  "orientation": "portrait",
+  "theme_color": "#E85D4A",
+  "background_color": "#0F172A",
+  "lang": "en",
+  "categories": ["shopping", "food"]
 }
