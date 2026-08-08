@@ -1,11 +1,12 @@
 import React from 'react';
 import { Card, CardMedia, CardContent, Typography, Box, Rating, Button, IconButton } from '@mui/material';
 import { ShoppingCart, FavoriteBorder, Visibility } from '@mui/icons-material';
+import { pingClick } from './AffiliateProductCard';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { taka } from '../format';
 
-// `affiliate` is opt-in: pass { goUrl, label } to render an affiliate item
+// `affiliate` is opt-in: pass { goUrl, targetUrl, label } to render an affiliate item
 // through this same card instead of forking a second component (see
 // storefront/pages/DealsPage.js) -- clicking opens `goUrl` (our own
 // click-tracking redirect) in a new tab with rel="noopener noreferrer"
@@ -81,9 +82,18 @@ export default function ProductCard({ product, showFlashBadge, affiliate = null 
         >
             <Card
                 component={isAffiliate ? 'a' : 'div'}
-                href={isAffiliate ? affiliate.goUrl : undefined}
+                // Prefer the affiliate destination itself. goUrl is our own
+                // /r/ endpoint — it counts the click, but pointing the tab at
+                // it meant landing on fabrythingweb.onrender.com first, and a
+                // cold free-tier start left the shopper on a blank Render page
+                // for ~50s. The click is still counted by a background beacon
+                // (see pingClick), so tracking is best-effort and the
+                // customer's click is not.
+                href={isAffiliate ? (affiliate.targetUrl || affiliate.goUrl) : undefined}
                 target={isAffiliate ? '_blank' : undefined}
-                rel={isAffiliate ? 'noopener noreferrer' : undefined}
+                rel={isAffiliate ? 'noopener noreferrer sponsored' : undefined}
+                onClick={isAffiliate ? () => pingClick(affiliate.goUrl) : undefined}
+                onAuxClick={isAffiliate ? () => pingClick(affiliate.goUrl) : undefined}
                 sx={{
                     cursor: 'pointer',
                     height: '100%',

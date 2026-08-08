@@ -77,7 +77,7 @@ export default function DealsPage() {
                         <Grid item xs={6} sm={4} md={3} key={item.id}>
                             <ProductCard
                                 product={toProductShape(item)}
-                                affiliate={{ goUrl: item.go_url, label: item.program_label || item.program }}
+                                affiliate={{ goUrl: item.go_url, targetUrl: item.target_url, label: item.program_label || item.program }}
                             />
                         </Grid>
                     ))}

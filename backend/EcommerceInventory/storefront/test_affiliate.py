@@ -571,3 +571,55 @@ class AdBlockerSafeRouteTests(TestCase):
             role="Customer", country="Bangladesh")
         auth(self.client, customer)
         self.assertEqual(self.client.get("/api/store/admin/partner-picks/").status_code, 403)
+
+
+class TargetUrlExposureTests(TestCase):
+    """The card must be able to link straight at the affiliate destination.
+
+    Sending the customer through our own /r/ endpoint means their new tab first
+    lands on fabrythingweb.onrender.com. On the free tier that host can be
+    cold-starting, so the shopper sits on a blank Render page for ~50s before
+    the 302 fires — the reported "Shop Now redirects to onrender.com".
+
+    Exposing the resolved target lets the browser navigate directly while a
+    background beacon still hits /r/ for the click count, so a slow or blocked
+    tracker can no longer break the customer's click.
+    """
+
+    def setUp(self):
+        cache.clear()
+        self.product = AffiliateProduct.objects.create(
+            program="rokomari", title="Face Wash", remote_product_id="531074",
+            current_price="1069.00", is_active=True,
+            manual_short_link="https://rkmri.co/3Eoeep05NRA5/",
+        )
+
+    def test_public_payload_carries_the_resolved_target(self):
+        res = self.client.get('/api/store/partner-picks/')
+        self.assertEqual(res.status_code, 200)
+        row = res.json()['data'][0]
+        self.assertEqual(row['target_url'], "https://rkmri.co/3Eoeep05NRA5/")
+
+    def test_go_url_is_still_present_for_click_tracking(self):
+        row = self.client.get('/api/store/partner-picks/').json()['data'][0]
+        self.assertIn('/partner-picks/', row['go_url'])
+        self.assertNotEqual(row['go_url'], row['target_url'])
+
+    def test_a_manual_short_link_override_wins(self):
+        # The owner's escape hatch when the constructed scheme stops
+        # attributing; the card must honour it, not the constructed URL.
+        row = self.client.get('/api/store/partner-picks/').json()['data'][0]
+        self.assertTrue(row['target_url'].startswith("https://rkmri.co/"))
+
+    def test_an_unresolvable_target_is_null_rather_than_an_error(self):
+        # A program with no adapter and no override raises inside
+        # build_affiliate_link. The list must still render; the card falls back
+        # to go_url, which resolves server-side.
+        AffiliateProduct.objects.all().delete()
+        AffiliateProduct.objects.create(
+            program="unknown-program", title="Mystery", remote_product_id="1",
+            is_active=True,
+        )
+        res = self.client.get('/api/store/partner-picks/')
+        self.assertEqual(res.status_code, 200)
+        self.assertIsNone(res.json()['data'][0]['target_url'])

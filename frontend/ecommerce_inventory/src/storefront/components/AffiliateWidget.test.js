@@ -65,14 +65,30 @@ test('fetches by category instead of placement when category is passed', async (
 });
 
 test('every item is badged as a partner link and opens in a new tab safely', async () => {
+    // The card itself is the link now — there is no separate "Shop Now"
+    // button, because only that button used to be clickable and tapping the
+    // photo or the title (what people actually do) did nothing.
     mockCallApi.mockReturnValue(respond([ITEM_A]));
     render(<AffiliateWidget placement="sidebar" />);
 
-    const link = await screen.findByRole('link', { name: /shop now/i });
+    const link = await screen.findByRole('link');
+    // Falls back to the tracked /r/ path when the fixture carries no
+    // target_url; a real payload sends the shopper straight to the partner.
     expect(link).toHaveAttribute('href', '/api/store/partner-picks/1/r/');
     expect(link).toHaveAttribute('target', '_blank');
-    expect(link).toHaveAttribute('rel', 'noopener noreferrer');
+    expect(link.getAttribute('rel')).toContain('noopener');
+    // `sponsored` marks a paid/affiliate link so search engines do not read it
+    // as an editorial endorsement.
+    expect(link.getAttribute('rel')).toContain('sponsored');
     expect(screen.getByText(/via Rokomari/i)).toBeInTheDocument();
+});
+
+test('links straight at the partner when a target url is available', async () => {
+    mockCallApi.mockReturnValue(respond([{ ...ITEM_A, target_url: 'https://rkmri.co/abc123/' }]));
+    render(<AffiliateWidget placement="sidebar" />);
+
+    const link = await screen.findByRole('link');
+    expect(link).toHaveAttribute('href', 'https://rkmri.co/abc123/');
 });
 
 test('rotates to the next item on a timer', async () => {

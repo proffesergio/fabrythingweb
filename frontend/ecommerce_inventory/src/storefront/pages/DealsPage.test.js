@@ -33,7 +33,10 @@ test('fetches the deals placement and renders each item through the shared produ
     const link = screen.getByRole('link');
     expect(link).toHaveAttribute('href', ITEM.go_url);
     expect(link).toHaveAttribute('target', '_blank');
-    expect(link).toHaveAttribute('rel', 'noopener noreferrer');
+    expect(link.getAttribute('rel')).toContain('noopener');
+    // `sponsored` marks a paid/affiliate link so search engines do not read it
+    // as an editorial endorsement.
+    expect(link.getAttribute('rel')).toContain('sponsored');
 });
 
 test('shows the discounted price struck through against the original', async () => {
