@@ -10,6 +10,7 @@ import { useDispatch } from 'react-redux';
 import { addToCart } from '../../redux/reducer/cartSlice';
 import useApi from '../../hooks/APIHandler';
 import ProductCard from '../components/ProductCard';
+import TopProgressBar from '../components/TopProgressBar';
 import { SUPPORT } from './legal/content';
 import { taka } from '../format';
 
@@ -46,7 +47,12 @@ export default function ProductDetail() {
     }, [slug]);
 
     if (loading || !product) {
+        // Skeletons alone read as a broken page during a ~50s cold start; the
+        // bar keeps moving and explains itself once the wait stops looking
+        // normal. Rendered alongside the skeletons, not instead of them.
         return (
+            <>
+            <TopProgressBar loading label="Loading product" />
             <Container maxWidth="lg" sx={{ py: 4 }}>
                 <Grid container spacing={4}>
                     <Grid item xs={12} md={6}>
@@ -59,6 +65,7 @@ export default function ProductDetail() {
                     </Grid>
                 </Grid>
             </Container>
+            </>
         );
     }
 

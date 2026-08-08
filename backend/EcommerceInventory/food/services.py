@@ -8,6 +8,9 @@ from decimal import Decimal
 
 from django.db import transaction
 from django.utils import timezone
+
+from core.email_alerts import send_email_alert_on_commit
+from core.models import StoreConfiguration
 from rest_framework.exceptions import ValidationError
 
 from food.models import (Restaurant, FoodItem, FoodItemOption, DeliveryZone, RestaurantZone,
@@ -217,4 +220,43 @@ def place_food_cod_order(*, customer, restaurant_slug, items, contact_name, cont
 
     _award_points(customer, order)
     notify(customer, "Order placed", f"Your order {order.order_code} is confirmed.", order.order_code)
+
+    # Tell the owner. notify() above is for the CUSTOMER — an in-app row and a
+    # push to their phone — and nothing here previously reached the business at
+    # all, so a food order could sit unconfirmed until somebody happened to
+    # open the admin panel. On a delivery business that is the order going cold.
+    #
+    # Deferred to after commit (this function runs inside @transaction.atomic
+    # holding select_for_update locks) and incapable of raising into the
+    # request, so a dead mailbox can never roll back an order a customer just
+    # placed. Mirrors the store-order alert in orders/services.py.
+    _email_admin_new_food_order(order, restaurant)
     return order
+
+
+def _email_admin_new_food_order(order, restaurant):
+    config = StoreConfiguration.get_solo()
+    items = ", ".join(f"{i.quantity}x {i.item_name}" for i in order.items.all()) or "-"
+    where = order.delivery_address or "-"
+    if order.village_id or order.zone_id:
+        area = getattr(order.village, "name", None) or getattr(order.zone, "name", None)
+        if area:
+            where = f"{where} ({area})"
+    send_email_alert_on_commit(
+        (config.alert_email or "").strip(),
+        kind="food_order_admin", related_order=order.order_code,
+        subject=f"New food order {order.order_code} — {order.total} {config.currency}",
+        body=(
+            f"A new food order was just placed.\n\n"
+            f"Order:      {order.order_code}\n"
+            f"Restaurant: {restaurant.name}\n"
+            f"Customer:   {order.guest_name or '-'}\n"
+            f"Phone:      {order.guest_phone or '-'}\n"
+            f"Deliver to: {where}\n"
+            f"Items:      {items}\n"
+            f"Subtotal:   {order.subtotal}\n"
+            f"Delivery:   {order.delivery_fee}\n"
+            f"Total:      {order.total} ({order.payment_method})\n\n"
+            f"Confirm it in the admin panel to start the kitchen and dispatch a rider."
+        ),
+    )
