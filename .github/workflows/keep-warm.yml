@@ -17,11 +17,16 @@ name: keep-warm
 
 on:
   schedule:
-    # Every 10 minutes, 03:00–19:00 UTC = 09:00–01:00 Bangladesh time, which
-    # covers the hours customers actually shop. Deliberately NOT every 10
-    # minutes around the clock: that is ~4300 runs a month against a 2000
-    # minute free budget, and nobody is browsing at 4am local.
-    - cron: "*/10 3-19 * * *"
+    # Every 10 minutes, 02:00–20:00 UTC = 08:00–02:00 Bangladesh time. Widened
+    # 2026-08-08: the old 09:00–01:00 window left the backend asleep first
+    # thing in the morning, and the owner kept meeting a cold start — which
+    # presents as a shop with placeholder banners and no products, not as an
+    # error. Deliberately still NOT round-the-clock: every 10 minutes for 24h
+    # is ~4300 runs/month against a 2000-minute free budget.
+    - cron: "*/10 2-19 * * *"
+    # A single ping at the top of each remaining hour keeps the gap short
+    # overnight without paying for a full 10-minute cadence.
+    - cron: "0 20-23,0-1 * * *"
   # So the schedule can be verified without waiting for the next tick.
   workflow_dispatch: {}
 

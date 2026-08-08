@@ -42,7 +42,10 @@
   },
   "jest": {
     "moduleNameMapper": {
-      "^axios$": "axios/dist/node/axios.cjs"
+      "^axios$": "axios/dist/node/axios.cjs",
+      "^swiper/react$": "<rootDir>/node_modules/swiper/swiper-react.mjs",
+      "^swiper/modules$": "<rootDir>/node_modules/swiper/modules/index.mjs",
+      "^swiper/css.*$": "<rootDir>/config/styleMock.js"
     }
   },
   "browserslist": {

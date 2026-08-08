@@ -7,7 +7,7 @@ import { Autoplay, Pagination, EffectFade } from 'swiper/modules';
 import 'swiper/css';
 import 'swiper/css/pagination';
 import 'swiper/css/effect-fade';
-import useApi from '../../hooks/APIHandler';
+import useCachedApi from '../../hooks/useCachedApi';
 
 // Static fallback shown when the owner hasn't configured any banners yet
 // (GET /api/store/banners/ returns an empty list) -- keeps the homepage from
@@ -253,17 +253,23 @@ function BannerAnimationStyles() {
 }
 
 export default function HeroCarousel() {
-    const { callApi } = useApi();
-    const [banners, setBanners] = useState(null); // null = not loaded yet
-
-    useEffect(() => {
-        let mounted = true;
-        callApi({ url: 'store/banners/' }).then((res) => {
-            if (mounted) setBanners(res?.data?.data || []);
-        });
-        return () => { mounted = false; };
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
+    // Stale-while-revalidate, deliberately NOT a plain callApi.
+    //
+    // callApi resolves to `null` on any failure, and the old code did
+    // `res?.data?.data || []` -- so a request that never completed was
+    // indistinguishable from "the owner has configured no banners", and the
+    // hero silently dropped to the built-in placeholder slides. Render's free
+    // tier sleeps outside the keep-warm window (09:00-01:00 Dhaka), and a cold
+    // request is answered by Render's edge with no CORS headers, which the
+    // browser blocks. The result was a homepage that showed stock "Eid
+    // Collection" slides no matter what the admin panel said.
+    //
+    // useCachedApi keeps the last good payload on failure and reports the
+    // error separately, so a sleeping backend can no longer downgrade a
+    // configured hero -- and a returning visitor paints their real banners
+    // instantly from cache instead of waiting on a cold boot.
+    const { data, loading } = useCachedApi('store/banners/');
+    const banners = Array.isArray(data) ? data : null;
 
     const usingBanners = Array.isArray(banners) && banners.length > 0;
     const slides = usingBanners
@@ -279,6 +285,12 @@ export default function HeroCarousel() {
             animationStyle: b.animation_style,
         }))
         : FALLBACK_SLIDES;
+
+    // Nothing to show yet: render an empty band of the right height rather
+    // than a flash of placeholder slides that the real banners then replace.
+    if (loading && banners === null) {
+        return <Box sx={{ minHeight: { xs: 320, md: 440 }, bgcolor: '#1a1a2e' }} />;
+    }
 
     return (
         <Box sx={{ position: 'relative' }}>
