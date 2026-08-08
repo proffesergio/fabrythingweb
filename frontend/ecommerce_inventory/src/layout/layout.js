@@ -11,16 +11,26 @@ import { GlobalStyles } from './GlobalStyle';
 import TextField from '@mui/material/TextField';
 import { Outlet,useLocation,useNavigate } from 'react-router-dom'; // Import Outlet
 import { expandItem,activateItem,triggerPageChange } from '../redux/reducer/sidebardata';
-import {useDispatch} from 'react-redux';
+import {useDispatch, useSelector} from 'react-redux';
 
-const Layout = ({sidebarList,pageTitle,childPage}) => {
+const Layout = ({pageTitle,childPage}) => {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [desktopOpen, setDesktopOpen] = useState(true); // State for desktop sidebar
   const [themeMode, setThemeMode] = useState('light');
   const [openChildMenu, setOpenChildMenu] = useState(false);
   const [anchorEl, setAnchorEl] = useState(null);
   const [themeMenu, setThemeMenu] = useState(null);
-  const [sidebarItems, setSidebarItems] = useState(sidebarList);
+  // Read the menu from the store, NOT from a prop.
+  //
+  // App.js builds the router inside useMemo(..., []) and used to pass
+  // `<Layout sidebarList={items}/>`. A React element freezes its props at
+  // creation, so the router captured whatever redux held on the FIRST render —
+  // `[]` for a logged-out visitor (cachedMenus() returns [] with no token).
+  // Logging in navigates via react-router without remounting App, so the memo
+  // never recomputed and the whole admin sidebar stayed empty until a hard
+  // reload. Subscribing here keeps the menu live and lets the router stay
+  // memoised. Defaults to [] so a missing slice cannot crash the shell.
+  const sidebarItems = useSelector((state) => state.sidebardata?.items) || [];
   const navigate=useNavigate();
   const dispatch=useDispatch();
   const location=useLocation();
@@ -32,10 +42,6 @@ const Layout = ({sidebarList,pageTitle,childPage}) => {
   useEffect(()=>{
     dispatch(triggerPageChange(location))
   },[location])
-
-  useEffect(() => {
-    setSidebarItems(sidebarList);
-  },[sidebarList])
 
   useEffect(() => {
     const savedTheme = localStorage.getItem('theme') || 'basic';

@@ -242,8 +242,8 @@ function App() {
       {path:"/admin/auth",element:<Auth/>},
       {
         path:"/admin",
-        element:<Layout sidebarList={items}/>,
-        errorElement:<Layout sidebarList={items} childPage={<Error404Page/>}/>,
+        element:<Layout/>,
+        errorElement:<Layout childPage={<Error404Page/>}/>,
         children:[
           {index:true,element:<ProtectedRoute element={<Home/>}/>},
           {path:"home",element:<ProtectedRoute element={<Home/>}/>},
