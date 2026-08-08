@@ -149,7 +149,9 @@ function RouteFallback() {
 }
 
 function App() {
-  const {status,error,items}=useSelector(state=>state.sidebardata);
+  // `items` was dropped here when Layout started subscribing to the store
+  // itself — App no longer renders the menu, it only triggers the fetch.
+  const {status,error}=useSelector(state=>state.sidebardata);
   const {isLoggedIn}=useSelector(state=>state.isLoggedInReducer);
   const dispatch=useDispatch();
 
@@ -242,8 +244,8 @@ function App() {
       {path:"/admin/auth",element:<Auth/>},
       {
         path:"/admin",
-        element:<Layout sidebarList={items}/>,
-        errorElement:<Layout sidebarList={items} childPage={<Error404Page/>}/>,
+        element:<Layout/>,
+        errorElement:<Layout childPage={<Error404Page/>}/>,
         children:[
           {index:true,element:<ProtectedRoute element={<Home/>}/>},
           {path:"home",element:<ProtectedRoute element={<Home/>}/>},

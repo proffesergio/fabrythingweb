@@ -1,6 +1,11 @@
 import { render, screen, waitFor, fireEvent, within } from '@testing-library/react';
 
-jest.mock('react-router-dom', () => ({ useNavigate: () => jest.fn() }));
+// useParams drives the per-source routes (/manage/import/<slug>); with no
+// param the picker is unlocked, which is what these tests exercise.
+jest.mock('react-router-dom', () => ({
+    useNavigate: () => jest.fn(),
+    useParams: () => ({}),
+}));
 
 const mockCalls = [];
 let mockBrowseResult = null;
