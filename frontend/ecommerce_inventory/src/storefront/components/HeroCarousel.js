@@ -73,6 +73,77 @@ function CtaButton({ label, link, ...props }) {
 // Renders one banner-driven slide: configurable background (colour/gradient)
 // behind a transparent PNG product cut-out, with the chosen animation preset
 // applied to the cut-out only -- text/CTA fade in without competing motion.
+// A wide pre-rendered artwork: it fills the hero and carries its own
+// typography, so nothing is drawn on top unless the owner actually set a
+// headline. `objectFit: contain` rather than `cover` — a supplied banner is
+// composed to be seen whole, and cropping it cuts off the very wording it
+// exists to show. The background colour fills whatever letterboxing remains.
+function FullBleedSlide({ banner }) {
+    const hasText = !!(banner.title || banner.subtitle || banner.eyebrow || banner.cta);
+    const body = (
+        <Box
+            sx={{
+                position: 'relative',
+                width: '100%',
+                background: banner.background_color || banner.background || '#1a1a2e',
+                minHeight: { xs: 200, sm: 300, md: 440 },
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                overflow: 'hidden',
+            }}
+        >
+            <Box
+                component="img"
+                src={banner.image}
+                alt={banner.title || 'Promotional banner'}
+                loading="eager"
+                sx={{ width: '100%', height: '100%', maxHeight: { xs: 240, sm: 340, md: 480 }, objectFit: 'contain', display: 'block' }}
+            />
+            {hasText && (
+                <Container
+                    maxWidth="lg"
+                    sx={{
+                        position: 'absolute', inset: 0, zIndex: 2, color: 'white',
+                        display: 'flex', flexDirection: 'column', justifyContent: 'center',
+                        textShadow: '0 2px 12px rgba(0,0,0,0.55)', pointerEvents: 'none',
+                    }}
+                >
+                    {banner.eyebrow && (
+                        <Chip label={banner.eyebrow} size="small"
+                              sx={{ mb: 1.5, alignSelf: 'flex-start', bgcolor: 'rgba(255,255,255,0.18)', color: 'white', fontWeight: 700 }} />
+                    )}
+                    {banner.title && (
+                        <Typography variant="h3" sx={{ fontWeight: 800, mb: 1, maxWidth: 560 }}>
+                            {banner.title}
+                        </Typography>
+                    )}
+                    {banner.subtitle && (
+                        <Typography variant="h6" sx={{ fontWeight: 400, maxWidth: 520, opacity: 0.95 }}>
+                            {banner.subtitle}
+                        </Typography>
+                    )}
+                    {banner.cta && banner.link && (
+                        <Button
+                            component={Link}
+                            to={banner.link}
+                            variant="contained"
+                            color="secondary"
+                            endIcon={<ArrowForward />}
+                            sx={{ mt: 2.5, alignSelf: 'flex-start', pointerEvents: 'auto' }}
+                        >
+                            {banner.cta}
+                        </Button>
+                    )}
+                </Container>
+            )}
+        </Box>
+    );
+    // With no CTA button the whole artwork should still be tappable when it
+    // points somewhere.
+    return banner.link && !banner.cta
+        ? <Box component={Link} to={banner.link} sx={{ display: 'block', textDecoration: 'none' }}>{body}</Box>
+        : body;
+}
+
 function BannerSlide({ banner }) {
     return (
         <Box
@@ -283,6 +354,7 @@ export default function HeroCarousel() {
             image: b.image,
             background: b.background,
             animationStyle: b.animation_style,
+            layout: b.layout,
         }))
         : FALLBACK_SLIDES;
 
@@ -305,7 +377,11 @@ export default function HeroCarousel() {
             >
                 {slides.map((slide, i) => (
                     <SwiperSlide key={usingBanners ? slide.id : i}>
-                        {usingBanners ? <BannerSlide banner={slide} /> : <FallbackSlide slide={slide} />}
+                        {usingBanners
+                            ? (slide.layout === 'FULL_BLEED'
+                                ? <FullBleedSlide banner={slide} />
+                                : <BannerSlide banner={slide} />)
+                            : <FallbackSlide slide={slide} />}
                     </SwiperSlide>
                 ))}
             </Swiper>

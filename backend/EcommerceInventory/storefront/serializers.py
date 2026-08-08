@@ -365,7 +365,7 @@ class BannerPublicSerializer(serializers.ModelSerializer):
     class Meta:
         model = Banner
         fields = [
-            'id', 'image', 'eyebrow', 'headline', 'subtext',
+            'id', 'image', 'layout', 'eyebrow', 'headline', 'subtext',
             'animation_style', 'background', 'cta_label', 'cta_link', 'display_order',
         ]
         read_only_fields = fields
@@ -387,7 +387,7 @@ class BannerAdminSerializer(serializers.ModelSerializer):
     class Meta:
         model = Banner
         fields = [
-            'id', 'image', 'eyebrow', 'headline', 'subtext',
+            'id', 'image', 'layout', 'eyebrow', 'headline', 'subtext',
             'animation_style', 'background',
             'cta_label', 'cta_product', 'cta_product_name', 'cta_url',
             'display_order', 'is_active', 'starts_at', 'ends_at',

@@ -15,6 +15,25 @@ import { taka } from '../format';
 // (image as an array, discount_price vs initial_selling_price) -- the caller
 // normalises the affiliate API shape onto that, so this component itself
 // stays unaware of where the data came from.
+
+// Wishlist / quick-view chips. They sit on the white photo tile (kept white in
+// both themes because the product shots are cut out on white), so a white chip
+// had only a faint boxShadow separating it from the photo -- in dark mode it
+// read as a stray white block. Dark chip on the light tile in dark mode gives
+// real contrast without darkening the tile itself.
+export function actionButtonSx(mode) {
+    const dark = mode === 'dark';
+    return {
+        p: { xs: 1.25 },
+        bgcolor: dark ? 'rgba(24,24,27,0.88)' : 'rgba(255,255,255,0.92)',
+        color: dark ? 'rgba(255,255,255,0.92)' : 'rgba(0,0,0,0.72)',
+        border: '1px solid',
+        borderColor: dark ? 'rgba(255,255,255,0.18)' : 'rgba(0,0,0,0.08)',
+        backdropFilter: 'blur(2px)',
+        boxShadow: 1,
+    };
+}
+
 export default function ProductCard({ product, showFlashBadge, affiliate = null }) {
     const navigate = useNavigate();
     const isAffiliate = !!affiliate;
@@ -134,22 +153,20 @@ export default function ProductCard({ product, showFlashBadge, affiliate = null 
                         <IconButton
                             size="small"
                             onClick={(e) => e.stopPropagation()}
-                            sx={{
-                                p: { xs: 1.25 },
-                                bgcolor: 'white', boxShadow: 1,
+                            sx={(t) => ({
+                                ...actionButtonSx(t.palette.mode),
                                 '&:hover': { bgcolor: 'secondary.main', color: 'white' },
-                            }}
+                            })}
                         >
                             <FavoriteBorder fontSize="small" />
                         </IconButton>
                         <IconButton
                             size="small"
                             onClick={(e) => { e.stopPropagation(); navigate(`/product/${product.slug}`); }}
-                            sx={{
-                                p: { xs: 1.25 },
-                                bgcolor: 'white', boxShadow: 1,
+                            sx={(t) => ({
+                                ...actionButtonSx(t.palette.mode),
                                 '&:hover': { bgcolor: 'primary.main', color: 'white' },
-                            }}
+                            })}
                         >
                             <Visibility fontSize="small" />
                         </IconButton>

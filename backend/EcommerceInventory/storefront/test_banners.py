@@ -172,3 +172,47 @@ class BannerAdminPermissionTests(TestCase):
         self.banner.refresh_from_db()
         self.assertEqual(second.display_order, 0)
         self.assertEqual(self.banner.display_order, 1)
+
+
+class BannerLayoutTests(TestCase):
+    """A wide marketing banner and a product cut-out need different heroes.
+
+    The original model assumed every banner is a transparent PNG composited
+    beside a headline. A wide pre-rendered artwork (the kind a brand supplies)
+    has its own typography baked in, so squeezing it into the split layout
+    letterboxes it and repeats the text.
+    """
+
+    def test_layout_defaults_to_the_product_cutout_split(self):
+        b = Banner.objects.create(image='https://x/y.png', headline='Hi')
+        self.assertEqual(b.layout, Banner.Layout.PRODUCT)
+
+    def test_full_bleed_layout_can_be_chosen(self):
+        b = Banner.objects.create(image='https://x/wide.jpg', layout=Banner.Layout.FULL_BLEED)
+        self.assertEqual(b.layout, 'FULL_BLEED')
+
+    def test_headline_is_optional(self):
+        # A full-bleed artwork usually carries its own wording; requiring a
+        # headline forced the owner to invent one that then rendered on top.
+        b = Banner(image='https://x/wide.jpg', layout=Banner.Layout.FULL_BLEED)
+        b.full_clean()   # must not raise
+        b.save()
+        self.assertEqual(b.headline, '')
+
+    def test_public_serializer_exposes_layout(self):
+        Banner.objects.create(image='https://x/wide.jpg', layout=Banner.Layout.FULL_BLEED,
+                              is_active=True)
+        res = self.client.get('/api/store/banners/')
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual(res.json()['data'][0]['layout'], 'FULL_BLEED')
+
+    def test_admin_serializer_round_trips_layout(self):
+        from storefront.serializers import BannerAdminSerializer
+        s = BannerAdminSerializer(data={'image': 'https://x/w.jpg', 'layout': 'FULL_BLEED'})
+        self.assertTrue(s.is_valid(), s.errors)
+        self.assertEqual(s.save().layout, 'FULL_BLEED')
+
+    def test_admin_serializer_accepts_a_banner_with_no_headline(self):
+        from storefront.serializers import BannerAdminSerializer
+        s = BannerAdminSerializer(data={'image': 'https://x/w.jpg'})
+        self.assertTrue(s.is_valid(), s.errors)

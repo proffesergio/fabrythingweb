@@ -34,6 +34,16 @@ class Banner(models.Model):
     Render's ephemeral filesystem.
     """
 
+    class Layout(models.TextChoices):
+        # A transparent product cut-out composited beside the headline, with
+        # the animation preset applied to the cut-out only. This is what the
+        # model was originally built for.
+        PRODUCT = "PRODUCT", "Product cut-out beside text"
+        # A wide pre-rendered artwork that fills the hero edge to edge. Brand
+        # banners arrive with their own typography baked in, so the split
+        # layout letterboxed them AND repeated the wording on top.
+        FULL_BLEED = "FULL_BLEED", "Full-width image"
+
     class AnimationStyle(models.TextChoices):
         FADE_UP = "FADE_UP", "Fade up"
         SLIDE_IN = "SLIDE_IN", "Slide in"
@@ -45,8 +55,15 @@ class Banner(models.Model):
         help_text="Transparent PNG product cut-out. Upload via POST /api/uploads/ "
                   "and store the returned URL here.",
     )
+    layout = models.CharField(
+        max_length=20, choices=Layout.choices, default=Layout.PRODUCT,
+        help_text="PRODUCT composites a transparent cut-out beside the text and "
+                  "animates it; FULL_BLEED fills the hero with a wide image.",
+    )
     eyebrow = models.CharField(max_length=60, blank=True, default="")
-    headline = models.CharField(max_length=200)
+    # Optional: a FULL_BLEED artwork usually carries its own wording, and
+    # requiring a headline forced one to be invented and then drawn on top.
+    headline = models.CharField(max_length=200, blank=True, default="")
     subtext = models.CharField(max_length=300, blank=True, default="")
     animation_style = models.CharField(
         max_length=20, choices=AnimationStyle.choices, default=AnimationStyle.FADE_UP,

@@ -20,8 +20,14 @@ const ANIMATION_OPTIONS = [
     { value: "ZOOM", label: "Zoom" },
 ];
 
+const LAYOUT_OPTIONS = [
+    { value: "PRODUCT", label: "Product cut-out beside text (animated)" },
+    { value: "FULL_BLEED", label: "Full-width image (wide artwork)" },
+];
+
 const EMPTY_FORM = {
     id: null,
+    layout: "PRODUCT",
     image: "",
     eyebrow: "",
     headline: "",
@@ -125,6 +131,7 @@ export default function ManageBanners() {
         setSaving(true);
         setFieldErrors({});
         const payload = {
+            layout: form.layout,
             image: form.image,
             eyebrow: form.eyebrow,
             headline: form.headline,
@@ -287,9 +294,23 @@ export default function ManageBanners() {
                             onChange={(e) => setForm({ ...form, eyebrow: e.target.value })}
                         />
                         <TextField
-                            label="Headline" fullWidth required value={form.headline}
+                            select label="Layout" fullWidth value={form.layout}
+                            onChange={(e) => setForm({ ...form, layout: e.target.value })}
+                            helperText={form.layout === "FULL_BLEED"
+                                ? "The image fills the hero edge to edge and is shown whole. Use for a wide banner that already has its own wording."
+                                : "A transparent product PNG is composited beside the headline and animated in."}
+                            sx={{ mb: 2 }}
+                        >
+                            {LAYOUT_OPTIONS.map((l) => <MenuItem key={l.value} value={l.value}>{l.label}</MenuItem>)}
+                        </TextField>
+                        <TextField
+                            label="Headline" fullWidth value={form.headline}
                             onChange={(e) => setForm({ ...form, headline: e.target.value })}
-                            error={!!fieldErrors.headline} helperText={fieldErrors.headline?.[0]}
+                            error={!!fieldErrors.headline}
+                            helperText={fieldErrors.headline?.[0]
+                                || (form.layout === "FULL_BLEED"
+                                    ? "Optional — leave blank so nothing is drawn over the artwork."
+                                    : "Optional.")}
                         />
                         <TextField
                             label="Subtext" fullWidth multiline minRows={2} value={form.subtext}

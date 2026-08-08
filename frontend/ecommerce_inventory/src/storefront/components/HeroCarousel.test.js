@@ -96,3 +96,50 @@ test('reads the public banners endpoint through the caching hook', () => {
   renderHero();
   expect(mockUseCachedApi).toHaveBeenCalledWith('store/banners/');
 });
+
+describe('layout variants', () => {
+  const wide = {
+    id: 3, image: 'https://cdn/wide-artwork.jpg', layout: 'FULL_BLEED',
+    eyebrow: '', headline: '', subtext: '', animation_style: 'FADE_UP',
+    background: '#101010', cta_label: '', cta_link: null, display_order: 0,
+  };
+
+  test('a full-bleed banner renders its artwork whole, with no invented text', async () => {
+    // A supplied brand banner has its wording baked into the image. Drawing a
+    // headline over it duplicates the message, and cropping it cuts the
+    // wording off — hence `contain`, not `cover`.
+    mockUseCachedApi.mockReturnValue({ data: [wide], loading: false, error: null });
+    renderHero();
+
+    const img = await screen.findByRole('img', { name: /promotional banner/i });
+    expect(img).toHaveAttribute('src', 'https://cdn/wide-artwork.jpg');
+    expect(screen.queryByText(FALLBACK_HEADLINE)).not.toBeInTheDocument();
+  });
+
+  test('a full-bleed banner still shows a headline when the owner set one', async () => {
+    mockUseCachedApi.mockReturnValue({
+      data: [{ ...wide, headline: 'Monsoon Sale', cta_label: 'Shop', cta_link: '/shop' }],
+      loading: false, error: null,
+    });
+    renderHero();
+    await waitFor(() => expect(screen.getByText('Monsoon Sale')).toBeInTheDocument());
+    expect(screen.getByText('Shop')).toBeInTheDocument();
+  });
+
+  test('the product cut-out layout is still used for PRODUCT banners', async () => {
+    mockUseCachedApi.mockReturnValue({
+      data: [{ ...LIVE_BANNERS[0], layout: 'PRODUCT' }], loading: false, error: null,
+    });
+    renderHero();
+    await waitFor(() => expect(screen.getByText('Shop Now')).toBeInTheDocument());
+    // The full-bleed renderer labels its image; the split layout does not.
+    expect(screen.queryByRole('img', { name: /promotional banner/i })).not.toBeInTheDocument();
+  });
+
+  test('a banner with no layout field falls back to the split layout', async () => {
+    // Older rows predate the column; they must keep rendering as before.
+    mockUseCachedApi.mockReturnValue({ data: LIVE_BANNERS, loading: false, error: null });
+    renderHero();
+    await waitFor(() => expect(screen.getByText('Shop Now')).toBeInTheDocument());
+  });
+});

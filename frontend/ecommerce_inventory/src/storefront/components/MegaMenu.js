@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import {
     Box, Typography, Paper, Grid,
-    List, ListItemButton, ListItemText,
+    List, ListItemButton, ListItemText, Collapse,
 } from '@mui/material';
-import { Apps, Whatshot, FiberNew, Storefront as StorefrontIcon } from '@mui/icons-material';
+import { Apps, Whatshot, FiberNew, Storefront as StorefrontIcon, ExpandLess, ExpandMore } from '@mui/icons-material';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { CATEGORY_META, metaFor } from './categoryMeta';
@@ -138,6 +138,14 @@ export default function MegaMenu({ categories = [] }) {
 
 // ── Mobile drawer menu ────────────────────────────────────────────────────────
 export function MobileCategoryMenu({ categories = [], onClose }) {
+    // The drawer used to list ONLY top-level categories, so everything below
+    // the first level -- Laptops, Monitors, Medicine, Supplements and the rest
+    // -- was unreachable on a phone while the desktop mega menu showed all of
+    // them. Each parent is now expandable, and the parent row itself still
+    // links to its own listing.
+    const [open, setOpen] = useState({});
+    const toggle = (id) => setOpen((cur) => ({ ...cur, [id]: !cur[id] }));
+
     return (
         <List>
             <ListItemButton component={Link} to="/" onClick={onClose}>
@@ -153,24 +161,68 @@ export function MobileCategoryMenu({ categories = [], onClose }) {
             <Typography variant="overline" sx={{ px: 2, pt: 1.5, display: 'block', color: 'text.secondary', fontWeight: 700 }}>
                 Categories
             </Typography>
+
             {categories.map((cat) => {
                 const meta = metaFor(cat.slug);
+                const children = cat.children || [];
+                const expanded = !!open[cat.id];
                 return (
-                    <ListItemButton
-                        key={cat.id}
-                        component={Link}
-                        to={`/shop?category=${cat.slug}`}
-                        onClick={onClose}
-                    >
-                        <Box sx={{
-                            width: 32, height: 32, mr: 1.5, borderRadius: 1.5, flexShrink: 0,
-                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            fontSize: '1.05rem', bgcolor: `${meta.color}1A`,
-                        }}>
-                            {meta.icon}
-                        </Box>
-                        <ListItemText primary={cat.name} primaryTypographyProps={{ fontSize: '0.95rem', fontWeight: 500 }} />
-                    </ListItemButton>
+                    <React.Fragment key={cat.id}>
+                        <ListItemButton
+                            component={Link}
+                            to={`/shop?category=${cat.slug}`}
+                            onClick={onClose}
+                        >
+                            <Box sx={{
+                                width: 32, height: 32, mr: 1.5, borderRadius: 1.5, flexShrink: 0,
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                fontSize: '1.05rem', bgcolor: `${meta.color}1A`,
+                            }}>
+                                {meta.icon}
+                            </Box>
+                            <ListItemText primary={cat.name} primaryTypographyProps={{ fontSize: '0.95rem', fontWeight: 500 }} />
+                            {children.length > 0 && (
+                                <Box
+                                    component="span"
+                                    role="button"
+                                    aria-label={`${expanded ? 'Collapse' : 'Expand'} ${cat.name}`}
+                                    onClick={(e) => {
+                                        // Don't navigate: this control only opens the sublist.
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        toggle(cat.id);
+                                    }}
+                                    sx={{
+                                        display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                                        minWidth: 40, minHeight: 40, ml: 1, borderRadius: 1,
+                                    }}
+                                >
+                                    {expanded ? <ExpandLess fontSize="small" /> : <ExpandMore fontSize="small" />}
+                                </Box>
+                            )}
+                        </ListItemButton>
+
+                        {children.length > 0 && (
+                            <Collapse in={expanded} timeout="auto" unmountOnExit>
+                                <List component="div" disablePadding>
+                                    {children.map((child) => (
+                                        <ListItemButton
+                                            key={child.id}
+                                            component={Link}
+                                            to={`/shop?category=${child.slug}`}
+                                            onClick={onClose}
+                                            sx={{ pl: 7 }}
+                                        >
+                                            <ListItemText
+                                                primary={child.name}
+                                                primaryTypographyProps={{ fontSize: '0.9rem', color: 'text.secondary' }}
+                                            />
+                                        </ListItemButton>
+                                    ))}
+                                </List>
+                            </Collapse>
+                        )}
+                    </React.Fragment>
                 );
             })}
         </List>
