@@ -40,31 +40,60 @@ MODULES = [
         'display_order': 3,
         'parent': 'Products',
     },
+    # ── Product Import: a TOP-LEVEL group, deliberately ──────────────────
+    #
+    # These were first added as children of "Products" and the owner still
+    # could not find them: a submenu is invisible until its parent is
+    # expanded, while "Affiliate Products" (Rokomari) sat at the top level and
+    # was the only import tool anyone could see. Same shape as that entry now,
+    # so every source is discoverable without knowing where to dig.
+    #
+    # Each child opens /manage/import/<slug> — the generic picker with the
+    # source pre-selected and locked.
     {
-        'module_name': 'Import Products',
+        'module_name': 'Product Import',
         'module_icon': 'CloudDownload',
-        'module_url': '/manage/product-import',
-        'display_order': 4,
-        'parent': 'Products',
+        'module_url': None,
+        'display_order': 11,
+        'parent': None,
     },
-    # Per-source entries. The generic page above already handles every
-    # registered ImportSource, but nothing in the sidebar said so: the only
-    # source-specific item was "Affiliate Products" (Rokomari), so Arogga and
-    # Fabrilife were invisible unless you knew the generic page existed. These
-    # open the same screen with the source pre-selected and locked.
     {
         'module_name': 'Import from Fabrilife',
         'module_icon': 'Checkroom',
         'module_url': '/manage/import/fabrilife',
-        'display_order': 5,
-        'parent': 'Products',
+        'display_order': 1,
+        'parent': 'Product Import',
     },
     {
         'module_name': 'Import from Arogga',
         'module_icon': 'Inventory',
         'module_url': '/manage/import/arogga',
-        'display_order': 6,
-        'parent': 'Products',
+        'display_order': 2,
+        'parent': 'Product Import',
+    },
+    {
+        'module_name': 'Import from Canvasit',
+        'module_icon': 'Store',
+        'module_url': '/manage/import/canvasit',
+        'display_order': 3,
+        'parent': 'Product Import',
+    },
+    # Potakait is included for completeness, but its Cloudflare setup returns
+    # 403 to Render's datacentre IPs — the same URL answers 200 from a normal
+    # connection. Browsing it will fail until the partner allowlists us.
+    {
+        'module_name': 'Import from Potakait',
+        'module_icon': 'Store',
+        'module_url': '/manage/import/potakait',
+        'display_order': 4,
+        'parent': 'Product Import',
+    },
+    {
+        'module_name': 'All Import Sources',
+        'module_icon': 'Tune',
+        'module_url': '/manage/product-import',
+        'display_order': 5,
+        'parent': 'Product Import',
     },
     # Parent: Orders
     {
