@@ -78,10 +78,9 @@ const ImportProducts = () => {
         return [];
     }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-    // A per-source route (/manage/import/fabrilife) pins the picker to that
-    // source and hides the selector — the sidebar entry has already made the
-    // choice, and leaving a dropdown that can silently switch away from it is
-    // how you end up importing Arogga medicine into a sports category.
+    // A per-source route (/manage/import/fabrilife) pre-selects that source.
+    // It does NOT lock the picker: an earlier version disabled the dropdown,
+    // which trapped the owner on one source with no way out but the sidebar.
     const { sourceSlug } = useParams();
     const [source, setSource] = useState(sourceSlug || "");
     useEffect(() => {
@@ -89,6 +88,7 @@ const ImportProducts = () => {
         // Arogga" remounts nothing, so the state has to follow the route.
         if (sourceSlug) setSource(sourceSlug);
     }, [sourceSlug]);
+
     const [categoryPath, setCategoryPath] = useState("");
     const [query, setQuery] = useState("");
     const [candidates, setCandidates] = useState([]);
@@ -104,6 +104,21 @@ const ImportProducts = () => {
     // "no products found" -- see catalog.services_scrape_import.browse_
     // candidates on the backend for the full reasoning.
     const [browseMeta, setBrowseMeta] = useState({ listingProductCount: 0, fetchFailures: 0 });
+
+    // Changing the source on a per-source route moves the URL with it, so the
+    // address bar never claims a source the picker is not showing (and a
+    // refresh or a shared link lands where the user actually was).
+    const changeSource = (slug) => {
+        setSource(slug);
+        setCandidates([]);
+        setSelected(new Set());
+        setBrowsed(false);
+        setBrowseError("");
+        setCategoryPath("");
+        if (sourceSlug && slug && slug !== sourceSlug) {
+            navigate(`/admin/manage/import/${slug}`);
+        }
+    };
 
     const activeSource = useMemo(() => sources.find((s) => s.slug === source) || null, [sources, source]);
     const searchSupported = !!activeSource?.supports_search;
@@ -137,10 +152,16 @@ const ImportProducts = () => {
     useEffect(() => {
         (async () => {
             const list = await loadSources();
+            // Only default when the ROUTE did not name a source. This used to
+            // run unconditionally and resolved AFTER the route effect, so the
+            // first enabled source (alphabetically: arogga) clobbered the
+            // choice on every per-source screen — /manage/import/fabrilife
+            // loaded, then silently switched itself to Arogga.
+            if (sourceSlug) return;
             const firstEnabled = list.find((s) => s.is_enabled);
             if (firstEnabled) setSource(firstEnabled.slug);
         })();
-    }, [loadSources]);
+    }, [loadSources, sourceSlug]);
 
     useEffect(() => {
         (async () => {
@@ -390,12 +411,14 @@ const ImportProducts = () => {
                             <Grid item xs={12} sm={3}>
                                 <TextField
                                     select fullWidth size="small" label="Source" value={source}
-                                    onChange={(e) => setSource(e.target.value)}
-                                    // Locked when the route named the source: the sidebar
-                                    // entry already chose it, and a dropdown that can drift
-                                    // away is how Arogga medicine lands in a sports category.
-                                    disabled={!!sourceSlug}
-                                    helperText={sourceSlug ? `Locked to ${activeSource?.name || sourceSlug}` : undefined}
+                                    onChange={(e) => changeSource(e.target.value)}
+                                    // NOT disabled. A per-source route pre-selects the
+                                    // source, but locking the dropdown trapped the owner on
+                                    // one source with no way back except the sidebar. The
+                                    // real guard against miscategorising an import is the
+                                    // "Import into category" selector below, which is
+                                    // explicit and separate.
+                                    helperText={sourceSlug ? "Switch source to browse another site" : undefined}
                                 >
                                     {sources.map((s) => (
                                         <MenuItem key={s.slug} value={s.slug} disabled={!s.is_enabled}>
