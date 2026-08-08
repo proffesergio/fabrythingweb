@@ -601,8 +601,38 @@ function StorefrontLayoutInner({ toggleDarkMode, darkMode }) {
 
                     {/* Mobile Bottom Nav */}
                     {isMobile && (
-                        <Paper sx={{ position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 1200 }} elevation={3}>
-                            <BottomNavigation showLabels value={activeBottomNavTab} onChange={() => {}}>
+                        <Paper
+                            elevation={3}
+                            sx={{
+                                position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 1200,
+                                // Belt and braces against a narrow phone: without these the
+                                // bar inherits its children's intrinsic width and the last
+                                // tab ends up off-screen.
+                                width: '100%', maxWidth: '100vw', overflowX: 'hidden',
+                                pb: 'env(safe-area-inset-bottom)',
+                            }}
+                        >
+                            <BottomNavigation
+                                showLabels
+                                value={activeBottomNavTab}
+                                onChange={() => {}}
+                                sx={{
+                                    width: '100%',
+                                    // MUI defaults each action to min-width 80px, which
+                                    // overflows four tabs on a 320px screen. Let them
+                                    // shrink evenly instead of pushing one out of view.
+                                    '& .MuiBottomNavigationAction-root': {
+                                        minWidth: 0,
+                                        maxWidth: 'none',
+                                        flex: 1,
+                                        px: 0.5,
+                                    },
+                                    '& .MuiBottomNavigationAction-label': {
+                                        fontSize: '0.7rem',
+                                        whiteSpace: 'nowrap',
+                                    },
+                                }}
+                            >
                                 <BottomNavigationAction value="home" label="Home"    icon={<HomeIcon />}    onClick={() => navigate('/')} />
                                 <BottomNavigationAction value="shop" label="Shop"    icon={<Category />}    onClick={() => navigate('/shop')} />
                                 <BottomNavigationAction value="cart" label="Cart"

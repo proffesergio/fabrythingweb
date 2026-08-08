@@ -50,6 +50,7 @@ from catalog.scrape_parsers import (
     parse_rokomari_listing_cards,
     parse_rokomari_product,
 )
+from catalog.pricing import apply_markup
 from catalog.services_import import import_image, seed_product_entry
 from tools.scrape.common import polite_get
 
@@ -93,6 +94,17 @@ _FABRILIFE_CATS_BY_PATH = {
     "women-tshirts": ["Womens > T-Shirt"],
     "kids-boys": ["Kids > Boys"],
     "kids-girls": ["Kids > Girls"],
+    # Sports. Facet values verified against fabrilife.com's live Algolia index
+    # on 2026-08-08 (a facet query for `cats`), so these are the strings the
+    # index actually holds rather than plausible-looking guesses — a wrong
+    # facet returns zero hits and looks like an empty category.
+    "sports-jersey": ["Sports > Football Jersey"],
+    "sports-tshirts": ["Sports > Sports T-shirt", "Mens > Half Sleeve T-shirt > Sports",
+                        "Mens > Full Sleeve T-shirt > Sports"],
+    "sports-shorts": ["Mens > Shorts > Sports Shorts"],
+    "sports-trousers": ["Mens > Sports Trouser"],
+    "sports-accessories": ["Mens > Socks > Sports"],
+    "sports-all": ["Sports"],
 }
 
 FABRILIFE_BASE_URL = "https://fabrilife.com/"
@@ -240,9 +252,23 @@ def _as_relative_path(category_path, base):
     return value.lstrip("/")
 
 
+
+def _selling_prices(price, discount_price=None):
+    """What the customer will pay, from the source's raw numbers.
+
+    The picker used to show only the source price, so products were chosen
+    without seeing the shelf price. This calls catalog.pricing.apply_markup —
+    the single definition of the markup — rather than letting the frontend
+    reimplement `max(floor, price * pct%)` and drift from what the import
+    actually stores.
+    """
+    return apply_markup(price), apply_markup(discount_price) if discount_price else None
+
+
 def _candidate_from_product(url, parsed):
     already_have = Products.objects.filter(slug=slugify(parsed.get("name") or "")).exists() \
         if parsed.get("name") else False
+    _sell, _sell_disc = _selling_prices(parsed.get("price"), parsed.get("discount_price"))
     return {
         "source_url": url,
         "name": parsed.get("name") or "",
@@ -253,6 +279,9 @@ def _candidate_from_product(url, parsed):
         # None means "unknown", not "over the counter". Only the medicine
         # adapters set this; every other source leaves it absent.
         "requires_prescription": parsed.get("requires_prescription"),
+        # What we would sell it for, markup applied (see _selling_prices).
+        "selling_price": _sell,
+        "selling_discount_price": _sell_disc,
     }
 
 
@@ -263,6 +292,7 @@ def _candidate_from_card(card):
     but _candidate_from_product above never surfaced."""
     already_have = Products.objects.filter(slug=slugify(card.get("name") or "")).exists() \
         if card.get("name") else False
+    _sell, _sell_disc = _selling_prices(card.get("price"), card.get("discount_price"))
     return {
         "source_url": card["source_url"],
         "name": card.get("name") or "",
@@ -274,6 +304,8 @@ def _candidate_from_card(card):
         # A listing card carries no prescription marker (it only exists on the
         # product page), so this stays None until a detailed browse fetches it.
         "requires_prescription": card.get("requires_prescription"),
+        "selling_price": _sell,
+        "selling_discount_price": _sell_disc,
     }
 
 

@@ -27,6 +27,8 @@ const LIVE_SLUGS = [
   'beauty-talcum-powder', 'beauty-personal-care', 'beauty-medical-supplies',
   'beauty-makeup', 'beauty-herbal-skin-care', 'beauty-nail-care', 'beauty-tools',
   'beauty-herbal-hair-care', 'beauty-deodorant',
+  'sports', 'sports-jersey', 'sports-tshirts', 'sports-shorts', 'sports-trousers',
+  'sports-accessories',
   'health', 'health-medicine', 'health-healthcare', 'health-supplement',
   'health-baby-mom-care', 'health-herbal', 'health-food-nutrition',
   'health-sexual-wellness', 'health-home-care',

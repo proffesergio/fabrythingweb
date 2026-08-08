@@ -102,6 +102,17 @@ TAXONOMY = [
     # pharmacy lines, and `health-medicine` in particular holds items that may
     # carry Products.requires_prescription and are therefore blocked at
     # checkout until StoreConfiguration.rx_sales_enabled is turned on.
+    # Fabrilife carries a real Sports line — the facet values below were read
+    # off their live Algolia index (Sports > Football Jersey, Sports T-shirt,
+    # Mens > Sports Trouser, Mens > Shorts > Sports Shorts), not guessed. See
+    # catalog/migrations/0015_seed_sports_categories.py for the mapping.
+    ("sports", "Sports", "Jerseys, activewear and sports accessories.", [
+        ("sports-jersey", "Jerseys", "Football and team jerseys.", []),
+        ("sports-tshirts", "Sports T-shirts", "Performance and training tees.", []),
+        ("sports-shorts", "Sports Shorts", "Training and match shorts.", []),
+        ("sports-trousers", "Sports Trousers", "Track and training bottoms.", []),
+        ("sports-accessories", "Sports Accessories", "Socks, caps and sports extras.", []),
+    ]),
     ("health", "Health & Pharmacy", "Medicines, supplements and healthcare essentials.", [
         ("health-medicine", "Medicine", "Prescription and over-the-counter medicines.", []),
         ("health-healthcare", "Healthcare Devices", "Thermometers, BP monitors & medical devices.", []),

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import {
     Alert, Autocomplete, Avatar, Box, Breadcrumbs, Button, Card, Checkbox, Chip,
     Dialog, DialogActions, DialogContent, DialogTitle, Divider, FormControlLabel,
@@ -78,7 +78,17 @@ const ImportProducts = () => {
         return [];
     }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-    const [source, setSource] = useState("");
+    // A per-source route (/manage/import/fabrilife) pins the picker to that
+    // source and hides the selector — the sidebar entry has already made the
+    // choice, and leaving a dropdown that can silently switch away from it is
+    // how you end up importing Arogga medicine into a sports category.
+    const { sourceSlug } = useParams();
+    const [source, setSource] = useState(sourceSlug || "");
+    useEffect(() => {
+        // Navigating straight from "Import from Fabrilife" to "Import from
+        // Arogga" remounts nothing, so the state has to follow the route.
+        if (sourceSlug) setSource(sourceSlug);
+    }, [sourceSlug]);
     const [categoryPath, setCategoryPath] = useState("");
     const [query, setQuery] = useState("");
     const [candidates, setCandidates] = useState([]);
@@ -381,6 +391,11 @@ const ImportProducts = () => {
                                 <TextField
                                     select fullWidth size="small" label="Source" value={source}
                                     onChange={(e) => setSource(e.target.value)}
+                                    // Locked when the route named the source: the sidebar
+                                    // entry already chose it, and a dropdown that can drift
+                                    // away is how Arogga medicine lands in a sports category.
+                                    disabled={!!sourceSlug}
+                                    helperText={sourceSlug ? `Locked to ${activeSource?.name || sourceSlug}` : undefined}
                                 >
                                     {sources.map((s) => (
                                         <MenuItem key={s.slug} value={s.slug} disabled={!s.is_enabled}>
@@ -474,29 +489,66 @@ const ImportProducts = () => {
                                             }}
                                             onClick={() => toggleSelected(c.source_url)}
                                         >
-                                            <Stack direction="row" spacing={1} alignItems="flex-start">
+                                            <Box sx={{ position: "relative", mb: 1 }}>
+                                                <Box
+                                                    sx={{
+                                                        width: "100%", aspectRatio: "1 / 1", borderRadius: 2,
+                                                        overflow: "hidden", bgcolor: "#fff",
+                                                        display: "flex", alignItems: "center", justifyContent: "center",
+                                                        border: "1px solid", borderColor: "divider",
+                                                    }}
+                                                >
+                                                    {firstImage(c.images) ? (
+                                                        <Box
+                                                            component="img"
+                                                            src={firstImage(c.images)}
+                                                            alt={c.name || ""}
+                                                            loading="lazy"
+                                                            sx={{ width: "100%", height: "100%", objectFit: "contain" }}
+                                                        />
+                                                    ) : (
+                                                        <Avatar variant="rounded" sx={{ width: 56, height: 56 }}>
+                                                            {(c.name || "?").charAt(0)}
+                                                        </Avatar>
+                                                    )}
+                                                </Box>
                                                 <Checkbox
                                                     checked={selected.has(c.source_url)}
                                                     onChange={() => toggleSelected(c.source_url)}
                                                     onClick={(e) => e.stopPropagation()}
-                                                    sx={{ p: 0 }}
+                                                    sx={{
+                                                        position: "absolute", top: 4, left: 4, p: 0.5,
+                                                        bgcolor: "background.paper", borderRadius: 1,
+                                                        "&:hover": { bgcolor: "background.paper" },
+                                                    }}
                                                 />
-                                                <Avatar variant="rounded" src={firstImage(c.images)} sx={{ width: 56, height: 56 }}>
-                                                    {(c.name || "?").charAt(0)}
-                                                </Avatar>
-                                            </Stack>
+                                            </Box>
                                             <Typography variant="body2" fontWeight={600} sx={{ mt: 1 }} noWrap title={c.name}>
                                                 {c.name}
                                             </Typography>
-                                            <Stack direction="row" spacing={1} alignItems="center" sx={{ mt: 0.5 }}>
-                                                <Typography variant="body2" fontWeight={700}>
-                                                    ৳{c.discount_price ?? c.price}
-                                                </Typography>
-                                                {c.discount_price != null && (
-                                                    <Typography variant="caption" sx={{ textDecoration: "line-through" }} color="text.secondary">
-                                                        ৳{c.price}
+                                            {/* Two prices, clearly separated: what the source
+                                                charges, and what we would put on the shelf after
+                                                catalog.pricing.apply_markup. Showing only the
+                                                source price meant picking stock without seeing
+                                                the sell price or the margin. */}
+                                            <Stack spacing={0.25} sx={{ mt: 0.75 }}>
+                                                <Stack direction="row" spacing={0.75} alignItems="baseline">
+                                                    <Typography variant="body1" fontWeight={800} color="success.main">
+                                                        ৳{c.selling_discount_price ?? c.selling_price ?? "—"}
                                                     </Typography>
-                                                )}
+                                                    {c.selling_discount_price != null && c.selling_price != null && (
+                                                        <Typography variant="caption" sx={{ textDecoration: "line-through" }} color="text.secondary">
+                                                            ৳{c.selling_price}
+                                                        </Typography>
+                                                    )}
+                                                    <Typography variant="caption" color="text.secondary">our price</Typography>
+                                                </Stack>
+                                                <Typography variant="caption" color="text.secondary">
+                                                    cost ৳{c.discount_price ?? c.price}
+                                                    {c.selling_price != null && (c.discount_price ?? c.price) != null
+                                                        ? ` · +৳${(Number(c.selling_discount_price ?? c.selling_price) - Number(c.discount_price ?? c.price)).toFixed(2)} margin`
+                                                        : ""}
+                                                </Typography>
                                             </Stack>
                                             <Stack direction="row" spacing={0.5} sx={{ mt: 1, flexWrap: "wrap", gap: 0.5 }}>
                                                 {c.already_have && (
@@ -540,6 +592,19 @@ const ImportProducts = () => {
                             <Card variant="outlined" sx={{ p: 2, mb: 2 }}>
                                 <Grid container spacing={2} alignItems="center">
                                     <Grid item xs={12} sm={4}>
+                                        <Stack direction="row" spacing={1} sx={{ mb: 1 }}>
+                                            <Button
+                                                size="small"
+                                                onClick={() => setSelected(new Set(
+                                                    candidates.filter((c) => !c.already_have)
+                                                        .slice(0, IMPORT_CAP).map((c) => c.source_url)))}
+                                            >
+                                                Select new ({candidates.filter((c) => !c.already_have).length})
+                                            </Button>
+                                            <Button size="small" onClick={() => setSelected(new Set())}>
+                                                Clear
+                                            </Button>
+                                        </Stack>
                                         <Typography variant="body2">
                                             {selected.size} selected (cap {IMPORT_CAP} per request — reference sites
                                             are rate-limited to 1 request/second, so a run takes roughly 1

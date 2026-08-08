@@ -274,7 +274,7 @@ export default function ChatWidget({ bottom }) {
                     </Tooltip>
                 </Box>
                 <Drawer anchor="right" open={open} onClose={closePanel}>
-                    <Box sx={{ width: { xs: '100vw', sm: 360 }, p: 3 }}>
+                    <Box sx={{ width: { xs: '100%', sm: 360 }, p: 3 }}>
                         <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 2 }}>
                             <Typography variant="h6">Live chat</Typography>
                             <IconButton onClick={closePanel} aria-label="Close"><CloseIcon /></IconButton>
@@ -303,7 +303,7 @@ export default function ChatWidget({ bottom }) {
             </Box>
 
             <Drawer anchor="right" open={open} onClose={closePanel}>
-                <Box sx={{ width: { xs: '100vw', sm: 380 }, height: '100%', display: 'flex', flexDirection: 'column' }}>
+                <Box sx={{ width: { xs: '100%', sm: 380 }, height: '100%', display: 'flex', flexDirection: 'column' }}>
                     <Stack direction="row" alignItems="center" spacing={1}
                         sx={{ p: 2, borderBottom: '1px solid', borderColor: 'divider' }}>
                         {activeThread && (

@@ -18,6 +18,7 @@ export const CATEGORY_META = {
     eyewear:              { icon: '🕶️', color: '#8B5CF6' },
     'beauty-health':      { icon: '💄', color: '#E85D4A' },
     health:               { icon: '💊', color: '#059669' },
+    sports:               { icon: '⚽', color: '#0D9488' },
 
     // Fashion
     'mens-fashion':       { icon: '👔', color: '#4F46E5' },
@@ -73,6 +74,13 @@ export const CATEGORY_META = {
     'beauty-tools':       { icon: '🪞', color: '#7C3AED' },
     'beauty-herbal-hair-care': { icon: '🌿', color: '#15803D' },
     'beauty-deodorant':   { icon: '🧴', color: '#0EA5E9' },
+
+    // Sports
+    'sports-jersey':      { icon: '👕', color: '#0D9488' },
+    'sports-tshirts':     { icon: '🎽', color: '#14B8A6' },
+    'sports-shorts':      { icon: '🩳', color: '#0891B2' },
+    'sports-trousers':    { icon: '👖', color: '#0F766E' },
+    'sports-accessories': { icon: '🧦', color: '#047857' },
 
     // Health & pharmacy
     'health-medicine':    { icon: '💊', color: '#DC2626' },

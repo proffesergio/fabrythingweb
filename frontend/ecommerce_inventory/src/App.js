@@ -252,6 +252,9 @@ function App() {
           {path:"manage/category",element:<ProtectedRoute element={<ManageCategories/>}/>},
           {path:"manage/product",element:<ProtectedRoute element={<ManageProducts/>}/>},
           {path:"manage/product-import",element:<ProtectedRoute element={<ImportProducts/>}/>},
+          // Per-source entry points (sidebar: Import from Fabrilife / Arogga).
+          // Same screen, source pre-selected and locked.
+          {path:"manage/import/:sourceSlug",element:<ProtectedRoute element={<ImportProducts/>}/>},
           {path:"manage/warehouse",element:<ProtectedRoute element={<ManageWarhouse/>}/>},
           {path:"manage/users",element:<ProtectedRoute element={<ManageUsers/>}/>},
           {path:"manage/moduleurls",element:<ProtectedRoute element={<ManageModuleUrls/>}/>},

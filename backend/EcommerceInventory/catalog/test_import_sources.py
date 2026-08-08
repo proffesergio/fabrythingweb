@@ -100,7 +100,24 @@ class SeededImportSourcesTests(TestCase):
         # Load-bearing distinction: Fabrilife is NOT a reseller partner, so
         # imports from it must never enrol a product into the price-sync job.
         self.assertFalse(source.sets_source_url)
-        self.assertEqual(source.categories.count(), 8)
+        # 8 fashion mappings from 0008 + 6 sports mappings from 0015. Asserted
+        # as a floor plus the specific rows that matter, so adding a category
+        # is not a test failure while a *missing* one still is.
+        self.assertGreaterEqual(source.categories.count(), 14)
+        paths = set(source.categories.values_list("source_path", flat=True))
+        self.assertIn("men-tshirts", paths)
+        self.assertIn("sports-jersey", paths)
+
+    def test_fabrilife_sports_paths_have_algolia_facets(self):
+        """Every seeded source_path must exist in _FABRILIFE_CATS_BY_PATH.
+
+        A path with no facet mapping does not error — Algolia just returns the
+        unfiltered catalogue — so the category would silently browse everything
+        instead of sports."""
+        from catalog.services_scrape_import import _FABRILIFE_CATS_BY_PATH
+        source = ImportSource.objects.get(slug="fabrilife")
+        for path in source.categories.values_list("source_path", flat=True):
+            self.assertIn(path, _FABRILIFE_CATS_BY_PATH, f"{path} has no facet mapping")
 
     def test_rokomari_seeded_with_source_url_false(self):
         source = ImportSource.objects.get(slug="rokomari")

@@ -47,6 +47,25 @@ MODULES = [
         'display_order': 4,
         'parent': 'Products',
     },
+    # Per-source entries. The generic page above already handles every
+    # registered ImportSource, but nothing in the sidebar said so: the only
+    # source-specific item was "Affiliate Products" (Rokomari), so Arogga and
+    # Fabrilife were invisible unless you knew the generic page existed. These
+    # open the same screen with the source pre-selected and locked.
+    {
+        'module_name': 'Import from Fabrilife',
+        'module_icon': 'Checkroom',
+        'module_url': '/manage/import/fabrilife',
+        'display_order': 5,
+        'parent': 'Products',
+    },
+    {
+        'module_name': 'Import from Arogga',
+        'module_icon': 'Inventory',
+        'module_url': '/manage/import/arogga',
+        'display_order': 6,
+        'parent': 'Products',
+    },
     # Parent: Orders
     {
         'module_name': 'Orders',

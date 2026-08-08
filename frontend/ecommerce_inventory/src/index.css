@@ -1,3 +1,39 @@
+/* No element may widen the page.
+ *
+ * Android Chrome was showing a horizontal scrollbar on the storefront: one
+ * stray wide child (a 100vw drawer, a long unbroken string, an image without a
+ * max-width) is enough to stretch the document, and once the document is wider
+ * than the viewport the fixed bottom navigation stretches with it — which is
+ * why only 3 of its 4 tabs were on screen and the fourth sat off to the side.
+ *
+ * `overflow-x: clip` on html is preferred over `hidden` because `hidden`
+ * silently creates a scroll container, which breaks `position: sticky`
+ * descendants. `hidden` is kept as the fallback for browsers without `clip`.
+ */
+html {
+  max-width: 100%;
+  overflow-x: hidden;
+  overflow-x: clip;
+}
+
+body {
+  max-width: 100%;
+  overflow-x: hidden;
+  overflow-x: clip;
+}
+
+/* A long product name, a pasted URL in a review, or an order code with no
+ * spaces would otherwise push the layout wider than the screen. */
+body, #root {
+  overflow-wrap: break-word;
+}
+
+/* Media never exceeds its column. Cheaper and more reliable than auditing
+ * every <img> in the app. */
+img, video, canvas, svg, iframe {
+  max-width: 100%;
+}
+
 body {
   margin: 0;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',

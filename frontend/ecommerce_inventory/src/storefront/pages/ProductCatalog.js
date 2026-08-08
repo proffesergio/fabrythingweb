@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback, Fragment } from 'react';
+import React, { useEffect, useState, useCallback, useMemo, Fragment } from 'react';
 import {
     Box, Container, Grid, Typography, FormControl, Select, MenuItem,
     Drawer, Button, Chip, Checkbox, FormControlLabel, FormGroup,
@@ -16,9 +16,23 @@ const GENDER_OPTIONS = ['MEN', 'WOMEN', 'KIDS', 'UNISEX'];
 export default function ProductCatalog() {
     const [searchParams, setSearchParams] = useSearchParams();
     const [products, setProducts] = useState([]);
-    const [categories, setCategories] = useState([]);
+    // Categories drive the filter drawer and barely ever change, so they are
+    // read stale-while-revalidate: the filter list is usable on the very first
+    // frame instead of being empty until a (possibly cold) backend answers.
+    //
+    // Derived, NOT copied into state through an effect. A copy re-runs the
+    // effect on every render where the hook hands back a new array identity,
+    // which sets state, which re-renders — an infinite loop one refactor away.
+    const { data: cachedCategories } = useCachedApi('store/categories/');
+    const categories = useMemo(
+        () => (Array.isArray(cachedCategories) ? cachedCategories : []),
+        [cachedCategories],
+    );
     const [pagination, setPagination] = useState({ totalPages: 1, currentPage: 1, totalItems: 0 });
     const [filterDrawerOpen, setFilterDrawerOpen] = useState(false);
+    // Distinct from `products.length === 0`: an empty catalogue and an
+    // unreachable one need different words and different buttons.
+    const [loadError, setLoadError] = useState(false);
     const { callApi, loading } = useApi();
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('md'));
@@ -50,6 +64,7 @@ export default function ProductCatalog() {
     };
 
     const fetchProducts = useCallback(async () => {
+        setLoadError(false);
         const params = {};
         if (filters.category) params.category = filters.category;
         if (filters.gender) params.gender = filters.gender;
@@ -61,24 +76,23 @@ export default function ProductCatalog() {
         params.pageSize = 12;
 
         const res = await callApi({ url: 'store/products/', params });
-        if (res?.data?.data) {
-            setProducts(res.data.data.data || []);
-            setPagination({
-                totalPages: res.data.data.totalPages || 1,
-                currentPage: res.data.data.currentPage || 1,
-                totalItems: res.data.data.totalItems || 0,
-            });
+        // callApi resolves to null on ANY failure — a non-2xx, a network error,
+        // or a request that never completed because the free-tier backend was
+        // cold-starting. Treating that as "no results" told customers the shop
+        // was empty when it holds 200+ products, with no way to retry.
+        if (!res?.data?.data) {
+            setLoadError(true);
+            setProducts([]);
+            return;
         }
+        setProducts(res.data.data.data || []);
+        setPagination({
+            totalPages: res.data.data.totalPages || 1,
+            currentPage: res.data.data.currentPage || 1,
+            totalItems: res.data.data.totalItems || 0,
+        });
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [searchParams]);
-
-    // Categories drive the filter drawer and barely ever change, so they are
-    // read stale-while-revalidate: the filter list is usable on the very first
-    // frame instead of being empty until a (possibly cold) backend answers.
-    const { data: cachedCategories } = useCachedApi('store/categories/');
-    useEffect(() => {
-        if (Array.isArray(cachedCategories)) setCategories(cachedCategories);
-    }, [cachedCategories]);
 
     useEffect(() => { fetchProducts(); }, [fetchProducts]);
 
@@ -275,6 +289,18 @@ export default function ProductCatalog() {
                                 </Grid>
                             ))}
                         </Grid>
+                    ) : loadError ? (
+                        <Box sx={{ textAlign: 'center', py: 8 }} role="alert">
+                            <Typography variant="h6" color="text.secondary">
+                                Could not load products
+                            </Typography>
+                            <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                                Our server may be waking up. This usually takes a few seconds.
+                            </Typography>
+                            <Button variant="contained" color="secondary" onClick={fetchProducts} sx={{ mt: 2 }}>
+                                Try again
+                            </Button>
+                        </Box>
                     ) : products.length === 0 ? (
                         <Box sx={{ textAlign: 'center', py: 8 }}>
                             <Typography variant="h6" color="text.secondary">No products found</Typography>

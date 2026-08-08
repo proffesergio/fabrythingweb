@@ -219,3 +219,48 @@ class BrowseDetailParamTests(TestCase):
 
     def test_unrecognised_value_falls_back_to_detailed(self):
         self.assertIs(self._browse({"source": "arogga", "category": "c", "detail": "banana"}).kwargs["detail"], True)
+
+
+class CandidateSellingPriceTests(TestCase):
+    """The picker showed the SOURCE price, so the owner was choosing products
+    without seeing what a customer would actually pay.
+
+    The markup rule lives in catalog.pricing and must not be reimplemented in
+    JavaScript — a drifting copy would quote a price the import then contradicts.
+    So the candidate carries the computed selling price from the server.
+    """
+
+    def setUp(self):
+        from core.models import StoreConfiguration
+        from django.core.cache import cache
+        cache.clear()
+        cfg = StoreConfiguration.get_solo()
+        cfg.markup_percentage = 3
+        cfg.markup_floor = 50
+        cfg.save()
+
+    def test_candidate_carries_the_marked_up_selling_price(self):
+        from catalog.services_scrape_import import _candidate_from_product
+        c = _candidate_from_product("https://x/y", {"name": "Alcohol Pad", "price": 74.0})
+        self.assertEqual(c["price"], 74.0)          # untouched source price
+        self.assertEqual(c["selling_price"], 124.0)  # 74 + max(50, 3%)
+
+    def test_percentage_wins_over_the_floor_on_an_expensive_item(self):
+        from catalog.services_scrape_import import _candidate_from_product
+        c = _candidate_from_product("https://x/y", {"name": "Laptop", "price": 100000.0})
+        self.assertEqual(c["selling_price"], 103000.0)
+
+    def test_discount_price_is_marked_up_too(self):
+        from catalog.services_scrape_import import _candidate_from_product
+        c = _candidate_from_product("https://x/y", {"name": "Tee", "price": 980.0, "discount_price": 850.0})
+        self.assertEqual(c["selling_discount_price"], 900.0)
+
+    def test_absent_price_yields_no_selling_price_rather_than_zero(self):
+        from catalog.services_scrape_import import _candidate_from_product
+        c = _candidate_from_product("https://x/y", {"name": "Mystery", "price": None})
+        self.assertIsNone(c["selling_price"])
+
+    def test_listing_cards_are_priced_the_same_way(self):
+        from catalog.services_scrape_import import _candidate_from_card
+        c = _candidate_from_card({"source_url": "https://x/y", "name": "Pad", "price": 74.0, "images": []})
+        self.assertEqual(c["selling_price"], 124.0)
