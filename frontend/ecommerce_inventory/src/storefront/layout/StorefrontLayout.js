@@ -10,7 +10,7 @@ import {
     ShoppingCart, Person, Menu as MenuIcon, Search, Close,
     Home as HomeIcon, Category, AccountCircle,
     Phone, Email, Facebook, Instagram,
-    DarkMode, LightMode, Restaurant as RestaurantIcon,
+    DarkMode, LightMode, Restaurant as RestaurantIcon, KeyboardArrowUp,
 } from '@mui/icons-material';
 import { motion } from 'framer-motion';
 import { useSelector } from 'react-redux';
@@ -450,8 +450,9 @@ function StorefrontLayoutInner({ toggleDarkMode, darkMode }) {
                                         height={30}
                                         sx={{ mb: 2 }}
                                     />
-                                    <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.6)', mb: 2 }}>
-                                        Authentic fashion, electronics and pharmacy essentials — plus hot food delivered across Bancharampur. Cash on Delivery nationwide.
+                                    <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.6)', mb: 2, maxWidth: 320 }}>
+                                        Fashion, electronics and everyday essentials — plus hot
+                                        food delivered fast. Cash on Delivery nationwide.
                                     </Typography>
                                     <Box sx={{ display: 'flex', gap: 1 }}>
                                         <IconButton
@@ -472,7 +473,7 @@ function StorefrontLayoutInner({ toggleDarkMode, darkMode }) {
                                             size="small"
                                             sx={{ color: 'rgba(255,255,255,0.7)', '&:hover': { color: '#34D399' } }}
                                         ><Email /></IconButton>
-                                        <IconButton size="small" sx={{ color: 'rgba(255,255,255,0.7)', '&:hover': { color: '#E879F9' } }}><Instagram /></IconButton>
+                                        <IconButton size="small" aria-label="Instagram" sx={{ color: 'rgba(255,255,255,0.7)', '&:hover': { color: '#E879F9' } }}><Instagram /></IconButton>
                                     </Box>
                                 </Grid>
                                 <Grid item xs={6} md={2}>
@@ -497,10 +498,32 @@ function StorefrontLayoutInner({ toggleDarkMode, darkMode }) {
                                     ))}
                                 </Grid>
                                 <Grid item xs={6} md={3}>
-                                    <Typography variant="subtitle2" fontWeight={700} gutterBottom>Customer Service</Typography>
-                                    {/* These were plain text before — dead labels that looked
-                                        like links. They now point at the real policy pages,
-                                        which the app stores also require to be publicly reachable. */}
+                                    <Typography variant="subtitle2" fontWeight={700} gutterBottom>Company</Typography>
+                                    {[
+                                        { label: 'About Us', to: '/about' },
+                                        { label: 'Custom Printing', to: '/custom-printing' },
+                                        { label: 'Deals', to: '/deals' },
+                                        { label: 'Order Food', to: '/food' },
+                                        { label: 'Become a Partner', to: '/food/partner' },
+                                    ].map(item => (
+                                        <Typography
+                                            key={item.to + item.label}
+                                            component={Link}
+                                            to={item.to}
+                                            variant="body2"
+                                            sx={{
+                                                display: 'block', mb: 0.5, color: 'rgba(255,255,255,0.6)',
+                                                textDecoration: 'none', '&:hover': { color: '#A5B4FC' },
+                                            }}
+                                        >
+                                            {item.label}
+                                        </Typography>
+                                    ))}
+                                </Grid>
+                                <Grid item xs={12} md={3}>
+                                    <Typography variant="subtitle2" fontWeight={700} gutterBottom>Support</Typography>
+                                    {/* Policy pages the app stores require to be publicly
+                                        reachable — kept as real links, not dead labels. */}
                                     {[
                                         { label: 'Delivery & Shipping', to: '/shipping' },
                                         { label: 'Privacy Policy', to: '/privacy' },
@@ -519,32 +542,7 @@ function StorefrontLayoutInner({ toggleDarkMode, darkMode }) {
                                             {item.label}
                                         </Typography>
                                     ))}
-                                </Grid>
-                                <Grid item xs={6} md={2}>
-                                    <Typography variant="subtitle2" fontWeight={700} gutterBottom>Food Delivery</Typography>
-                                    {[
-                                        { label: 'Order Food', to: '/food' },
-                                        { label: 'Browse Restaurants', to: '/food/restaurants' },
-                                        { label: 'My Food Orders', to: '/food/orders' },
-                                        { label: 'Become a Partner', to: '/food/partner' },
-                                    ].map(item => (
-                                        <Typography
-                                            key={item.to}
-                                            component={Link}
-                                            to={item.to}
-                                            variant="body2"
-                                            sx={{
-                                                display: 'block', mb: 0.5, color: 'rgba(255,255,255,0.6)',
-                                                textDecoration: 'none', '&:hover': { color: '#FCA5A5' },
-                                            }}
-                                        >
-                                            {item.label}
-                                        </Typography>
-                                    ))}
-                                </Grid>
-                                <Grid item xs={12} md={3}>
-                                    <Typography variant="subtitle2" fontWeight={700} gutterBottom>Contact</Typography>
-                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 1.5, mb: 1 }}>
                                         <Phone fontSize="small" sx={{ color: 'rgba(255,255,255,0.6)' }} />
                                         <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.6)' }}>+880 1842-168117</Typography>
                                     </Box>
@@ -592,9 +590,23 @@ function StorefrontLayoutInner({ toggleDarkMode, darkMode }) {
                                 <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.4)' }}>
                                     &copy; 2026 Fabrything. All rights reserved.
                                 </Typography>
-                                <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.4)' }}>
-                                    Bancharampur, Brahmanbaria &middot; Delivering nationwide
-                                </Typography>
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                                    <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.4)' }}>
+                                        Delivering across Bangladesh
+                                    </Typography>
+                                    <IconButton
+                                        size="small"
+                                        aria-label="Back to top"
+                                        onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+                                        sx={{
+                                            color: 'rgba(255,255,255,0.6)',
+                                            border: '1px solid rgba(255,255,255,0.16)',
+                                            '&:hover': { color: '#fff', borderColor: 'rgba(255,255,255,0.4)' },
+                                        }}
+                                    >
+                                        <KeyboardArrowUp fontSize="small" />
+                                    </IconButton>
+                                </Box>
                             </Box>
                         </Container>
                     </Box>

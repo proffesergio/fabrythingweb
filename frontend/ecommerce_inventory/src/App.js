@@ -79,6 +79,7 @@ const CheckoutPage = lazy(() => import('./storefront/pages/CheckoutPage'));
 const CustomerAuth = lazy(() => import('./storefront/pages/CustomerAuth'));
 const CustomerAccount = lazy(() => import('./storefront/pages/CustomerAccount'));
 const CustomPrintingPage = lazy(() => import('./storefront/pages/CustomPrintingPage'));
+const AboutPage = lazy(() => import('./storefront/pages/AboutPage'));
 const PrintRequestDetail = lazy(() => import('./storefront/pages/PrintRequestDetail'));
 const DealsPage = lazy(() => import('./storefront/pages/DealsPage'));
 const LegalPage = lazy(() => import('./storefront/pages/legal/LegalPage'));
@@ -190,6 +191,8 @@ function App() {
           {path:"privacy",element:<LegalPage doc={PRIVACY}/>},
           {path:"terms",element:<LegalPage doc={TERMS}/>},
           {path:"shipping",element:<LegalPage doc={SHIPPING}/>},
+          // Who runs the store — public for shoppers AND AdSense reviewers.
+          {path:"about",element:<AboutPage/>},
           // Not ProtectedRoute: an anonymous visitor can still land here (e.g. a
           // shared link) and the page itself prompts login for the parts that need it.
           {path:"custom-printing/requests/:id",element:<ProtectedRoute element={<PrintRequestDetail/>}/>},
