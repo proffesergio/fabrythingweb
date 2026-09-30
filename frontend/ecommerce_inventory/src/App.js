@@ -22,6 +22,7 @@ import CircularProgress from '@mui/material/CircularProgress';
 import AppSplash from './storefront/components/AppSplash';
 import InstallPrompt from './storefront/components/InstallPrompt';
 import Box from '@mui/material/Box';
+import { trackPageview } from './utils/analytics';
 
 // Vendor (Restaurant-role) dashboard imports
 import VendorLayout from './vendor/VendorLayout';
@@ -64,6 +65,7 @@ const PartnerApplications = lazy(() => import('./pages/food/PartnerApplications'
 const RiderCash = lazy(() => import('./pages/food/RiderCash'));
 const ChatInbox = lazy(() => import('./pages/chat/ChatInbox'));
 const ManageBanners = lazy(() => import('./pages/banners/ManageBanners'));
+const ManageAnalytics = lazy(() => import('./pages/analytics/ManageAnalytics'));
 const ManageAffiliateProducts = lazy(() => import('./pages/affiliate/ManageAffiliateProducts'));
 const ManagePrintRequests = lazy(() => import('./pages/printing/ManagePrintRequests'));
 const PrintSetup = lazy(() => import('./pages/printing/PrintSetup'));
@@ -278,6 +280,7 @@ function App() {
           {path:"manage/food/rider-cash",element:<ProtectedRoute element={<RiderCash/>}/>},
           {path:"manage/chat/inbox",element:<ProtectedRoute element={<ChatInbox/>}/>},
           {path:"manage/banners",element:<ProtectedRoute element={<ManageBanners/>}/>},
+          {path:"manage/analytics",element:<ProtectedRoute element={<ManageAnalytics/>}/>},
           {path:"manage/affiliate",element:<ProtectedRoute element={<ManageAffiliateProducts/>}/>},
           {path:"manage/print/requests",element:<ProtectedRoute element={<ManagePrintRequests/>}/>},
           {path:"manage/print/setup",element:<ProtectedRoute element={<PrintSetup/>}/>},
@@ -285,6 +288,17 @@ function App() {
         ]},
     ]
   ), [])
+
+  // SPA pageviews: createBrowserRouter does client-side transitions with no
+  // full reload, so the gtag snippet in index.html only sees the first load.
+  // Subscribing here covers every storefront / food / admin route in one place.
+  useEffect(() => {
+    trackPageview(window.location.pathname + window.location.search);
+    const unsub = router.subscribe((state) => {
+      trackPageview(state.location.pathname + state.location.search);
+    });
+    return unsub;
+  }, [router])
 
   return (
     <>

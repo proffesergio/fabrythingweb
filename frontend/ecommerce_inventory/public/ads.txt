@@ -1,0 +1,13 @@
+# ads.txt — required before AdSense will serve on the domain.
+# (AdSense > Account > Settings > ads.txt; crawl errors appear in the
+# AdSense dashboard ~24h after deploy.)
+#
+# 1. After AdSense approval, replace the placeholder line below with YOUR line
+#    from the AdSense dashboard (it looks like the example, with your pub ID).
+# 2. Redeploy. Verify at https://fabrything.com/ads.txt
+# 3. AdMob (in-app ads later): add the app-ads.txt equivalent when the app
+#    ships — same format, served from the app's domain/listing.
+#
+# Example (DO NOT serve this verbatim — use your own pub ID):
+# google.com, pub-0000000000000000, DIRECT, f08c47fec0942fa0
+google.com, pub-0000000000000000, DIRECT, f08c47fec0942fa0

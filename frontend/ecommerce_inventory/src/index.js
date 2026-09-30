@@ -9,6 +9,7 @@ import axios from 'axios';
 import config from './utils/config';
 import { getToken } from './utils/authToken';
 import { applyUpdate, registerServiceWorker } from './utils/pwa';
+import { sendToAnalytics } from './utils/analytics';
 
 // Set default Authorization header. getToken() refuses to hand back an expired
 // token (and drops it), so a months-old session can't poison every request the
@@ -56,4 +57,22 @@ registerServiceWorker({
 // If you want to start measuring performance in your app, pass a function
 // to log results (for example: reportWebVitals(console.log))
 // or send to an analytics endpoint. Learn more: https://bit.ly/CRA-vitals
-reportWebVitals();
+// Wired to GA4: Core Web Vitals land as events (category "Web Vitals") and
+// feed the Search Console / Page Experience view of the site.
+reportWebVitals(sendToAnalytics);
+
+// Warm the Render free-tier backend on first paint. The keep-warm workflow
+// covers shopping hours, but the first visitor after an idle gap still pays
+// the ~50s cold boot — firing the cheap health check now (silently, short
+// timeout) starts that boot while the customer is still reading the hero
+// banner instead of when they first click "Add to Cart".
+try {
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), 8000);
+  // REACT_APP_API_URL ends in /api/ by contract (see .env.example) — the
+  // health check lives at the app root, one level up from it.
+  const base = (config.API_URL || '').replace(/\/+$/, '').replace(/\/api$/, '');
+  fetch(`${base}/api/health/`, { signal: ctrl.signal })
+    .catch(() => {})
+    .finally(() => clearTimeout(t));
+} catch { /* never break boot for a warm-up ping */ }

@@ -16,6 +16,7 @@ import { selectCartItems, selectCartTotal, clearCart } from '../../redux/reducer
 import { isAuthenticated } from '../../utils/Helper';
 import useApi from '../../hooks/APIHandler';
 import { taka } from '../format';
+import { trackBeginCheckout, trackPurchase } from '../../utils/analytics';
 
 const STEPS = ['Delivery Details', 'Review & Confirm', 'Done'];
 
@@ -73,6 +74,14 @@ export default function CheckoutPage() {
         if (items.length === 0 && !orderPlaced) {
             navigate('/cart');
             return;
+        }
+        // GA4 begin_checkout — once per mount with items (also feeds Pixel
+        // InitiateCheckout + the backend funnel in the Traffic panel).
+        if (items.length > 0 && !orderPlaced) {
+            trackBeginCheckout({
+                value: items.reduce((s, i) => s + (Number(i.price) || 0) * (i.quantity || 1), 0),
+                numItems: items.reduce((s, i) => s + (i.quantity || 1), 0),
+            });
         }
         bootstrap();
         // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -154,8 +163,16 @@ export default function CheckoutPage() {
         };
         const res = await callApi({ url: 'store/orders/', method: 'POST', body: orderData });
         if (res?.data?.data?.order_number) {
-            setOrderPlaced(res.data.data);
+            const placed = res.data.data;
+            setOrderPlaced(placed);
             setActiveStep(2);
+            // GA4 purchase — transaction_id = our order number (also mirrors
+            // to Pixel Purchase + backend, so revenue shows in all three).
+            trackPurchase({
+                orderNumber: placed.order_number,
+                value: placed.total_amount,
+                numItems: items.reduce((s, i) => s + (i.quantity || 1), 0),
+            });
             dispatch(clearCart());
         } else if (res?.data?.errors) {
             setError(Array.isArray(res.data.errors) ? res.data.errors.join(' ') : String(res.data.errors));

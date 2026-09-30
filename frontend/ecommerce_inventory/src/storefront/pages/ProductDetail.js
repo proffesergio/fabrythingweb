@@ -13,6 +13,7 @@ import ProductCard from '../components/ProductCard';
 import TopProgressBar from '../components/TopProgressBar';
 import { SUPPORT } from './legal/content';
 import { taka } from '../format';
+import { trackViewItem, trackAddToCart } from '../../utils/analytics';
 
 export default function ProductDetail() {
     const { slug } = useParams();
@@ -31,6 +32,12 @@ export default function ProductDetail() {
             const res = await callApi({ url: `store/products/${slug}/` });
             if (res?.data?.data) {
                 setProduct(res.data.data);
+                const p = res.data.data;
+                // GA4 view_item (also mirrors to Pixel ViewContent + backend).
+                trackViewItem({
+                    id: p.id, name: p.name,
+                    price: p.discount_price || p.initial_selling_price,
+                });
                 const vs = res.data.data.variants;
                 if (Array.isArray(vs) && vs.length > 0) {
                     const firstInStock = vs.find(v => v.in_stock) || vs[0];
@@ -138,6 +145,11 @@ export default function ProductDetail() {
             stock: selectedVariant.stock_quantity,
             quantity,
         }));
+        // GA4 add_to_cart (also mirrors to Pixel AddToCart + backend).
+        trackAddToCart({
+            id: selectedVariant.id, name: product.name,
+            price: Number(selectedVariant.effective_price), quantity,
+        });
     };
 
     return (

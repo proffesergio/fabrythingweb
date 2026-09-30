@@ -63,6 +63,7 @@ LOCAL_APPS = [
     "food",
     "chat",
     "printing",
+    "analytics",
 ]
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
@@ -135,6 +136,10 @@ REST_FRAMEWORK = {
         # applied to the write path (see chat/views.py's get_throttles) —
         # never to the polling reads, which need to run every few seconds.
         "chat.message": os.getenv("THROTTLE_CHAT_MESSAGE", "30/minute"),
+        # Public analytics beacon (analytics/views.py IngestView): browsers
+        # fire it on every pageview via sendBeacon, so the cap is generous —
+        # it exists to blunt bot floods, not to limit real shoppers.
+        "analytics": os.getenv("THROTTLE_ANALYTICS", "120/minute"),
     },
 }
 

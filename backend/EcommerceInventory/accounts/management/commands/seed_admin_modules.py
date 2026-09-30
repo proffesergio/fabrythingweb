@@ -296,6 +296,21 @@ MODULES = [
         'display_order': 2,
         'parent': 'Custom Printing',
     },
+    # ── Traffic & analytics (plugin-based panel) ───────────────────────
+    {
+        'module_name': 'Marketing',
+        'module_icon': 'Campaign',
+        'module_url': None,
+        'display_order': 12,
+        'parent': None,
+    },
+    {
+        'module_name': 'Traffic & Analytics',
+        'module_icon': 'Analytics',
+        'module_url': '/manage/analytics',
+        'display_order': 1,
+        'parent': 'Marketing',
+    },
 ]
 
 # The exact module_names we manage — anything else gets deactivated

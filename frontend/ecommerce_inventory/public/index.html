@@ -43,6 +43,65 @@
       Learn how to configure a non-root public URL by running `npm run build`.
     -->
     <title>Fabrything</title>
+    <!-- ── Google Search Console ownership ────────────────────────────
+         1. Open https://search.google.com/search-console > Add property >
+            fabrything.com > HTML tag method, copy the token.
+         2. Set it as the Vercel env var REACT_APP_GOOGLE_SITE_VERIFICATION
+            (Project > Settings > Environment Variables) and redeploy.
+         CRA replaces %REACT_APP_GOOGLE_SITE_VERIFICATION% at build time.
+         Until then the literal placeholder below is ignored by Google. -->
+    <meta name="google-site-verification" content="%REACT_APP_GOOGLE_SITE_VERIFICATION%" />
+    <!-- ── AdSense account link (needed for the AdSense site-approval check).
+         Same flow: AdSense > Sites > Add site gives you a pub-ID; set
+         REACT_APP_ADSENSE_CLIENT=ca-pub-XXXXXXXXXXXXXXXX in Vercel. The
+         actual ad units are rendered later from the admin Traffic panel. -->
+    <meta name="google-adsense-account" content="%REACT_APP_ADSENSE_CLIENT%" />
+    <!-- ── Google Analytics 4 (GA4) ───────────────────────────────────
+         Measurement ID G-S32TZJZCLV, overridable via Vercel env
+         REACT_APP_GA4_MEASUREMENT_ID. Hostname-guarded like the Pixel below
+         so localhost / *.vercel.app previews never pollute production data.
+         Consent Mode v2 defaults to granted (no opt-in cookie law in BD);
+         see utils/analytics.js grantConsent()/denyConsent(). -->
+    <script>
+      (function () {
+        var h = window.location.hostname;
+        if (h === 'localhost' || h === '127.0.0.1' || h.endsWith('.vercel.app')) return;
+        var GA_ID = '%REACT_APP_GA4_MEASUREMENT_ID%';
+        if (!GA_ID || GA_ID.indexOf('REACT_APP') !== -1) GA_ID = 'G-S32TZJZCLV';
+        window.__GA4_ID__ = GA_ID;
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        window.gtag = gtag;
+        gtag('consent', 'default', {
+          ad_storage: 'granted', ad_user_data: 'granted',
+          ad_personalization: 'granted', analytics_storage: 'granted'
+        });
+        gtag('js', new Date());
+        gtag('config', GA_ID, { send_page_view: false });
+        var s = document.createElement('script');
+        s.async = true;
+        s.src = 'https://www.googletagmanager.com/gtag/js?id=' + encodeURIComponent(GA_ID);
+        document.head.appendChild(s);
+      })();
+    </script>
+    <!-- ── Google Tag Manager ─────────────────────────────────────────
+         Set REACT_APP_GTM_ID=GTM-XXXXXXX in Vercel once the container exists
+         (tagmanager.google.com > create container for fabrything.com).
+         Empty/unset = this block no-ops. GTM then owns future tags
+         (Ads conversions, extra pixels) with no redeploy needed. -->
+    <script>
+      (function (w, d, s, l, i) {
+        if (!i || i.indexOf('REACT_APP') !== -1) return;
+        var h = w.location.hostname;
+        if (h === 'localhost' || h === '127.0.0.1' || h.endsWith('.vercel.app')) return;
+        w[l] = w[l] || [];
+        w[l].push({ 'gtm.start': new Date().getTime(), event: 'gtm.js' });
+        var f = d.getElementsByTagName(s)[0], j = d.createElement(s);
+        j.async = true;
+        j.src = 'https://www.googletagmanager.com/gtm.js?id=' + encodeURIComponent(i);
+        f.parentNode.insertBefore(j, f);
+      })(window, document, 'script', 'dataLayer', '%REACT_APP_GTM_ID%');
+    </script>
     <!-- Meta Pixel. Wrapped in a hostname check so localhost/preview traffic
          never lands in the real Pixel data — otherwise every `npm start` and
          every Vercel preview build pollutes the numbers you make decisions on.
