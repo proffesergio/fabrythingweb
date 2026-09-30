@@ -105,6 +105,10 @@ export default function AffiliateProductCard({ item, dense = false }) {
                     className="aff-img"
                     image={item.image || ''}
                     alt={item.title}
+                    // Same reasoning as ProductCard: these render in grids,
+                    // almost all below the fold.
+                    loading="lazy"
+                    decoding="async"
                     sx={{
                         width: '100%', height: '100%', objectFit: 'contain',
                         transition: 'transform 0.4s ease',

@@ -66,6 +66,8 @@ export default function CartPage() {
                                         component="img"
                                         src={item.image || 'https://via.placeholder.com/100?text=No+Image'}
                                         alt={item.name}
+                                        loading="lazy"
+                                        decoding="async"
                                         sx={{ width: '100%', height: 100, objectFit: 'cover', borderRadius: 1 }}
                                         onError={(e) => { e.target.src = 'https://via.placeholder.com/100?text=No+Image'; }}
                                     />

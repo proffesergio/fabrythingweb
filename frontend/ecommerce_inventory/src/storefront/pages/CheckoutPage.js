@@ -88,22 +88,28 @@ export default function CheckoutPage() {
     }, []);
 
     const bootstrap = async () => {
-        const cfgRes = await callApi({ url: 'store/config/' });
+        // config + profile + addresses are independent — fire together so a
+        // cold backend costs one wake-up (~50s worst case), not three in a
+        // row. Profile/addresses only exist for logged-in customers.
+        const [cfgRes, profRes, addrRes] = await Promise.all([
+            callApi({ url: 'store/config/' }),
+            authed ? callApi({ url: 'store/profile/' }) : Promise.resolve(null),
+            authed ? callApi({ url: 'store/addresses/' }) : Promise.resolve(null),
+        ]);
         const cfg = cfgRes?.data?.data;
         if (cfg) {
             setShippingRate(cfg.fixed_shipping_rate);
             setFreeThreshold(cfg.free_shipping_threshold);
             setCurrency(cfg.currency || 'BDT');
         }
-        // Profile + saved addresses only exist for logged-in customers.
-        if (authed) {
-            const profRes = await callApi({ url: 'store/profile/' });
-            const prof = profRes?.data?.data;
-            if (prof) {
-                setContactName(`${prof.first_name || ''} ${prof.last_name || ''}`.trim() || prof.username || '');
-                setContactPhone(prof.phone || '');
-            }
-            await fetchAddresses();
+        const prof = profRes?.data?.data;
+        if (prof) {
+            setContactName(`${prof.first_name || ''} ${prof.last_name || ''}`.trim() || prof.username || '');
+            setContactPhone(prof.phone || '');
+        }
+        if (addrRes?.data?.data) {
+            setAddresses(addrRes.data.data);
+            if (addrRes.data.data.length > 0) setSelectedAddress(String(addrRes.data.data[0].id));
         }
     };
 

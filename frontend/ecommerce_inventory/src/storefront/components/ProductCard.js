@@ -202,6 +202,11 @@ export default function ProductCard({ product, showFlashBadge, affiliate = null 
                 }}>
                     <CardMedia
                         component="img"
+                        // Grid cards are almost all below the fold: lazy-load so
+                        // the homepage doesn't fire ~50 image requests (each a
+                        // round trip to the free-tier backend) before first paint.
+                        loading="lazy"
+                        decoding="async"
                         sx={{
                             width: '100%',
                             height: '100%',

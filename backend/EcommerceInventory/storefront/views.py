@@ -2,7 +2,7 @@ from datetime import timedelta
 
 from django.contrib.auth import get_user_model
 from django.db import transaction
-from django.db.models import Avg, Count, FloatField, IntegerField, OuterRef, Q, Subquery, Sum
+from django.db.models import Avg, Count, ExpressionWrapper, F, FloatField, IntegerField, OuterRef, Q, Subquery, Sum
 from django.db.models.functions import Coalesce
 from django.utils import timezone
 from rest_framework import generics
@@ -247,14 +247,21 @@ class PublicHomepageView(APIView):
             if best_rated_ids else best_rated_qs[:8]
         )
 
-        all_discounted = list(annotate_product_cards(Products.objects.filter(
-            status='ACTIVE', discount_price__isnull=False, initial_selling_price__gt=0,
-        )))
-        flash_sale = sorted(
-            all_discounted,
-            key=lambda p: (p.initial_selling_price - p.discount_price) / p.initial_selling_price,
-            reverse=True,
-        )[:8]
+        # Biggest discount %, ranked in the database. This used to pull EVERY
+        # discounted product into Python and sort there — with a ~600-product
+        # catalog that meant serializing the whole table on every homepage hit
+        # (against a cold free-tier DB), only to keep 8 rows. Now Postgres
+        # orders by the ratio and returns just the top 8.
+        flash_sale = list(annotate_product_cards(
+            Products.objects.filter(
+                status='ACTIVE', discount_price__isnull=False,
+                initial_selling_price__gt=0,
+            ).annotate(discount_ratio=ExpressionWrapper(
+                (F('initial_selling_price') - F('discount_price'))
+                / F('initial_selling_price'),
+                output_field=FloatField(),
+            )).order_by('-discount_ratio')[:8]
+        ))
 
         now = timezone.now()
         days_until_sunday = (6 - now.weekday()) % 7 or 7

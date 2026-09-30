@@ -133,7 +133,7 @@ export default function PrintRequestDetail() {
                         <Typography variant="subtitle2" sx={{ mb: 1 }}>Reference images</Typography>
                         <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mb: 1 }}>
                             {(request.reference_images || []).map((url) => (
-                                <Box key={url} component="img" src={url} alt="Reference"
+                                <Box key={url} component="img" src={url} alt="Reference" loading="lazy" decoding="async"
                                     sx={{ width: 90, height: 90, objectFit: 'cover', borderRadius: 1, border: '1px solid', borderColor: 'divider' }} />
                             ))}
                         </Box>
@@ -161,7 +161,7 @@ export default function PrintRequestDetail() {
                                         color={proof.decision === 'APPROVED' ? 'success' : proof.decision === 'REVISION_REQUESTED' ? 'warning' : 'default'}
                                     />
                                 </Stack>
-                                <Box component="img" src={proof.image} alt={`Proof v${proof.version}`}
+                                <Box component="img" src={proof.image} alt={`Proof v${proof.version}`} loading="lazy" decoding="async"
                                     sx={{ maxWidth: '100%', maxHeight: 320, borderRadius: 1, mt: 1, border: '1px solid', borderColor: 'divider' }} />
                                 {proof.note && <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>{proof.note}</Typography>}
                                 {proof.customer_feedback && (

@@ -223,7 +223,7 @@ export default function ProductDetail() {
                                             borderColor: selectedImage === i ? 'secondary.main' : 'divider',
                                         }}
                                     >
-                                        <img src={img} alt="" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                                        <img src={img} alt="" loading="lazy" decoding="async" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
                                     </Box>
                                 ))}
                             </Box>

@@ -89,6 +89,9 @@ export default function ManageAffiliateProducts() {
     // owner pastes from his own browser. No fetch involved.
     const [manual, setManual] = useState(null);
     const [manualErrors, setManualErrors] = useState({});
+    // Products added in the current manual session — shown in the dialog so
+    // a 10+ product run has visible progress without closing to check.
+    const [addedCount, setAddedCount] = useState(0);
     const [looking, setLooking] = useState(false);
     const [creating, setCreating] = useState(false);
     const [uploading, setUploading] = useState(false);
@@ -196,7 +199,7 @@ export default function ManageAffiliateProducts() {
         else toast.error("Upload failed — try again");
     };
 
-    const createManual = async () => {
+    const createManual = async (addAnother = false) => {
         // remote_product_id is what every constructed link is built from, so a
         // row without one can only ever produce a dead link. Look up first.
         if (!manual.remote_product_id) {
@@ -229,6 +232,17 @@ export default function ManageAffiliateProducts() {
         });
         setCreating(false);
         if (res?.status === 200 || res?.status === 201) {
+            // "Save & add another" keeps the dialog open with a FRESH form
+            // (the product id from the last URL must not leak into the next
+            // row) so a 10+ product run is one continuous loop.
+            if (addAnother) {
+                toast.success(`"${manual.title}" added — add the next one`);
+                setManual({ ...EMPTY_MANUAL_FORM });
+                setManualErrors({});
+                setAddedCount((c) => c + 1);
+                loadProducts();
+                return;
+            }
             toast.success("Affiliate product added");
             setManual(null);
             loadProducts();
@@ -335,9 +349,20 @@ export default function ManageAffiliateProducts() {
                 </Breadcrumbs>
             </Stack>
 
-            <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1 }}>
-                <StorefrontIcon color="primary" />
-                <Typography variant="h5" fontWeight={800}>Rokomari Affiliate Products</Typography>
+            {/* Manual entry is the path that actually works in production:
+                rokomari.com answers the server with a Cloudflare challenge, so
+                Search & Add fails there — this button is the primary way in. */}
+            <Stack direction="row" spacing={1} alignItems="center" justifyContent="space-between" sx={{ mb: 1, flexWrap: 'wrap', gap: 1 }}>
+                <Stack direction="row" spacing={1} alignItems="center">
+                    <StorefrontIcon color="primary" />
+                    <Typography variant="h5" fontWeight={800}>Rokomari Affiliate Products</Typography>
+                </Stack>
+                <Button
+                    variant="contained"
+                    onClick={() => { setManual({ ...EMPTY_MANUAL_FORM }); setManualErrors({}); setAddedCount(0); }}
+                >
+                    Add manually
+                </Button>
             </Stack>
 
             <Tabs value={tab} onChange={(_, v) => setTab(v)} sx={{ mb: 2 }}>
@@ -381,7 +406,7 @@ export default function ManageAffiliateProducts() {
                         </Grid>
                         <Button
                             size="small" sx={{ mt: 1 }}
-                            onClick={() => { setManual({ ...EMPTY_MANUAL_FORM }); setManualErrors({}); }}
+                            onClick={() => { setManual({ ...EMPTY_MANUAL_FORM }); setManualErrors({}); setAddedCount(0); }}
                         >
                             Add a product manually
                         </Button>
@@ -604,6 +629,11 @@ export default function ManageAffiliateProducts() {
             <Dialog open={!!manual} onClose={() => setManual(null)} maxWidth="sm" fullWidth>
                 <DialogTitle>Add a Rokomari product manually</DialogTitle>
                 <DialogContent>
+                    {addedCount > 0 && (
+                        <Alert severity="success" sx={{ mb: 2 }}>
+                            {addedCount} product{addedCount === 1 ? '' : 's'} added so far — keep going.
+                        </Alert>
+                    )}
                     {manual && (
                         <Stack spacing={2} sx={{ mt: 1 }}>
                             <Alert severity="info">
@@ -731,7 +761,10 @@ export default function ManageAffiliateProducts() {
                 </DialogContent>
                 <DialogActions>
                     <Button onClick={() => setManual(null)}>Cancel</Button>
-                    <Button variant="contained" disabled={creating} onClick={createManual}>
+                    <Button variant="outlined" disabled={creating} onClick={() => createManual(true)}>
+                        {creating ? <CircularProgress size={20} /> : "Save & add another"}
+                    </Button>
+                    <Button variant="contained" disabled={creating} onClick={() => createManual(false)}>
                         {creating ? <CircularProgress size={20} /> : "Add product"}
                     </Button>
                 </DialogActions>

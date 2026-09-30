@@ -9,7 +9,7 @@ import TabbedProductSection from '../components/TabbedProductSection';
 import ProductCarousel from '../components/ProductCarousel';
 import PromoBanner from '../components/PromoBanner';
 import CategoryGrid from '../components/CategoryGrid';
-import AffiliateWidget from '../components/AffiliateWidget';
+import AffiliateCarousel from '../components/AffiliateCarousel';
 
 export default function HomePage() {
     // Stale-while-revalidate: renders instantly from the last cached homepage,
@@ -78,9 +78,11 @@ export default function HomePage() {
                 )}
             </Container>
 
-            {/* Rotating affiliate deals (Rokomari) -- homepage section widget */}
+            {/* Partner deals carousel (Rokomari) — multi-card Swiper fed by the
+                `deals` placement, the same flag that feeds /deals. The old
+                single rotating card left the section mostly empty. */}
             <Container maxWidth="lg">
-                <AffiliateWidget placement="sidebar" title="Deals from Rokomari" />
+                <AffiliateCarousel title="Deals from Rokomari" />
             </Container>
 
             {/* Promo Banners */}
