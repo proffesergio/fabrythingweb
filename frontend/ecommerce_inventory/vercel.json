@@ -1,13 +1,6 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "buildCommand": "CI=false react-scripts build",
-  // NOTE (2026-09-30): an Ezoic ads.txt 301 lived here briefly and was
-  // reverted BEFORE any deploy. Ezoic's manager doesn't know fabrything.com
-  // yet (account not integrated — dashboard only offers nameserver verify),
-  // so redirecting would have replaced our working AdSense ads.txt with an
-  // empty/unknown manager page and broken AdSense authorization mid-review.
-  // Revisit only AFTER Ezoic integration is detected, and only with the
-  // AdSense line confirmed inside their manager first.
   "rewrites": [
     {
       "source": "/(.*)",
