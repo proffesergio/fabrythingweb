@@ -5,8 +5,8 @@ const BASE = 'store/nobleseek/';
 
 function unwrap(res) { return res?.data?.data ?? res?.data; }
 
-export async function fetchNewsList({ category = '', search = '', page = 1, featured = '' } = {}) {
-  const res = await axios.get(`${config.API_URL}${BASE}articles/`, { params: { category, search, page, featured } });
+export async function fetchNewsList({ category = '', search = '', page = 1, featured = '', breaking = '', popular = '' } = {}) {
+  const res = await axios.get(`${config.API_URL}${BASE}articles/`, { params: { category, search, page, featured, breaking, popular } });
   const raw = unwrap(res);
   // DRF paginated {results,count} or plain list — normalize both.
   if (raw && Array.isArray(raw.results)) return { results: raw.results, count: raw.count, next: raw.next };
@@ -34,6 +34,52 @@ export async function fetchLatestStrip() {
     const res = await axios.get(`${config.API_URL}${BASE}latest/`);
     return unwrap(res) || [];
   } catch { return []; }
+}
+
+// Portal homepage data: most-read sidebar, breaking ticker, sections.
+export async function fetchPopular(limit = 5) {
+  try {
+    const res = await axios.get(`${config.API_URL}${BASE}articles/`, { params: { popular: '1' } });
+    const raw = unwrap(res);
+    const list = (raw && raw.results) || raw || [];
+    return list.slice(0, limit);
+  } catch { return []; }
+}
+
+export async function fetchSection(category, limit = 5) {
+  try {
+    const { results } = await fetchNewsList({ category });
+    return (results || []).slice(0, limit);
+  } catch { return []; }
+}
+
+export async function fetchBreaking(limit = 6) {
+  try {
+    const { results } = await fetchNewsList({ breaking: '1' });
+    return (results || []).slice(0, limit);
+  } catch { return []; }
+}
+
+// Fallback section labels when the categories API is unreachable.
+export const PORTAL_SECTIONS = [
+  { slug: 'bangladesh', name: 'বাংলাদেশ' },
+  { slug: 'politics', name: 'রাজনীতি' },
+  { slug: 'world', name: 'আন্তর্জাতিক' },
+  { slug: 'economy', name: 'অর্থনীতি' },
+  { slug: 'opinion', name: 'মতামত' },
+  { slug: 'sports', name: 'খেলা' },
+  { slug: 'entertainment', name: 'বিনোদন' },
+  { slug: 'lifestyle', name: 'জীবনযাপন' },
+  { slug: 'tech', name: 'প্রযুক্তি' },
+  { slug: 'education', name: 'শিক্ষা' },
+  { slug: 'health', name: 'স্বাস্থ্য' },
+  { slug: 'jobs', name: 'চাকরি' },
+];
+
+export function sectionName(slug, cats = []) {
+  const hit = (cats || []).find((c) => c.slug === slug);
+  if (hit) return hit.name;
+  return (PORTAL_SECTIONS.find((c) => c.slug === slug) || {}).name || 'সংবাদ';
 }
 
 export function timeAgo(iso) {

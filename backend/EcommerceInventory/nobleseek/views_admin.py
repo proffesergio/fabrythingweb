@@ -69,6 +69,14 @@ class AdminCategoryListCreateView(generics.ListCreateAPIView):
     queryset = NewsCategory.objects.all().order_by("display_order")
 
 
+class AdminCategoryDetailView(generics.RetrieveUpdateDestroyAPIView):
+    """Rename / reorder / deactivate sections from the Categories tab."""
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated, StaffPerm]
+    serializer_class = NewsCategorySerializer
+    queryset = NewsCategory.objects.all()
+
+
 class AdminTrendListView(generics.ListAPIView):
     authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated, StaffPerm]

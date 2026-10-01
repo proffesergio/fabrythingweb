@@ -162,7 +162,7 @@ class Article(models.Model):
             "image": [self.hero_image] if self.hero_image else [],
             "datePublished": self.published_at.isoformat() if self.published_at else None,
             "dateModified": self.updated_at.isoformat() if self.updated_at else None,
-            "author": {"@type": "Organization", "name": "NobleSeek by Fabrything",
+            "author": {"@type": "Organization", "name": "NobleSeek",
                        "url": site_url},
             "publisher": {"@type": "Organization", "name": "NobleSeek",
                           "logo": {"@type": "ImageObject",

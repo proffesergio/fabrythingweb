@@ -6,7 +6,7 @@ import { Facebook, X, WhatsApp, Link as LinkIcon } from '@mui/icons-material';
 export default function ShareBar({ title, vertical = false }) {
   const [copied, setCopied] = useState(false);
   const url = typeof window !== 'undefined' ? window.location.href : '';
-  const text = `${title || 'NobleSeek'} — NobleSeek by Fabrything`;
+  const text = `${title || 'নোবেলসিক'} — নোবেলসিক`;
   const links = [
     { icon: <Facebook />, label: 'Share on Facebook', href: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}` },
     { icon: <X />, label: 'Share on X', href: `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}` },

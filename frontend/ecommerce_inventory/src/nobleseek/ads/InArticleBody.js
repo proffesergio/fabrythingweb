@@ -4,13 +4,14 @@ import AdSlot from './AdSlot';
 // Splits article HTML by closing </p> and injects AdSlots every N paragraphs.
 // Detail page = maximum ad density: top slot handled by page, here we add
 // in-article 1 after para 2, in-article 2 mid-way, multiplex near end.
-export default function InArticleBody({ html, slots }) {
+// dropCap adds the newspaper drop-cap to the opening paragraph only.
+export default function InArticleBody({ html, slots, dropCap = false }) {
   const parts = useMemo(() => {
     const chunks = String(html || '').split(/<\/p>/i).filter(Boolean).map(s => `${s}</p>`);
-    if (chunks.length <= 3) return [{ type: 'html', key: 'p0', html }];
+    if (chunks.length <= 3) return [{ type: 'html', key: 'p0', html, drop: dropCap }];
     const out = [];
     chunks.forEach((c, i) => {
-      out.push({ type: 'html', key: `p${i}`, html: c });
+      out.push({ type: 'html', key: `p${i}`, html: c, drop: dropCap && i === 0 });
       if (i === 1 && slots?.inarticle1) out.push({ type: 'ad', key: 'ad1', slot: slots.inarticle1, format: 'fluid', layout: 'in-article' });
       else if (i === Math.floor(chunks.length * 0.6) && slots?.inarticle2) out.push({ type: 'ad', key: 'ad2', slot: slots.inarticle2, format: 'auto' });
     });
@@ -22,7 +23,7 @@ export default function InArticleBody({ html, slots }) {
     <div className="ns-article-body">
       {parts.map((p) => p.type === 'ad'
         ? <AdSlot key={p.key} slot={p.slot} format={p.format} layout={p.layout} minHeight={120} />
-        : <div key={p.key} dangerouslySetInnerHTML={{ __html: p.html }} />)}
+        : <div key={p.key} className={p.drop ? 'ns-dropcap' : undefined} dangerouslySetInnerHTML={{ __html: p.html }} />)}
     </div>
   );
 }

@@ -1,37 +1,44 @@
 import React from 'react';
-import { Container, Typography, Box } from '@mui/material';
+import { Container, Typography, Box, Divider } from '@mui/material';
 import NewsSeo from '../components/NewsSeo';
 
 const DOCS = {
   about: {
-    title: 'About NobleSeek',
-    body: `<p><strong>NobleSeek by Fabrything</strong> is a trends-driven Bangla news desk. Topics come from Google Trends (Bangladesh + worldwide), updated daily. Every story is human-written (600-1000 words), with 1 verified hero image, source credit, and tags.</p><p>We exist to turn viral curiosity into verified reading — and to fund it with clearly-labelled advertising, so the shop can stay low-ad and fast.</p><p>Contact: support@fabrything.com, Dhaka, Bangladesh.</p>`,
+    title: 'আমাদের সম্পর্কে',
+    intro: 'সত্যের সন্ধানে, সবার আগে।',
+    body: `<p><strong>নোবেলসিক (NobleSeek)</strong> একটি বাংলা অনলাইন সংবাদমাধ্যম। দেশ-বিদেশের সর্বশেষ সংবাদ, বিশ্লেষণ ও মতামত আমরা দ্রুত ও নির্ভরযোগ্যভাবে পাঠকের কাছে পৌঁছে দিই।</p><p>আমাদের প্রতিটি প্রতিবেদন যাচাই করা তথ্যের ভিত্তিতে তৈরি। ভুল হলে আমরা স্বচ্ছভাবে সংশোধন করি এবং সংশোধনের নোট প্রতিবেদনে যুক্ত করি। বিজ্ঞাপন ও সম্পাদকীয় বিভাগ সম্পূর্ণ আলাদা — বিজ্ঞাপনদাতারা সংবাদে হস্তক্ষেপ করতে পারেন না।</p>`,
   },
   contact: {
-    title: 'Contact NobleSeek',
-    body: `<p>Email: <strong>support@fabrything.com</strong><br/>Phone: +880 1842-168117<br/>Address: Dhaka, Bangladesh</p><p>For corrections: send story URL + correct info; we update within 24h with an editor's note.</p><p>For ads/partnerships: mention NobleSeek in subject line.</p>`,
+    title: 'যোগাযোগ',
+    intro: 'সংবাদ, সংশোধন ও বিজ্ঞাপনের জন্য।',
+    body: `<p><strong>নোবেলসিক নিউজরুম</strong><br/>ঢাকা, বাংলাদেশ<br/>ইমেইল: <strong>support@fabrything.com</strong><br/>ফোন: +880 1842-168117</p><p><strong>সংশোধনের জন্য:</strong> খবরের লিংকসহ সঠিক তথ্য পাঠান — ২৪ ঘণ্টার মধ্যে আপডেট করা হয়।</p><p><strong>বিজ্ঞাপন/পার্টনারশিপ:</strong> ইমেইলের বিষয়ে “বিজ্ঞাপন” লিখুন।</p>`,
   },
   privacy: {
-    title: 'Privacy Policy — NobleSeek',
-    body: `<p>We use Google AdSense, Google Analytics 4 and Meta Pixel to measure readership and serve ads. These set cookies. You can block cookies in your browser; the site still works.</p><p>We never sell personal data. FB comments are governed by Meta's policy. Contact support@fabrything.com for data requests.</p>`,
+    title: 'গোপনীয়তা নীতি',
+    intro: 'আপনার তথ্য কীভাবে ব্যবহার হয়।',
+    body: `<p>পাঠকসংখ্যা পরিমাপ ও বিজ্ঞাপন পরিবেশনের জন্য আমরা Google AdSense, Google Analytics ও Meta Pixel ব্যবহার করি। এগুলো কুকি সংরক্ষণ করতে পারে। ব্রাউজার থেকে কুকি বন্ধ করলেও সাইট ব্যবহার করা যায়।</p><p>আমরা কখনো ব্যক্তিগত তথ্য বিক্রি করি না। ফেসবুক মন্তব্য Meta-এর নীতিমালার আওতাধীন। তথ্য-সংক্রান্ত অনুরোধে লিখুন: support@fabrything.com।</p>`,
   },
   disclaimer: {
-    title: 'Disclaimer',
-    body: `<p>NobleSeek reports on trending topics for information only. We verify with named sources; breaking stories are updated as facts arrive. Images carry credits; if you own one and want takedown/credit change, contact us.</p><p>Ads are clearly labelled and do not imply editorial endorsement.</p>`,
+    title: 'ডিসক্লেইমার',
+    intro: 'পাঠকের জ্ঞাতার্থে।',
+    body: `<p>নোবেলসিকের প্রতিবেদন শুধু তথ্যের উদ্দেশ্যে। আমরা নির্ভরযোগ্য সূত্র থেকে যাচাই করে প্রকাশ করি; চলমান ঘটনার খবর নতুন তথ্য এলে হালনাগাদ করা হয়। ছবির সঙ্গে ক্রেডিট দেওয়া থাকে — কোনো ছবির স্বত্বাধিকারী অপসারণ/ক্রেডিট পরিবর্তন চাইলে যোগাযোগ করুন।</p><p>বিজ্ঞাপন স্পষ্টভাবে চিহ্নিত থাকে এবং তা সম্পাদকীয় সমর্থন বোঝায় না।</p>`,
   },
   ethics: {
-    title: 'Editorial Ethics',
-    body: `<ul><li>Human review before every publish — AI drafts are scaffolds only.</li><li>No fabricated quotes, no clickbait without substance.</li><li>Corrections policy: fix + note at article bottom.</li><li>One hero image minimum, credited; no graphic content.</li><li>Separation of ads and editorial — advertisers don't approve copy.</li></ul>`,
+    title: 'সম্পাদকীয় নীতি',
+    intro: 'যে নীতিতে আমরা সংবাদ প্রকাশ করি।',
+    body: `<ul><li>প্রতিটি প্রকাশের আগে মানব সম্পাদকের যাচাই — খসড়া কখনো সরাসরি প্রকাশ হয় না।</li><li>বানোয়াট উদ্ধৃতি নয়, তথ্যহীন চমকপ্রদ শিরোনাম নয়।</li><li>ভুল হলে সংশোধন + প্রতিবেদনের নিচে নোট।</li><li>ক্রেডিটসহ ছবি; গ্রাফিক/আপত্তিকর কনটেন্ট নয়।</li><li>বিজ্ঞাপন ও সম্পাদকীয়র পৃথকীকরণ — বিজ্ঞাপনদাতা কপি অনুমোদন করেন না।</li></ul>`,
   },
 };
 
 export default function NobleSeekInfoPage({ page = 'about' }) {
   const doc = DOCS[page] || DOCS.about;
   return (
-    <Container maxWidth="md" sx={{ py: 4 }}>
-      <NewsSeo title={doc.title} description={doc.title} slug={page} />
-      <Typography variant="h4" fontWeight={900} gutterBottom>{doc.title}</Typography>
-      <Box dangerouslySetInnerHTML={{ __html: doc.body }} sx={{ '& p': { lineHeight: 1.8, mb: 1.5 } }} />
+    <Container maxWidth="md" sx={{ py: { xs: 3, md: 5 } }}>
+      <NewsSeo title={doc.title} description={`${doc.title} — নোবেলসিক`} slug={page} />
+      <Typography variant="h4" fontWeight={900} className="ns-serif" gutterBottom>{doc.title}</Typography>
+      <Typography variant="subtitle1" color="text.secondary" className="ns-sans" sx={{ mb: 1 }}>{doc.intro}</Typography>
+      <Divider sx={{ mb: 2.5 }} />
+      <Box dangerouslySetInnerHTML={{ __html: doc.body }} className="ns-sans" sx={{ '& p': { lineHeight: 1.9, mb: 1.75, color: '#333' }, '& li': { lineHeight: 1.9, mb: 0.75 } }} />
     </Container>
   );
 }

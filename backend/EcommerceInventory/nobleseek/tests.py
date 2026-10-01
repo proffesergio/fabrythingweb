@@ -28,3 +28,34 @@ class NobleSeekPublicTests(TestCase):
         c = APIClient()
         r = c.get(f"/api/store/nobleseek/articles/{d.slug}/")
         assert r.status_code == 404
+
+    def test_scheduled_future_hidden_until_due(self):
+        from datetime import timedelta
+        from django.utils import timezone
+        f = Article.objects.create(
+            headline="scheduled future story",
+            body_html="<p>hi</p>",
+            status=Article.Status.PUBLISHED,
+            published_at=timezone.now() + timedelta(hours=2))
+        c = APIClient()
+        r = c.get(f"/api/store/nobleseek/articles/{f.slug}/")
+        assert r.status_code == 404, r.content[:200]
+        r2 = c.get("/api/store/nobleseek/articles/")
+        slugs = [a["slug"] for a in r2.json()["results"]]
+        assert f.slug not in slugs
+
+    def test_popular_ordering(self):
+        from django.utils import timezone
+        low = Article.objects.create(
+            headline="low views story", body_html="<p>hi</p>",
+            status=Article.Status.PUBLISHED,
+            published_at=timezone.now(), view_count=3)
+        high = Article.objects.create(
+            headline="high views story", body_html="<p>hi</p>",
+            status=Article.Status.PUBLISHED,
+            published_at=timezone.now(), view_count=999)
+        c = APIClient()
+        r = c.get("/api/store/nobleseek/articles/", {"popular": "1"})
+        assert r.status_code == 200, r.content[:200]
+        slugs = [a["slug"] for a in r.json()["results"]]
+        assert slugs.index(high.slug) < slugs.index(low.slug)

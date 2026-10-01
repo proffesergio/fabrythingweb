@@ -9,7 +9,8 @@ class NewsCategorySerializer(serializers.ModelSerializer):
 
     class Meta:
         model = NewsCategory
-        fields = ["id", "name", "slug", "description", "display_order", "article_count"]
+        fields = ["id", "name", "slug", "description", "display_order",
+                  "is_active", "article_count"]
 
 
 class TrendKeywordSerializer(serializers.ModelSerializer):

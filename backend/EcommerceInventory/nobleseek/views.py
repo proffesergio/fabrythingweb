@@ -14,6 +14,13 @@ from .serializers import (AdConfigSerializer, ArticleDetailSerializer,
                           ArticleListSerializer, NewsCategorySerializer)
 
 
+def _visible_qs():
+    """Published AND already live. Editors can schedule a future
+    published_at — those stay hidden until the timestamp passes."""
+    return Article.objects.filter(status=Article.Status.PUBLISHED,
+                                  published_at__lte=timezone.now())
+
+
 class NewsCategoryListView(generics.ListAPIView):
     permission_classes = [AllowAny]
     serializer_class = NewsCategorySerializer
@@ -38,9 +45,12 @@ class ArticleListView(generics.ListAPIView):
     pagination_class = CustomPageNumberPagination
 
     def get_queryset(self):
-        qs = (Article.objects.filter(status=Article.Status.PUBLISHED)
-              .select_related("category").order_by("-published_at", "-created_at"))
+        qs = _visible_qs().select_related("category")
         p = self.request.query_params
+        if p.get("popular") == "1":
+            qs = qs.order_by("-view_count", "-published_at")
+        else:
+            qs = qs.order_by("-published_at", "-created_at")
         if p.get("category"):
             qs = qs.filter(category__slug=p["category"])
         if p.get("search"):
@@ -61,8 +71,7 @@ class ArticleDetailView(APIView):
 
     def get(self, request, slug):
         try:
-            a = Article.objects.select_related("category").get(
-                slug=slug, status=Article.Status.PUBLISHED)
+            a = _visible_qs().select_related("category").get(slug=slug)
         except Article.DoesNotExist:
             return Response({"message": "Article not found"}, status=404)
         # lightweight view counter (1 per 30 min per IP via cache)
@@ -82,11 +91,10 @@ class RelatedArticlesView(APIView):
 
     def get(self, request, slug):
         try:
-            cur = Article.objects.select_related("category").get(
-                slug=slug, status=Article.Status.PUBLISHED)
+            cur = _visible_qs().select_related("category").get(slug=slug)
         except Article.DoesNotExist:
             return Response({"message": "Article not found"}, status=404)
-        qs = Article.objects.filter(status=Article.Status.PUBLISHED).exclude(pk=cur.pk)
+        qs = _visible_qs().exclude(pk=cur.pk)
         if cur.category_id:
             same = list(qs.filter(category_id=cur.category_id)
                         .order_by("-published_at")[:4])
@@ -105,7 +113,7 @@ class LatestStripView(APIView):
     def get(self, request):
         data = cache.get("nobleseek:latest4")
         if data is None:
-            qs = (Article.objects.filter(status=Article.Status.PUBLISHED)
+            qs = (_visible_qs()
                   .select_related("category").order_by("-published_at")[:4])
             data = ArticleListSerializer(qs, many=True).data
             cache.set("nobleseek:latest4", data, 300)
@@ -120,7 +128,7 @@ class NewsSitemapView(APIView):
         urls = [f"{base}/nobleseek",
                 f"{base}/nobleseek/about",
                 f"{base}/nobleseek/contact"]
-        for a in Article.objects.filter(status=Article.Status.PUBLISHED).order_by(
+        for a in _visible_qs().order_by(
                 "-published_at")[:500].only("slug", "updated_at"):
             urls.append({"loc": f"{base}/nobleseek/{a.slug}",
                          "lastmod": a.updated_at.date().isoformat()})
@@ -133,7 +141,7 @@ class NewsRssView(APIView):
     def get(self, request):
         base = f"{request.scheme}://{request.get_host()}"
         items = ArticleDetailSerializer(
-            Article.objects.filter(status=Article.Status.PUBLISHED)
+            _visible_qs()
             .select_related("category").order_by("-published_at")[:20],
             many=True, context={"request": request}).data
         return renderResponse(data={"site": base, "items": items},

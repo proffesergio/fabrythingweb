@@ -13,7 +13,7 @@ export default function NobleSeekStrip() {
     <Container maxWidth="lg" sx={{ mt: 4, mb: 2 }}>
       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1.5 }}>
         <Typography variant="h5" fontWeight={900}>
-          NobleSeek <Typography component="span" variant="body2" color="text.secondary">— Trends News</Typography>
+          NobleSeek <Typography component="span" variant="body2" color="text.secondary">— সর্বশেষ সংবাদ</Typography>
         </Typography>
         <Button component={Link} to="/nobleseek" size="small" variant="outlined">All news</Button>
       </Box>

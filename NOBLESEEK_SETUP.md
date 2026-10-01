@@ -1,6 +1,42 @@
-# NobleSeek by Fabrything — Setup & Ops
+# NobleSeek — standalone Bangla news portal (Prothom Alo-style)
 
-Trends-driven Bangla news desk: `/nobleseek` listing + `/nobleseek/:slug` max-ad detail + `/admin/manage/nobleseek` easy panel.
+NobleSeek is a **standalone news brand**: no Fabrything logo, shop chrome, or
+Trends wording anywhere on news pages. Portal shell = Bangla date top bar →
+centered masthead → sticky section nav → breaking ticker → lead grid →
+category sections → most-read sidebar → media footer.
+
+- Public: `/nobleseek` (portal front), `/nobleseek?category=<slug>`,
+  `/nobleseek?search=<q>`, `/nobleseek/:slug` (detail + `?amp=1` lite),
+  `/nobleseek/about|contact|privacy|disclaimer|ethics`
+- Admin: `/admin/manage/nobleseek` (প্রতিবেদন, ট্রেন্ড ইনবক্স, বিভাগ, বিজ্ঞাপন)
+- 12 sections: বাংলাদেশ bangladesh, রাজনীতি politics, আন্তর্জাতিক world,
+  অর্থনীতি economy, মতামত opinion, খেলা sports, বিনোদন entertainment,
+  জীবনযাপন lifestyle, প্রযুক্তি tech, শিক্ষা education, স্বাস্থ্য health,
+  চাকরি jobs (seeded idempotently by `seed_nobleseek`)
+
+## 0. Logo — where to place files
+
+Brand colors: navy `#101244` (NOBLE + globe) + orange `#F2631F` (SEEK + lens).
+Same two colors drive the portal chrome (navy top bar/footer, orange accents).
+
+```
+frontend/ecommerce_inventory/public/nobleseek_logo.png   UPLOADED source (stacked lockup, kept as-is)
+frontend/ecommerce_inventory/public/nobleseek-logo-wide.png  DERIVED horizontal lockup (transparent) — masthead + drawer
+frontend/ecommerce_inventory/public/nobleseek-logo-white.png DERIVED white silhouette — dark footer only
+frontend/ecommerce_inventory/public/nobleseek-mark.png       DERIVED square badge — favicon + shop header pill
+```
+
+Regenerate the derived files after replacing the source:
+`python tools/make_ns_logo.py` (trims whitespace, splits icon/wordmark,
+composes the wide lockup + white silhouette + square mark with transparency).
+
+`MastheadLogo` tries wide → original PNG → CSS wordmark fallback, so the
+portal never renders a broken image. The browser-tab icon swaps to
+`nobleseek-mark.png` on news routes (restored on shop routes).
+
+Shop → news entry points (branded, not plain text links): desktop header pill
+(mark + “নোবেলসিক” + live pulse dot, first item in the category nav row) and
+mobile drawer rich card (mark + “নোবেলসিক সংবাদ” + পড়ুন button).
 
 ## 1. Backend
 
@@ -26,8 +62,9 @@ AI_MODEL=gpt-4o-mini
 ```
 
 APIs:
-- Public: `GET /api/store/nobleseek/articles/`, `.../articles/:slug/`, `.../categories/`, `.../latest/`, `.../ad-config/`
-- Admin (JWT + platform staff): `/api/store/nobleseek/admin/articles/`, `/admin/trends/`, `/admin/trends/fetch/`, `/admin/trends/:id/create-draft/`, `/admin/ad-config/`, `/admin/stats/`
+- Public: `GET /api/store/nobleseek/articles/` (`?category=&search=&breaking=1&popular=1&featured=1`, paginated), `.../articles/:slug/`, `.../articles/:slug/related/`, `.../categories/`, `.../latest/`, `.../ad-config/`
+- Scheduled publishing: `PUBLISHED` + future `published_at` stays hidden (list/detail/related/latest/sitemap/rss) until due
+- Admin (JWT + platform staff): `/api/store/nobleseek/admin/articles/`, `/admin/categories/` + `/admin/categories/:id/`, `/admin/trends/`, `/admin/trends/fetch/`, `/admin/trends/:id/create-draft/`, `/admin/ad-config/`, `/admin/stats/`
 
 ## 2. Frontend env (Vercel)
 
@@ -48,13 +85,15 @@ REACT_APP_GA4_MEASUREMENT_ID=G-XXXX
 5. Anchor/Vignette: AdSense > Auto ads > enable Anchor + Vignette, then in code they only load on `/nobleseek/*` (detail mounts them; shop routes suppress via `shouldSuppressAds`).
 
 Detail density map (`NobleSeekDetailPage.js`):
-top leaderboard → hero → in-article every ~300 words (InArticleBody) → multiplex → sticky sidebar 300x600 → related + shop funnel.
+top leaderboard → hero → in-article every ~300 words (InArticleBody, drop-cap
+lead) → multiplex → sticky sidebar 300x600 + সর্বাধিক পঠিত → related.
 
-## 4. Facebook traffic loop
+## 4. Traffic loop (Facebook → portal)
 
 - FB page (NobleSeek) post format: Bangla hook + `fabrything.com/nobleseek/:slug?utm_source=facebook&utm_medium=social&utm_campaign=nobleseek-fb`
-- Detail page has ShareBar (FB/X/WhatsApp/copy) + FB comments + Follow box linking back to FB page.
-- Homepage `NobleSeekStrip` shows latest 4 on shop home for reverse flow.
+- Detail page has ShareBar (FB/X/WhatsApp/copy) + FB comments + Follow box.
+- Homepage `NobleSeekStrip` shows latest 4 on the shop home for reverse flow
+  (shop side only — the news portal itself links nowhere commercial).
 
 ## 5. AdSense policy checklist
 

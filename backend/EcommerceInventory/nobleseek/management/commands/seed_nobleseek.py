@@ -6,9 +6,14 @@ class Command(BaseCommand):
 
     def handle(self, *args, **opts):
         from nobleseek.models import Article, NewsCategory
-        cats = [("Bangladesh", "bangladesh"), ("World", "world"),
-                ("Sports", "sports"), ("Tech", "tech"),
-                ("Entertainment", "entertainment")]
+        # Full portal taxonomy (Prothom Alo-style sections). Create-only so
+        # admin renames/reorders are never clobbered by a redeploy.
+        cats = [("বাংলাদেশ", "bangladesh"), ("রাজনীতি", "politics"),
+                ("আন্তর্জাতিক", "world"), ("অর্থনীতি", "economy"),
+                ("মতামত", "opinion"), ("খেলা", "sports"),
+                ("বিনোদন", "entertainment"), ("জীবনযাপন", "lifestyle"),
+                ("প্রযুক্তি", "tech"), ("শিক্ষা", "education"),
+                ("স্বাস্থ্য", "health"), ("চাকরি", "jobs")]
         cat_map = {}
         for i, (n, s) in enumerate(cats):
             c, _ = NewsCategory.objects.get_or_create(slug=s, defaults={

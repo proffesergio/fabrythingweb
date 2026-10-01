@@ -346,6 +346,34 @@ function StorefrontLayoutInner({ toggleDarkMode, darkMode }) {
                                 <Toolbar variant="dense" sx={{ minHeight: 44, gap: 1, justifyContent: 'space-between' }}>
                                     <MegaMenu categories={categories} />
                                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                                        {/* NobleSeek portal entry — branded pill with live pulse */}
+                                        <Box
+                                            component={Link}
+                                            to="/nobleseek"
+                                            sx={{
+                                                display: 'flex', alignItems: 'center', gap: 0.75,
+                                                textDecoration: 'none', border: '1.5px solid #F2631F',
+                                                borderRadius: 99, pl: 0.75, pr: 1.5, py: 0.4,
+                                                transition: 'background .2s ease',
+                                                '&:hover': { bgcolor: '#FFF3EC' },
+                                            }}
+                                        >
+                                            <Box component="img" src="/nobleseek-mark.png" alt="নোবেলসিক" sx={{ width: 22, height: 22 }} />
+                                            <Box sx={{ fontSize: '0.85rem', fontWeight: 800, color: '#101244' }}>
+                                                নোবেলসিক
+                                            </Box>
+                                            <Box
+                                                sx={{
+                                                    width: 8, height: 8, borderRadius: '50%', bgcolor: '#F2631F',
+                                                    '@keyframes nsPulse': {
+                                                        '0%': { boxShadow: '0 0 0 0 rgba(242,99,31,0.55)' },
+                                                        '70%': { boxShadow: '0 0 0 7px rgba(242,99,31,0)' },
+                                                        '100%': { boxShadow: '0 0 0 0 rgba(242,99,31,0)' },
+                                                    },
+                                                    animation: 'nsPulse 1.6s ease-out infinite',
+                                                }}
+                                            />
+                                        </Box>
                                         <Box
                                             component={Link}
                                             to="/deals"
@@ -355,16 +383,6 @@ function StorefrontLayoutInner({ toggleDarkMode, darkMode }) {
                                             }}
                                         >
                                             Deals
-                                        </Box>
-                                        <Box
-                                            component={Link}
-                                            to="/nobleseek"
-                                            sx={{
-                                                fontSize: '0.85rem', fontWeight: 800, textDecoration: 'none',
-                                                color: 'secondary.main', '&:hover': { textDecoration: 'underline' },
-                                            }}
-                                        >
-                                            NobleSeek News
                                         </Box>
                                         <Box
                                             component={Link}
@@ -405,9 +423,24 @@ function StorefrontLayoutInner({ toggleDarkMode, darkMode }) {
                                 sx={{ display: 'block', px: 2, py: 1.5, textDecoration: 'none', color: 'text.primary', fontWeight: 600 }}>
                                 Deals
                             </Box>
-                            <Box component={Link} to="/nobleseek" onClick={() => setMobileMenuOpen(false)}
-                                sx={{ display: 'block', px: 2, py: 1.5, textDecoration: 'none', color: 'secondary.main', fontWeight: 800 }}>
-                                📰 NobleSeek News
+                            {/* NobleSeek portal entry — rich card, first tap target */}
+                            <Box
+                                component={Link} to="/nobleseek" onClick={() => setMobileMenuOpen(false)}
+                                sx={{
+                                    display: 'flex', alignItems: 'center', gap: 1.5,
+                                    mx: 1.5, mb: 1, p: 1.5, borderRadius: 2,
+                                    border: '1px solid #F5D9C8', bgcolor: '#FFF8F3',
+                                    textDecoration: 'none',
+                                }}
+                            >
+                                <Box component="img" src="/nobleseek-mark.png" alt="নোবেলসিক" sx={{ width: 42, height: 42, flexShrink: 0 }} />
+                                <Box sx={{ minWidth: 0, flex: 1 }}>
+                                    <Box sx={{ fontWeight: 800, color: '#101244', fontSize: '0.95rem' }}>নোবেলসিক সংবাদ</Box>
+                                    <Box sx={{ fontSize: '0.75rem', color: 'text.secondary' }}>সর্বশেষ খবর • লাইভ</Box>
+                                </Box>
+                                <Box sx={{ fontSize: '0.75rem', fontWeight: 800, color: 'white', bgcolor: '#F2631F', borderRadius: 99, px: 1.25, py: 0.5 }}>
+                                    পড়ুন
+                                </Box>
                             </Box>
                             <Box component={Link} to="/custom-printing" onClick={() => setMobileMenuOpen(false)}
                                 sx={{ display: 'block', px: 2, py: 1.5, textDecoration: 'none', color: 'text.primary', fontWeight: 600 }}>
