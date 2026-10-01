@@ -18,6 +18,22 @@ import SaveIcon from '@mui/icons-material/Save';
 import { toast } from 'react-toastify';
 import useApi from '../../hooks/APIHandler';
 
+// Last-good snapshot so the desk stays usable while the backend sleeps:
+// categories render instantly from cache, then refresh in background.
+function readSnap(key) {
+  try {
+    const raw = JSON.parse(localStorage.getItem(key) || 'null');
+    return raw && raw.data !== undefined ? raw.data : null;
+  } catch { return null; }
+}
+function writeSnap(key, data) {
+  try { localStorage.setItem(key, JSON.stringify({ at: Date.now(), data })); } catch {}
+}
+
+// Fail-fast for dashboard loaders — Render's free tier can sleep, and an
+// axios call with no timeout would spin the loader forever.
+const LOADER_TIMEOUT = 25000;
+
 // Keystroke inputs shouldn't fire API calls — wait for a pause first.
 function useDebounced(value, ms = 450) {
   const [v, setV] = useState(value);
@@ -93,10 +109,11 @@ function publishGaps(f) {
 export default function ManageNobleSeek() {
   const { callApi } = useApi();
   const [tab, setTab] = useState(0);
-  const [stats, setStats] = useState(null);
+  const [stats, setStats] = useState(() => readSnap('ns_stats'));
   const [articles, setArticles] = useState([]);
   const [trends, setTrends] = useState([]);
-  const [cats, setCats] = useState([]);
+  const [cats, setCats] = useState(() => readSnap('ns_cats') || []);
+  const [loadError, setLoadError] = useState(false);
   const [statusFilter, setStatusFilter] = useState('');
   const [catFilter, setCatFilter] = useState('');
   const [searchInput, setSearchInput] = useState('');
@@ -125,10 +142,11 @@ export default function ManageNobleSeek() {
   const inflight = useRef(false);
 
   const loadAll = useCallback(async () => {
-    const api = (args) => callApiRef.current(args);
+    const api = (args) => callApiRef.current({ timeout: LOADER_TIMEOUT, ...args });
     if (inflight.current) return;
     inflight.current = true;
     setLoading(true);
+    setLoadError(false);
     try {
       const params = { status: statusFilter, search };
       if (catFilter) params.category = catFilter;
@@ -140,7 +158,9 @@ export default function ManageNobleSeek() {
         api({ url: 'store/nobleseek/admin/categories/', silent: true }),
         api({ url: 'store/nobleseek/admin/ad-config/', silent: true }),
       ]);
-      if (s?.status === 200) setStats(s.data.data);
+      const ok = [s, a, t, c, ad].filter((r) => r?.status === 200).length;
+      if (ok === 0) setLoadError(true);
+      if (s?.status === 200) { setStats(s.data.data); writeSnap('ns_stats', s.data.data); }
       if (a?.status === 200) {
         let rows = a.data.data?.results || a.data.data || [];
         if (catFilter) rows = rows.filter((r) => String(r.category) === String(catFilter));
@@ -152,7 +172,7 @@ export default function ManageNobleSeek() {
         if (trendGeo) rows = rows.filter((r) => r.geo === trendGeo);
         setTrends(rows);
       }
-      if (c?.status === 200) setCats(c.data.data || []);
+      if (c?.status === 200) { setCats(c.data.data || []); writeSnap('ns_cats', c.data.data || []); }
       if (ad?.status === 200) setAdCfg(ad.data.data || {});
     } finally {
       inflight.current = false;
@@ -332,6 +352,11 @@ export default function ManageNobleSeek() {
               <Button size="small" onClick={() => { setStatusFilter(''); setCatFilter(''); setSearchInput(''); }}>ফিল্টার মুছুন</Button>
             )}
           </Stack>
+          {loadError && !loading && (
+            <Alert severity="warning" sx={{ mb: 2 }} action={<Button size="small" variant="contained" onClick={loadAll}>পুনরায় চেষ্টা</Button>}>
+              সার্ভারে পৌঁছানো যাচ্ছে না (Render free tier ঘুমিয়ে থাকলে প্রথমবার ৩০–৬০ সেকেন্ড লাগে)। একটু অপেক্ষা করে পুনরায় চেষ্টা করুন — বিভাগগুলো শেষবারের সংরক্ষিত তালিকা থেকে দেখানো হচ্ছে।
+            </Alert>
+          )}
           {loading ? <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}><CircularProgress /></Box> : (
             <Table size="small">
               <TableHead><TableRow><TableCell>প্রতিবেদন</TableCell><TableCell>বিভাগ</TableCell><TableCell>স্ট্যাটাস</TableCell><TableCell>পঠিত</TableCell><TableCell>হালনাগাদ</TableCell><TableCell align="right">অ্যাকশন</TableCell></TableRow></TableHead>

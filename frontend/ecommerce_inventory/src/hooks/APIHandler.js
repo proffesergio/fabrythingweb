@@ -13,7 +13,9 @@ function useApi(){
     // Pass rawError:true to receive the error response ({status,data}) instead of
     // null, so the caller can read DRF field errors out of the {data,message}
     // envelope. Default stays null for the existing call sites.
-    const callApi=async ({url,method="GET",body={},header={},params={},silent=false,rawError=false})=>{
+    // Pass timeout:ms to fail fast instead of hanging forever (axios default is
+    // no timeout) — use for dashboard loaders hitting a possibly-sleeping backend.
+    const callApi=async ({url,method="GET",body={},header={},params={},silent=false,rawError=false,timeout=0})=>{
         let gUrl=config.API_URL+url;
         setLoading(true);
         let response=null;
@@ -21,8 +23,10 @@ function useApi(){
         // see utils/authToken.js for why a stale JWT broke *guest* checkout.
         const token=getToken();
         header['Authorization']=token?`Bearer ${token}`:"";
+        const reqConfig={params:params,url:gUrl,method:method,data:body,headers:header};
+        if(timeout>0) reqConfig.timeout=timeout;
         try{
-            response=await axios.request({params:params,url:gUrl,method:method,data:body,headers:header});
+            response=await axios.request(reqConfig);
             devLog(`[API] ${method} ${gUrl} ->`, response?.status, response?.data);
         }
         catch(err){
@@ -35,7 +39,7 @@ function useApi(){
                 clearToken();
                 try{
                     response=await axios.request({params:params,url:gUrl,method:method,data:body,
-                                                  headers:{...header,Authorization:""}});
+                                                  headers:{...header,Authorization:""},timeout:timeout||undefined});
                     devLog(`[API] ${method} ${gUrl} (retried anonymously) ->`, response?.status);
                     setLoading(false);
                     return response;
