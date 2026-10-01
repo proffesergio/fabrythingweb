@@ -53,6 +53,7 @@ urlpatterns = [
     # Public: see PUBLIC_API_PREFIXES in core/middleware.py.
     path('api/media/<str:sha256>/',serve_media_blob,name='media-blob'),
     path('api/store/',include('storefront.urls')),
+    path('api/store/nobleseek/',include('nobleseek.urls')),
     # First-party traffic beacons + staff Traffic panel API. Mounted under
     # /api/store/ so core.middleware leaves auth to the views themselves:
     # IngestView is public (AllowAny + throttle), admin/* require staff.

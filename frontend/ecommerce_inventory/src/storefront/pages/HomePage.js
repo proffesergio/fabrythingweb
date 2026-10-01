@@ -10,6 +10,7 @@ import ProductCarousel from '../components/ProductCarousel';
 import PromoBanner from '../components/PromoBanner';
 import CategoryGrid from '../components/CategoryGrid';
 import AffiliateCarousel from '../components/AffiliateCarousel';
+import NobleSeekStrip from '../../nobleseek/home/NobleSeekStrip';
 
 export default function HomePage() {
     // Stale-while-revalidate: renders instantly from the last cached homepage,
@@ -84,6 +85,9 @@ export default function HomePage() {
             <Container maxWidth="lg">
                 <AffiliateCarousel title="Deals from Rokomari" />
             </Container>
+
+            {/* NobleSeek latest strip — funnels shop visitors to news (and back). */}
+            <NobleSeekStrip />
 
             {/* Promo Banners */}
             <PromoBanner />

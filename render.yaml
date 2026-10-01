@@ -37,3 +37,14 @@ services:
         sync: false
       - key: DATABASE_HOST
         sync: false
+      - key: OPENAI_API_KEY  # optional: enables AI headline/body scaffolds in Trends Inbox
+        sync: false
+      - key: AI_BASE_URL
+        sync: false
+      - key: AI_MODEL
+        sync: false
+# ── NobleSeek trends cron (2x daily BD+US pull) ──
+# Render dashboard > New + > Cron Job, same repo, command below, schedule "0 6,18 * * *":
+#   rootDir: backend/EcommerceInventory
+#   buildCommand: "pip install -r requirements.txt"
+#   command: "python manage.py fetch_trends --limit 20"

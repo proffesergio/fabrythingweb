@@ -358,6 +358,16 @@ function StorefrontLayoutInner({ toggleDarkMode, darkMode }) {
                                         </Box>
                                         <Box
                                             component={Link}
+                                            to="/nobleseek"
+                                            sx={{
+                                                fontSize: '0.85rem', fontWeight: 800, textDecoration: 'none',
+                                                color: 'secondary.main', '&:hover': { textDecoration: 'underline' },
+                                            }}
+                                        >
+                                            NobleSeek News
+                                        </Box>
+                                        <Box
+                                            component={Link}
                                             to="/custom-printing"
                                             sx={{
                                                 fontSize: '0.85rem', fontWeight: 700, textDecoration: 'none',
@@ -394,6 +404,10 @@ function StorefrontLayoutInner({ toggleDarkMode, darkMode }) {
                             <Box component={Link} to="/deals" onClick={() => setMobileMenuOpen(false)}
                                 sx={{ display: 'block', px: 2, py: 1.5, textDecoration: 'none', color: 'text.primary', fontWeight: 600 }}>
                                 Deals
+                            </Box>
+                            <Box component={Link} to="/nobleseek" onClick={() => setMobileMenuOpen(false)}
+                                sx={{ display: 'block', px: 2, py: 1.5, textDecoration: 'none', color: 'secondary.main', fontWeight: 800 }}>
+                                📰 NobleSeek News
                             </Box>
                             <Box component={Link} to="/custom-printing" onClick={() => setMobileMenuOpen(false)}
                                 sx={{ display: 'block', px: 2, py: 1.5, textDecoration: 'none', color: 'text.primary', fontWeight: 600 }}>

@@ -2,6 +2,7 @@ import {
   AccountCircle,
   AddCircleOutlineOutlined,
   Analytics as AnalyticsIcon,
+  Article as ArticleIcon,
   Business as BusinessIcon,
   Campaign as CampaignIcon,
   Category,
@@ -13,6 +14,7 @@ import {
   HowToReg,
   InventoryOutlined,
   Map as MapIcon,
+  Newspaper as NewspaperIcon,
   Payments,
   ReceiptLong,
   ReceiptOutlined,
@@ -69,6 +71,8 @@ const ICONS = {
   // Marketing / traffic panel (seeded by seed_admin_modules.py).
   Campaign: CampaignIcon,
   Analytics: AnalyticsIcon,
+  Newspaper: NewspaperIcon,
+  Article: ArticleIcon,
 };
 
 // A neutral "module" glyph. The old fallback was AccountCircle, which reads as

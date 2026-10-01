@@ -311,6 +311,14 @@ MODULES = [
         'display_order': 1,
         'parent': 'Marketing',
     },
+    # ── NobleSeek news desk (Trends-driven, max-ad detail pages) ──────────
+    {
+        'module_name': 'NobleSeek News',
+        'module_icon': 'Newspaper',
+        'module_url': '/manage/nobleseek',
+        'display_order': 6,
+        'parent': None,
+    },
 ]
 
 # The exact module_names we manage — anything else gets deactivated

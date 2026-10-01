@@ -4,7 +4,4 @@
 #
 # Publisher ID: ca-pub-1712742966437949 (fabrything@gmail.com).
 # Verify live at https://fabrything.com/ads.txt after deploy.
-#
-# AdMob (in-app ads later): add the app-ads.txt equivalent when the app
-# ships — same format, served from the app's domain/listing.
 google.com, pub-1712742966437949, DIRECT, f08c47fec0942fa0

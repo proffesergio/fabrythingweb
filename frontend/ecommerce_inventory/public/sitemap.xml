@@ -15,4 +15,13 @@
   <url><loc>https://fabrything.com/privacy</loc><changefreq>yearly</changefreq><priority>0.3</priority></url>
   <url><loc>https://fabrything.com/terms</loc><changefreq>yearly</changefreq><priority>0.3</priority></url>
   <url><loc>https://fabrything.com/shipping</loc><changefreq>yearly</changefreq><priority>0.3</priority></url>
+  <!-- NobleSeek news desk (AdSense trust + discoverability). Article detail
+       URLs change daily — submit those via the API-driven sitemap at
+       GET /api/store/nobleseek/sitemap-data/ once traffic justifies it. -->
+  <url><loc>https://fabrything.com/nobleseek</loc><changefreq>daily</changefreq><priority>0.9</priority></url>
+  <url><loc>https://fabrything.com/nobleseek/about</loc><changefreq>monthly</changefreq><priority>0.4</priority></url>
+  <url><loc>https://fabrything.com/nobleseek/contact</loc><changefreq>yearly</changefreq><priority>0.3</priority></url>
+  <url><loc>https://fabrything.com/nobleseek/privacy</loc><changefreq>yearly</changefreq><priority>0.3</priority></url>
+  <url><loc>https://fabrything.com/nobleseek/disclaimer</loc><changefreq>yearly</changefreq><priority>0.3</priority></url>
+  <url><loc>https://fabrything.com/nobleseek/ethics</loc><changefreq>yearly</changefreq><priority>0.3</priority></url>
 </urlset>

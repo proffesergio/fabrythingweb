@@ -94,6 +94,12 @@ const FoodCheckout = lazy(() => import('./food/pages/FoodCheckout'));
 const FoodOrderTrack = lazy(() => import('./food/pages/FoodOrderTrack'));
 const FoodMyOrders = lazy(() => import('./food/pages/FoodMyOrders'));
 const BecomePartner = lazy(() => import('./food/pages/BecomePartner'));
+// ── NobleSeek news desk (Trends-driven, max-ad detail pages) ──
+const NobleSeekLayout = lazy(() => import('./nobleseek/layout/NobleSeekLayout'));
+const NobleSeekListPage = lazy(() => import('./nobleseek/pages/NobleSeekListPage'));
+const NobleSeekDetailPage = lazy(() => import('./nobleseek/pages/NobleSeekDetailPage'));
+const NobleSeekInfoPage = lazy(() => import('./nobleseek/pages/NobleSeekInfoPage'));
+const ManageNobleSeek = lazy(() => import('./pages/nobleseek/ManageNobleSeek'));
 
 // Wraps the storefront with a dark-mode-aware theme.
 // Lives inside the router so it re-renders cleanly on toggle.
@@ -198,6 +204,24 @@ function App() {
           {path:"custom-printing/requests/:id",element:<ProtectedRoute element={<PrintRequestDetail/>}/>},
         ]
       },
+      // ── NobleSeek news desk (lightweight, dedicated footer, max ads) ──
+      // Outside StorefrontLayout on purpose: no cart/Redux/MegaMenu/chat bloat,
+      // so FB-clicked readers get fast first paint. Theme via StorefrontAuthTheme.
+      {
+        path:"/nobleseek",
+        element:<StorefrontAuthTheme><NobleSeekLayout/></StorefrontAuthTheme>,
+        children:[
+          {index:true,element:<NobleSeekListPage/>},
+          // Static trust pages BEFORE :slug — RRv6 ranks static higher, but
+          // explicit order removes any doubt (and reads correctly).
+          {path:"about",element:<NobleSeekInfoPage page="about"/>},
+          {path:"contact",element:<NobleSeekInfoPage page="contact"/>},
+          {path:"privacy",element:<NobleSeekInfoPage page="privacy"/>},
+          {path:"disclaimer",element:<NobleSeekInfoPage page="disclaimer"/>},
+          {path:"ethics",element:<NobleSeekInfoPage page="ethics"/>},
+          {path:":slug",element:<NobleSeekDetailPage/>},
+        ]
+      },
       // Storefront Auth (standalone page, no layout)
       {path:"/auth/login",element:<StorefrontAuthTheme><CustomerAuth/></StorefrontAuthTheme>},
       {path:"/auth/signup",element:<StorefrontAuthTheme><CustomerAuth/></StorefrontAuthTheme>},
@@ -283,6 +307,7 @@ function App() {
           {path:"manage/food/rider-cash",element:<ProtectedRoute element={<RiderCash/>}/>},
           {path:"manage/chat/inbox",element:<ProtectedRoute element={<ChatInbox/>}/>},
           {path:"manage/banners",element:<ProtectedRoute element={<ManageBanners/>}/>},
+          {path:"manage/nobleseek",element:<ProtectedRoute element={<ManageNobleSeek/>}/>},
           {path:"manage/analytics",element:<ProtectedRoute element={<ManageAnalytics/>}/>},
           {path:"manage/affiliate",element:<ProtectedRoute element={<ManageAffiliateProducts/>}/>},
           {path:"manage/print/requests",element:<ProtectedRoute element={<ManagePrintRequests/>}/>},

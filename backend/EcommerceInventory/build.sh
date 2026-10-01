@@ -34,6 +34,11 @@ fi
 # used to fight over this table and delete each other's menus.
 python manage.py seed_admin_modules
 
+# NobleSeek news desk: idempotent (skips existing headlines), so safe every
+# deploy. Guarantees the 5 categories + demo published articles exist on the
+# live server for the first test — real articles are never touched.
+python manage.py seed_nobleseek || echo "WARNING: seed_nobleseek failed (non-fatal)"
+
 # Demo/seed data — best-effort. A data-seed hiccup must never fail the whole deploy
 # (which would keep the site on the old version). Migrations + nav above already applied.
 # --if-empty: seed demo data only on a fresh/empty DB, so redeploys never clobber

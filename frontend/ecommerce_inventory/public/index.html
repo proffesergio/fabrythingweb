@@ -56,6 +56,11 @@
          REACT_APP_ADSENSE_CLIENT=ca-pub-XXXXXXXXXXXXXXXX in Vercel. The
          actual ad units are rendered later from the admin Traffic panel. -->
     <meta name="google-adsense-account" content="%REACT_APP_ADSENSE_CLIENT%" />
+    <!-- Preconnect for AdSense + fast news images. Auto Ads script itself is
+         injected lazily by nobleseek/ads/adsConfig.js only on ad routes
+         (never on /cart,/checkout,/account) to keep shop fast + minimal. -->
+    <link rel="preconnect" href="https://pagead2.googlesyndication.com" crossorigin />
+    <link rel="preconnect" href="https://googleads.g.doubleclick.net" crossorigin />
     <!-- ── Google Analytics 4 (GA4) ───────────────────────────────────
          Measurement ID G-S32TZJZCLV, overridable via Vercel env
          REACT_APP_GA4_MEASUREMENT_ID. Hostname-guarded like the Pixel below

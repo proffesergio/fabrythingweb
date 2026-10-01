@@ -60,6 +60,7 @@ LOCAL_APPS = [
     "purchasing",
     "orders",
     "storefront",
+    "nobleseek",
     "food",
     "chat",
     "printing",
