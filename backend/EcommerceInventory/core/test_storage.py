@@ -58,3 +58,32 @@ class SaveFileS3PreservedTests(TestCase):
         fake_client.put_object.assert_called_once()
         self.assertIn("my-bucket.s3.amazonaws.com", url)
         self.assertEqual(ImageBlob.objects.count(), 0)
+
+
+class SaveFileR2Tests(TestCase):
+    """Cloudflare R2 path: endpoint_url goes to the boto3 client and the
+    returned URL uses the public base (R2 API URLs are not readable)."""
+
+    def test_uses_r2_endpoint_and_public_base_url(self):
+        fake_session = MagicMock()
+        fake_client = MagicMock()
+        fake_session.client.return_value = fake_client
+
+        with patch("core.storage.AWS_ACCESS_KEY_ID", "r2-key-id"), \
+             patch("core.storage.AWS_ACESS_KEY_SECRET", "r2-secret"), \
+             patch("core.storage.AWS_STORAGE_BUCKET_NAME", "fabrything-media"), \
+             patch("core.storage.AWS_S3_REGION_NAME", "auto"), \
+             patch("core.storage.AWS_S3_ENDPOINT_URL",
+                   "https://acct123.r2.cloudflarestorage.com"), \
+             patch("core.storage.AWS_S3_PUBLIC_BASE_URL",
+                   "https://media.fabrything.com"), \
+             patch("boto3.session.Session", return_value=fake_session):
+            url = save_file("hero.jpg", b"bytes", "image/jpeg")
+
+        fake_session.client.assert_called_once_with(
+            "s3", endpoint_url="https://acct123.r2.cloudflarestorage.com")
+        fake_client.put_object.assert_called_once()
+        kwargs = fake_client.put_object.call_args.kwargs
+        self.assertEqual(kwargs["Bucket"], "fabrything-media")
+        self.assertEqual(url, "https://media.fabrything.com/uploads/hero.jpg")
+        self.assertEqual(ImageBlob.objects.count(), 0)

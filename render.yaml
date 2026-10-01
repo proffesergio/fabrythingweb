@@ -37,6 +37,21 @@ services:
         sync: false
       - key: DATABASE_HOST
         sync: false
+      # --- Object storage (Cloudflare R2 recommended, S3-compatible) ---
+      # Leave all six unset to keep the DB-blob fallback. Set them (Render
+      # dashboard > Environment) to route uploads to R2 — see NOBLESEEK_SETUP.
+      - key: AWS_ACCESS_KEY_ID
+        sync: false
+      - key: AWS_ACESS_KEY_SECRET  # NOTE: exact misspelled name — storage.py reads it
+        sync: false
+      - key: AWS_STORAGE_BUCKET_NAME
+        sync: false
+      - key: AWS_S3_REGION_NAME  # R2: literally "auto"
+        sync: false
+      - key: AWS_S3_ENDPOINT_URL  # R2: https://<ACCOUNT_ID>.r2.cloudflarestorage.com (empty = AWS S3)
+        sync: false
+      - key: AWS_S3_PUBLIC_BASE_URL  # public host for <img> URLs, e.g. https://media.fabrything.com
+        sync: false
       - key: OPENAI_API_KEY  # optional: enables AI headline/body scaffolds in Trends Inbox
         sync: false
       - key: AI_BASE_URL

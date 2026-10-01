@@ -222,3 +222,10 @@ AWS_ACCESS_KEY_ID = os.getenv("AWS_ACCESS_KEY_ID")
 AWS_ACESS_KEY_SECRET = os.getenv("AWS_ACESS_KEY_SECRET")
 AWS_STORAGE_BUCKET_NAME = os.getenv("AWS_STORAGE_BUCKET_NAME")
 AWS_S3_REGION_NAME = os.getenv("AWS_S3_REGION_NAME")
+# --- Cloudflare R2 (S3-compatible object storage) --------------------------
+# Set both to route uploads to R2 instead of AWS: the endpoint goes to the
+# boto3 client, the public base is what lands in <img> URLs (R2 API URLs are
+# private). Empty endpoint keeps plain AWS S3 behavior; empty keys keep the
+# DB-blob fallback. R2 region is always "auto".
+AWS_S3_ENDPOINT_URL = os.getenv("AWS_S3_ENDPOINT_URL", "")
+AWS_S3_PUBLIC_BASE_URL = os.getenv("AWS_S3_PUBLIC_BASE_URL", "")

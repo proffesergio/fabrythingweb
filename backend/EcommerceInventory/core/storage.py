@@ -4,6 +4,12 @@
 stored as a content-addressed row in the database (``core.models.ImageBlob``)
 and served back by ``core.views.serve_media_blob`` at ``/api/media/<sha256>/``.
 
+Cloudflare R2 is S3-compatible, so it needs no separate code path: set
+``AWS_S3_ENDPOINT_URL`` to the R2 S3 API endpoint and uploads route to R2
+instead of AWS. Because R2 API URLs are not publicly readable, also set
+``AWS_S3_PUBLIC_BASE_URL`` (custom domain or r2.dev URL) — that host is what
+lands in ``<img>`` tags and hero_image URLs.
+
 There deliberately is no local-disk fallback. Render's filesystem is
 ephemeral and wiped on every deploy, so a local write silently disappears on
 the next release — that used to be the fallback and was a live latent bug
@@ -18,6 +24,9 @@ AWS_ACCESS_KEY_ID = settings.AWS_ACCESS_KEY_ID
 AWS_ACESS_KEY_SECRET = settings.AWS_ACESS_KEY_SECRET
 AWS_S3_REGION_NAME = settings.AWS_S3_REGION_NAME
 AWS_STORAGE_BUCKET_NAME = settings.AWS_STORAGE_BUCKET_NAME
+# R2 (or any S3-compatible store): empty keeps plain AWS S3 behavior.
+AWS_S3_ENDPOINT_URL = settings.AWS_S3_ENDPOINT_URL
+AWS_S3_PUBLIC_BASE_URL = settings.AWS_S3_PUBLIC_BASE_URL
 
 
 def use_s3():
@@ -42,14 +51,18 @@ def save_file(filename: str, content: bytes, content_type: str) -> str:
         s3_client = Session(
             aws_access_key_id=AWS_ACCESS_KEY_ID,
             aws_secret_access_key=AWS_ACESS_KEY_SECRET,
-            region_name=AWS_S3_REGION_NAME,
-        ).client("s3")
+            region_name=AWS_S3_REGION_NAME or "auto",
+        ).client("s3", endpoint_url=AWS_S3_ENDPOINT_URL or None)
         s3_client.put_object(
             Bucket=AWS_STORAGE_BUCKET_NAME,
             Key=file_path,
             Body=content,
             ContentType=content_type,
         )
+        if AWS_S3_PUBLIC_BASE_URL:
+            # R2/custom-domain serving: API URLs are private, so return the
+            # public host instead (e.g. https://media.fabrything.com/...).
+            return f"{AWS_S3_PUBLIC_BASE_URL.rstrip('/')}/{file_path}"
         return f"https://{AWS_STORAGE_BUCKET_NAME}.s3.amazonaws.com/{file_path}"
 
     return _save_to_database(content, content_type)
