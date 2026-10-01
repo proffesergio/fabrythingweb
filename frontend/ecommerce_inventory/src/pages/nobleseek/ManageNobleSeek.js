@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Box, Typography, Tabs, Tab, Paper, Table, TableHead, TableRow, TableCell, TableBody,
   Button, IconButton, Dialog, DialogTitle, DialogContent, DialogActions, TextField,
@@ -17,6 +17,16 @@ import PublishIcon from '@mui/icons-material/Publish';
 import SaveIcon from '@mui/icons-material/Save';
 import { toast } from 'react-toastify';
 import useApi from '../../hooks/APIHandler';
+
+// Keystroke inputs shouldn't fire API calls — wait for a pause first.
+function useDebounced(value, ms = 450) {
+  const [v, setV] = useState(value);
+  useEffect(() => {
+    const t = setTimeout(() => setV(value), ms);
+    return () => clearTimeout(t);
+  }, [value, ms]);
+  return v;
+}
 
 const STATUS = ['DRAFT', 'REVIEW', 'PUBLISHED', 'ARCHIVED'];
 const STATUS_BN = { DRAFT: 'খসড়া', REVIEW: 'রিভিউ', PUBLISHED: 'প্রকাশিত', ARCHIVED: 'আর্কাইভ' };
@@ -89,8 +99,10 @@ export default function ManageNobleSeek() {
   const [cats, setCats] = useState([]);
   const [statusFilter, setStatusFilter] = useState('');
   const [catFilter, setCatFilter] = useState('');
-  const [search, setSearch] = useState('');
-  const [trendSearch, setTrendSearch] = useState('');
+  const [searchInput, setSearchInput] = useState('');
+  const search = useDebounced(searchInput);
+  const [trendSearchInput, setTrendSearchInput] = useState('');
+  const trendSearch = useDebounced(trendSearchInput);
   const [trendGeo, setTrendGeo] = useState('');
   const [loading, setLoading] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -103,34 +115,50 @@ export default function ManageNobleSeek() {
 
   const catName = useCallback((id) => cats.find((c) => c.id === id)?.name || '—', [cats]);
 
+  // callApi identity changes on EVERY render (the shared hook doesn't
+  // memoize it), so it must never sit in loadAll's dependency array — that
+  // re-fires the loader endlessly and the browser runs out of sockets
+  // (ERR_INSUFFICIENT_RESOURCES storm). Route through a ref instead, and
+  // guard against overlapping loads.
+  const callApiRef = useRef(callApi);
+  callApiRef.current = callApi;
+  const inflight = useRef(false);
+
   const loadAll = useCallback(async () => {
+    const api = (args) => callApiRef.current(args);
+    if (inflight.current) return;
+    inflight.current = true;
     setLoading(true);
-    const params = { status: statusFilter, search };
-    if (catFilter) params.category = catFilter;
-    const [s, a, t, c, ad] = await Promise.all([
-      callApi({ url: 'store/nobleseek/admin/stats/', silent: true }),
-      // Backend admin list has no category param — filter client-side below.
-      callApi({ url: 'store/nobleseek/admin/articles/', params, silent: true }),
-      callApi({ url: 'store/nobleseek/admin/trends/', params: { status: 'NEW', search: trendSearch, geo: trendGeo }, silent: true }),
-      callApi({ url: 'store/nobleseek/admin/categories/', silent: true }),
-      callApi({ url: 'store/nobleseek/admin/ad-config/', silent: true }),
-    ]);
-    if (s?.status === 200) setStats(s.data.data);
-    if (a?.status === 200) {
-      let rows = a.data.data?.results || a.data.data || [];
-      if (catFilter) rows = rows.filter((r) => String(r.category) === String(catFilter));
-      setArticles(rows);
+    try {
+      const params = { status: statusFilter, search };
+      if (catFilter) params.category = catFilter;
+      const [s, a, t, c, ad] = await Promise.all([
+        api({ url: 'store/nobleseek/admin/stats/', silent: true }),
+        // Backend admin list has no category param — filter client-side below.
+        api({ url: 'store/nobleseek/admin/articles/', params, silent: true }),
+        api({ url: 'store/nobleseek/admin/trends/', params: { status: 'NEW', search: trendSearch, geo: trendGeo }, silent: true }),
+        api({ url: 'store/nobleseek/admin/categories/', silent: true }),
+        api({ url: 'store/nobleseek/admin/ad-config/', silent: true }),
+      ]);
+      if (s?.status === 200) setStats(s.data.data);
+      if (a?.status === 200) {
+        let rows = a.data.data?.results || a.data.data || [];
+        if (catFilter) rows = rows.filter((r) => String(r.category) === String(catFilter));
+        setArticles(rows);
+      }
+      if (t?.status === 200) {
+        let rows = t.data.data?.results || t.data.data || [];
+        if (trendSearch) rows = rows.filter((r) => r.keyword.toLowerCase().includes(trendSearch.toLowerCase()));
+        if (trendGeo) rows = rows.filter((r) => r.geo === trendGeo);
+        setTrends(rows);
+      }
+      if (c?.status === 200) setCats(c.data.data || []);
+      if (ad?.status === 200) setAdCfg(ad.data.data || {});
+    } finally {
+      inflight.current = false;
+      setLoading(false);
     }
-    if (t?.status === 200) {
-      let rows = t.data.data?.results || t.data.data || [];
-      if (trendSearch) rows = rows.filter((r) => r.keyword.toLowerCase().includes(trendSearch.toLowerCase()));
-      if (trendGeo) rows = rows.filter((r) => r.geo === trendGeo);
-      setTrends(rows);
-    }
-    if (c?.status === 200) setCats(c.data.data || []);
-    if (ad?.status === 200) setAdCfg(ad.data.data || {});
-    setLoading(false);
-  }, [callApi, statusFilter, catFilter, search, trendSearch, trendGeo]);
+  }, [statusFilter, catFilter, search, trendSearch, trendGeo]);
 
   useEffect(() => { loadAll(); }, [loadAll]);
 
@@ -293,15 +321,15 @@ export default function ManageNobleSeek() {
       {tab === 0 && (
         <Paper sx={{ p: 2 }}>
           <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5} sx={{ mb: 2 }}>
-            <TextField size="small" label="অনুসন্ধান" value={search} onChange={(e) => setSearch(e.target.value)} sx={{ minWidth: 200 }} />
+            <TextField size="small" label="অনুসন্ধান" value={searchInput} onChange={(e) => setSearchInput(e.target.value)} sx={{ minWidth: 200 }} />
             <TextField size="small" select label="স্ট্যাটাস" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} sx={{ minWidth: 150 }}>
               <MenuItem value="">সব</MenuItem>{STATUS.map((s) => <MenuItem key={s} value={s}>{STATUS_BN[s]}</MenuItem>)}
             </TextField>
             <TextField size="small" select label="বিভাগ" value={catFilter} onChange={(e) => setCatFilter(e.target.value)} sx={{ minWidth: 170 }}>
               <MenuItem value="">সব বিভাগ</MenuItem>{cats.map((c) => <MenuItem key={c.id} value={c.id}>{c.name}</MenuItem>)}
             </TextField>
-            {(statusFilter || catFilter || search) && (
-              <Button size="small" onClick={() => { setStatusFilter(''); setCatFilter(''); setSearch(''); }}>ফিল্টার মুছুন</Button>
+            {(statusFilter || catFilter || searchInput) && (
+              <Button size="small" onClick={() => { setStatusFilter(''); setCatFilter(''); setSearchInput(''); }}>ফিল্টার মুছুন</Button>
             )}
           </Stack>
           {loading ? <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}><CircularProgress /></Box> : (
@@ -353,7 +381,7 @@ export default function ManageNobleSeek() {
         <Paper sx={{ p: 2 }}>
           <Box sx={{ display: 'flex', gap: 1, mb: 2, alignItems: 'center', flexWrap: 'wrap' }}>
             <Alert severity="info" sx={{ flex: 1, minWidth: 240 }}>ক্রন দিনে ২ বার নতুন কীওয়ার্ড আনে। ১ ক্লিকে খসড়া — প্রকাশের আগে অবশ্যই সম্পাদনা করুন।</Alert>
-            <TextField size="small" label="কীওয়ার্ড খুঁজুন" value={trendSearch} onChange={(e) => setTrendSearch(e.target.value)} />
+            <TextField size="small" label="কীওয়ার্ড খুঁজুন" value={trendSearchInput} onChange={(e) => setTrendSearchInput(e.target.value)} />
             <TextField size="small" select label="অঞ্চল" value={trendGeo} onChange={(e) => setTrendGeo(e.target.value)} sx={{ minWidth: 100 }}>
               <MenuItem value="">সব</MenuItem><MenuItem value="BD">BD</MenuItem><MenuItem value="US">US</MenuItem>
             </TextField>

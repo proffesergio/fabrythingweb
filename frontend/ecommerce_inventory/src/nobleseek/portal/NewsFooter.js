@@ -53,7 +53,7 @@ export default function NewsFooter() {
           <Box sx={{ maxWidth: 260 }}>
             <Typography variant="subtitle2" fontWeight={800} sx={{ color: 'white', mb: 1.2 }} className="ns-sans">যোগাযোগ</Typography>
             <Typography variant="body2" className="ns-sans">নোবেলসিক নিউজরুম<br />ঢাকা, বাংলাদেশ</Typography>
-            <Typography variant="body2" sx={{ mt: 1 }} className="ns-sans">support@fabrything.com<br />+880 1842-168117</Typography>
+            <Typography variant="body2" sx={{ mt: 1 }} className="ns-sans">support@fabrything.com</Typography>
             <Typography variant="body2" sx={{ mt: 1.5 }} className="ns-sans">সম্পাদক: নোবেলসিক সম্পাদনা পর্ষদ</Typography>
           </Box>
         </Box>
