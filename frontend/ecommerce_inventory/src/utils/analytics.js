@@ -181,11 +181,14 @@ function ingest(event, params = {}) {
       const blob = new Blob([body], { type: 'application/json' });
       navigator.sendBeacon(INGEST_URL, blob);
     } else {
+      // No credentials: ingest is AllowAny + throttled, so cookies add
+      // nothing but a CORS preflight failure mode (Allow-Credentials).
       fetch(INGEST_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body,
         keepalive: true,
+        credentials: 'omit',
       }).catch(() => {});
     }
   } catch { /* noop */ }

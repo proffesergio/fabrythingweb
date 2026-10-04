@@ -43,6 +43,23 @@ class NobleSeekPublicTests(TestCase):
         slugs = [a["slug"] for a in r2.json()["results"]]
         assert f.slug not in slugs
 
+    def test_relative_hero_image_served_absolute(self):
+        """DB-blob uploads return relative /api/media/<sha>/ paths, which are
+        unloadable on the storefront origin — public serializers must make
+        them absolute (same contract as catalog images)."""
+        a = Article.objects.create(
+            headline="relative hero story", body_html="<p>hi</p>",
+            hero_image="/api/media/abc123/", status=Article.Status.PUBLISHED)
+        c = APIClient()
+        r = c.get("/api/store/nobleseek/articles/")
+        assert r.status_code == 200, r.content[:200]
+        row = [x for x in r.json()["results"] if x["slug"] == a.slug][0]
+        assert row["hero_image"].startswith("http"), row["hero_image"]
+        assert row["hero_image"].endswith("/api/media/abc123/")
+        r2 = c.get(f"/api/store/nobleseek/articles/{a.slug}/")
+        assert r2.status_code == 200, r2.content[:200]
+        assert r2.json()["data"]["hero_image"].startswith("http")
+
     def test_popular_ordering(self):
         from django.utils import timezone
         low = Article.objects.create(

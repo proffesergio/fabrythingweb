@@ -189,6 +189,10 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 # --- CORS (overridden per-env) ----------------------------------------------
 CORS_ALLOW_ALL_ORIGINS = False
 CORS_ALLOWED_ORIGINS = env_list("CORS_ALLOWED_ORIGINS", "http://localhost:3000")
+# The analytics beacon (and any credentialed cross-origin call) needs the
+# server to echo Access-Control-Allow-Credentials. Auth itself is JWT in
+# headers, so allowing credentials adds no session-cookie attack surface.
+CORS_ALLOW_CREDENTIALS = True
 
 
 # --- Email (admin order alerts — core/email_alerts.py) -----------------------

@@ -1,7 +1,17 @@
 """Serializers — public ones are deliberately slim for fast mobile loads."""
 from rest_framework import serializers
 
+from core.helpers import absolutize_media_url
+
 from .models import AdConfig, Article, NewsCategory, TrendKeyword
+
+
+def absolute_hero(obj, context):
+    """hero_image may be a relative DB-blob path (/api/media/<sha>/) which is
+    meaningless on the storefront origin — absolutize at serialization time
+    (same contract as catalog images; see core.helpers)."""
+    request = (context or {}).get("request")
+    return absolutize_media_url(obj.hero_image, request)
 
 
 class NewsCategorySerializer(serializers.ModelSerializer):
@@ -24,6 +34,7 @@ class TrendKeywordSerializer(serializers.ModelSerializer):
 class ArticleListSerializer(serializers.ModelSerializer):
     category_name = serializers.CharField(source="category.name", read_only=True, default="")
     category_slug = serializers.SlugField(source="category.slug", read_only=True, default="")
+    hero_image = serializers.SerializerMethodField()
 
     class Meta:
         model = Article
@@ -32,11 +43,15 @@ class ArticleListSerializer(serializers.ModelSerializer):
                   "category_slug", "tags", "is_featured", "is_breaking",
                   "view_count", "read_time_minutes", "published_at", "created_at"]
 
+    def get_hero_image(self, obj):
+        return absolute_hero(obj, self.context)
+
 
 class ArticleDetailSerializer(serializers.ModelSerializer):
     category_name = serializers.CharField(source="category.name", read_only=True, default="")
     category_slug = serializers.SlugField(source="category.slug", read_only=True, default="")
     json_ld = serializers.SerializerMethodField()
+    hero_image = serializers.SerializerMethodField()
 
     class Meta:
         model = Article
@@ -53,6 +68,9 @@ class ArticleDetailSerializer(serializers.ModelSerializer):
         if request:
             site = f"{request.scheme}://{request.get_host()}"
         return obj.get_json_ld(site)
+
+    def get_hero_image(self, obj):
+        return absolute_hero(obj, self.context)
 
 
 class ArticleAdminSerializer(serializers.ModelSerializer):

@@ -102,7 +102,8 @@ class RelatedArticlesView(APIView):
             same = []
         others = list(qs.exclude(pk__in=[x.pk for x in same])
                       .order_by("-published_at")[: max(0, 4 - len(same))])
-        ser = ArticleListSerializer(same + others, many=True)
+        ser = ArticleListSerializer(same + others, many=True,
+                                    context={"request": request})
         return renderResponse(data=ser.data, message="Related articles")
 
 
@@ -115,7 +116,8 @@ class LatestStripView(APIView):
         if data is None:
             qs = (_visible_qs()
                   .select_related("category").order_by("-published_at")[:4])
-            data = ArticleListSerializer(qs, many=True).data
+            data = ArticleListSerializer(qs, many=True,
+                                             context={"request": request}).data
             cache.set("nobleseek:latest4", data, 300)
         return renderResponse(data=data, message="Latest news")
 

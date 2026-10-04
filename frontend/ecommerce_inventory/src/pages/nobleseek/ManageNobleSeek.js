@@ -114,6 +114,11 @@ export default function ManageNobleSeek() {
   const [trends, setTrends] = useState([]);
   const [cats, setCats] = useState(() => readSnap('ns_cats') || []);
   const [loadError, setLoadError] = useState(false);
+  // All five admin endpoints share one staff gate: when they answer 401/403
+  // the login itself isn't platform staff (menus still render for domain
+  // owners, and stats cards may show stale cache) — say so explicitly with
+  // a re-login action instead of a silent empty desk.
+  const [authError, setAuthError] = useState(false);
   const [statusFilter, setStatusFilter] = useState('');
   const [catFilter, setCatFilter] = useState('');
   const [searchInput, setSearchInput] = useState('');
@@ -142,11 +147,12 @@ export default function ManageNobleSeek() {
   const inflight = useRef(false);
 
   const loadAll = useCallback(async () => {
-    const api = (args) => callApiRef.current({ timeout: LOADER_TIMEOUT, ...args });
+    const api = (args) => callApiRef.current({ timeout: LOADER_TIMEOUT, rawError: true, ...args });
     if (inflight.current) return;
     inflight.current = true;
     setLoading(true);
     setLoadError(false);
+    setAuthError(false);
     try {
       const params = { status: statusFilter, search };
       if (catFilter) params.category = catFilter;
@@ -158,8 +164,11 @@ export default function ManageNobleSeek() {
         api({ url: 'store/nobleseek/admin/categories/', silent: true }),
         api({ url: 'store/nobleseek/admin/ad-config/', silent: true }),
       ]);
-      const ok = [s, a, t, c, ad].filter((r) => r?.status === 200).length;
-      if (ok === 0) setLoadError(true);
+      const all = [s, a, t, c, ad];
+      const ok = all.filter((r) => r?.status === 200).length;
+      const denied = all.filter((r) => r && (r.status === 401 || r.status === 403)).length;
+      if (ok === 0 && denied > 0) setAuthError(true);
+      else if (ok === 0) setLoadError(true);
       if (s?.status === 200) { setStats(s.data.data); writeSnap('ns_stats', s.data.data); }
       if (a?.status === 200) {
         let rows = a.data.data?.results || a.data.data || [];
@@ -337,6 +346,15 @@ export default function ManageNobleSeek() {
       <Tabs value={tab} onChange={(_, v) => setTab(v)} sx={{ mb: 2 }}>
         <Tab label="প্রতিবেদন" /><Tab label={`ট্রেন্ড ইনবক্স (${trends.length})`} /><Tab label={`বিভাগ (${cats.length})`} /><Tab label="বিজ্ঞাপন" />
       </Tabs>
+
+      {authError && (
+        <Alert
+          severity="error" sx={{ mb: 2 }}
+          action={<Button size="small" variant="contained" component="a" href="/admin/auth">পুনরায় লগইন</Button>}
+        >
+          স্টাফ অ্যাক্সেস প্রয়োজন — এই লগইনটি প্ল্যাটফর্ম Admin/Staff নয় (তাই টেবিল খালি; উপরের সংখ্যাগুলো পুরনো ক্যাশ হতে পারে)। স্টাফ অ্যাকাউন্টে লগইন করুন অথবা Super Admin কে ভূমিকা (role) ঠিক করতে বলুন।
+        </Alert>
+      )}
 
       {tab === 0 && (
         <Paper sx={{ p: 2 }}>
@@ -564,6 +582,11 @@ export default function ManageNobleSeek() {
                     <TextField fullWidth select size="small" label="বিভাগ *" value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })}>
                       <MenuItem value="">— বেছে নিন —</MenuItem>{cats.map((c) => <MenuItem key={c.id} value={c.id}>{c.name}</MenuItem>)}
                     </TextField>
+                    {cats.length === 0 && (
+                      <Alert severity="warning" sx={{ mt: 1 }} action={<Button size="small" onClick={loadAll}>আবার লোড</Button>}>
+                        বিভাগ তালিকা আসেনি — সার্ভার জেগে উঠলে আবার লোড করুন। বিভাগ ছাড়া প্রকাশ হবে না।
+                      </Alert>
+                    )}
                   </Grid>
                   <Grid item xs={12} sm={6}><TextField fullWidth size="small" label="ট্রেন্ড ID (ঐচ্ছিক)" value={form.trend} onChange={(e) => setForm({ ...form, trend: e.target.value })} /></Grid>
                 </Grid>
