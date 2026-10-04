@@ -20,6 +20,7 @@ export const isAuthenticated=()=>{
         devLog(decodedToken);
         if(decodedToken.exp<currentTime){
             localStorage.removeItem("token");
+            localStorage.removeItem("refresh_token");
         }
         return decodedToken.exp>currentTime
     }

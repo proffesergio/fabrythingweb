@@ -84,7 +84,7 @@ export default function RiderDashboard() {
     // Both of these used to point at "/auth/login" — the customer page, which
     // redirects to "/" after a successful login. That is the bounce riders hit:
     // dashboard fails to load → "Log in" → storefront homepage → never /rider.
-    const logout = () => { localStorage.removeItem("token"); navigate("/rider/login"); };
+    const logout = () => { localStorage.removeItem("token"); localStorage.removeItem("refresh_token"); navigate("/rider/login"); };
 
     if (loading) return <Box sx={{ textAlign: "center", py: 10 }}><CircularProgress /></Box>;
     if (!me) return (

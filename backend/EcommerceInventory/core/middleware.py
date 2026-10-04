@@ -42,6 +42,7 @@ PUBLIC_API_PREFIXES = (
     '/api/chat/',
     '/api/print/',
     '/api/auth/login',
+    '/api/auth/refresh',
     '/api/auth/signup',
     '/api/health/',
     '/api/media/',

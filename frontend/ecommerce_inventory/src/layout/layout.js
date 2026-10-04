@@ -162,6 +162,7 @@ const Layout = ({pageTitle,childPage}) => {
 
   const handleLogout = () => {
     localStorage.removeItem('token');
+    localStorage.removeItem('refresh_token');
     navigate('/admin/auth');
   };
 

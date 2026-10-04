@@ -2,8 +2,30 @@ import {useState} from 'react';
 import axios from 'axios';
 import config from '../utils/config';
 import { toast } from 'react-toastify';
-import { getToken, clearToken, isTokenRejection } from '../utils/authToken';
+import { getToken, clearToken, isTokenRejection, getRefreshToken, setAuthTokens, clearAuth } from '../utils/authToken';
 import { devLog } from '../utils/devLog';
+
+// Single-flight renewal: parallel 401s share one refresh call instead of
+// racing the token endpoint and invalidating each other's fresh pairs.
+let refreshInflight = null;
+function refreshAccessToken() {
+    if (refreshInflight) return refreshInflight;
+    const rt = getRefreshToken();
+    if (!rt) return Promise.resolve(null);
+    refreshInflight = axios.request({
+        url: config.API_URL + 'auth/refresh/', method: 'POST', data: { refresh: rt },
+    }).then((res) => {
+        // SimpleJWT answers {access, refresh} at top level; tolerate our envelope too.
+        const d = res?.data?.data || res?.data || {};
+        if (d.access) {
+            setAuthTokens({ access: d.access, refresh: d.refresh });
+            return d.access;
+        }
+        return null;
+    }).catch(() => null)
+      .finally(() => { refreshInflight = null; });
+    return refreshInflight;
+}
 
 function useApi(){
     const [error,setError]=useState("");
@@ -30,6 +52,29 @@ function useApi(){
             devLog(`[API] ${method} ${gUrl} ->`, response?.status, response?.data);
         }
         catch(err){
+            // 1. Silent renewal FIRST: a 401 with a stored refresh token almost
+            // always means the 60-minute access token lapsed mid-session (the
+            // classic "admin desk goes empty after an hour while cached UI
+            // looks alive"). Mint a fresh pair and replay this exact request
+            // once. Only when renewal fails do we fall through below.
+            if(err.response?.status===401 && getRefreshToken()){
+                const fresh = await refreshAccessToken();
+                if(fresh){
+                    header['Authorization']=`Bearer ${fresh}`;
+                    try{
+                        response=await axios.request({...reqConfig, headers:header});
+                        devLog(`[API] ${method} ${gUrl} (retried after refresh) ->`, response?.status);
+                        setLoading(false);
+                        return response;
+                    }catch(retryErr){
+                        err=retryErr;
+                    }
+                } else {
+                    // Refresh dead too (expired/revoked) — fully logged out.
+                    // Leave the re-login messaging to the caller.
+                    clearAuth();
+                }
+            }
             // The server rejected the token itself (revoked, re-signed, or from
             // an older deployment's SECRET_KEY — none of which the expiry check
             // can see). Drop it and retry once as an anonymous caller: public

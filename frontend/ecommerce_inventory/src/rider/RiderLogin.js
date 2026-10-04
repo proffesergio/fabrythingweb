@@ -49,6 +49,7 @@ export default function RiderLogin() {
             // A real account, but not a rider one. Drop the token rather than
             // leave them half-signed-in on a dashboard they can't use.
             localStorage.removeItem("token");
+            localStorage.removeItem("refresh_token");
             setError("This is not a rider account. Ask an admin to set up your rider login.");
             return;
         }

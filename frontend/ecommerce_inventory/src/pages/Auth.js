@@ -74,6 +74,9 @@ const doLogin = async(e) => {
     devLog(response);
     if(response?.data?.access){
       localStorage.setItem("token",response.data.access);
+      // Long-lived refresh token: lets APIHandler silently renew the
+      // 60-minute access token instead of dropping the admin to a 401.
+      if(response.data.refresh) localStorage.setItem("refresh_token",response.data.refresh);
           toast.success("Login Successfully");
           dispatch(login());
           // Role lives in the JWT we just stored; send each role to its own home.

@@ -12,6 +12,7 @@
 // The rule here: a token is only worth sending while it is still valid, and a
 // token the server rejects is dead and must be dropped, not retried.
 export const TOKEN_KEY = 'token';
+export const REFRESH_KEY = 'refresh_token';
 
 // Decode a JWT payload without a library. Returns null for anything that is not
 // a well-formed three-part token — a garbage value in storage is treated the
@@ -39,6 +40,28 @@ export function isExpired(jwt) {
 
 export function clearToken() {
   try { localStorage.removeItem(TOKEN_KEY); } catch { /* private mode */ }
+}
+
+/** Refresh token: long-lived (7d), used once to mint a new access token.
+ *  Stored at login next to the access token; never attached to requests. */
+export function getRefreshToken() {
+  try { return localStorage.getItem(REFRESH_KEY) || ''; } catch { return ''; }
+}
+
+export function setAuthTokens({ access, refresh }) {
+  try {
+    if (access) localStorage.setItem(TOKEN_KEY, access);
+    if (refresh) localStorage.setItem(REFRESH_KEY, refresh);
+  } catch { /* private mode */ }
+}
+
+/** Full sign-out: drop both tokens so a stale refresh can never silently
+ *  re-authenticate a logged-out user on their next 401. */
+export function clearAuth() {
+  try {
+    localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem(REFRESH_KEY);
+  } catch { /* private mode */ }
 }
 
 /** The token to send, or '' when there is none worth sending. Self-cleaning:
