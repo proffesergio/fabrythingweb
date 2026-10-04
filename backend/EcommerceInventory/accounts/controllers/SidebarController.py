@@ -36,9 +36,9 @@ class ModuleView(generics.CreateAPIView):
         for menu in serialized_menus:
             menu['fields']['id']=menu['pk']
             if request.user.role=="Super Admin" or is_top_level:
-                menu['fields']['submenus']=Modules.objects.filter(parent_id=menu['pk'],is_active=True,is_menu=True).order_by('display_order').values('id','module_name','module_icon','is_menu','is_active','parent_id','display_order','module_url','module_description')
+                menu['fields']['submenus']=Modules.objects.filter(parent_id=menu['pk'],is_active=True,is_menu=True).order_by('display_order').values('id','module_name','module_icon','is_menu','is_active','parent_id','display_order','module_url','module_description','module')
             else:
-                menu['fields']['submenus']=Modules.objects.filter(parent_id=menu['pk'],is_active=True,is_menu=True).filter(id__in=permission_module_ids).order_by('display_order').values('id','module_name','module_icon','is_menu','is_active','parent_id','display_order','module_url','module_description')
+                menu['fields']['submenus']=Modules.objects.filter(parent_id=menu['pk'],is_active=True,is_menu=True).filter(id__in=permission_module_ids).order_by('display_order').values('id','module_name','module_icon','is_menu','is_active','parent_id','display_order','module_url','module_description','module')
             cleaned_menus.append(menu['fields'])
 
         if request.user.role=='Super Admin':

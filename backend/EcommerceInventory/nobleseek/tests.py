@@ -4,7 +4,6 @@ from rest_framework.test import APIClient
 
 from nobleseek.models import Article, NewsCategory
 
-
 class NobleSeekPublicTests(TestCase):
     def setUp(self):
         self.cat = NewsCategory.objects.create(name="Tech", slug="tech")
@@ -59,3 +58,45 @@ class NobleSeekPublicTests(TestCase):
         assert r.status_code == 200, r.content[:200]
         slugs = [a["slug"] for a in r.json()["results"]]
         assert slugs.index(high.slug) < slugs.index(low.slug)
+
+
+class NobleSeekOverviewTests(TestCase):
+    """Module overview for the News dashboard (staff-only)."""
+
+    def test_overview_shape_and_numbers(self):
+        from types import SimpleNamespace
+
+        from rest_framework.test import APIRequestFactory, force_authenticate
+
+        from nobleseek.views_admin import AdminNewsOverviewView
+        Article.objects.create(
+            headline="top story", body_html="<p>hi</p>",
+            status=Article.Status.PUBLISHED, view_count=42)
+        Article.objects.create(
+            headline="needs review", body_html="<p>hi</p>",
+            status=Article.Status.REVIEW)
+        req = APIRequestFactory().get("/api/store/nobleseek/admin/overview/")
+        force_authenticate(req, user=SimpleNamespace(
+            id=1, role="Super Admin", is_authenticated=True,
+            domain_user_id_id=1))
+        r = AdminNewsOverviewView.as_view()(req)
+        assert r.status_code == 200, r.data
+        d = r.data["data"]
+        assert d["kpis"]["published"] == 1
+        assert d["kpis"]["total_views"] == 42
+        assert len(d["series"]) == 14
+        assert d["top_stories"][0]["view_count"] == 42
+        assert d["alerts"]["review_queue"] == 1
+
+    def test_overview_forbidden_for_customer(self):
+        from types import SimpleNamespace
+
+        from rest_framework.test import APIRequestFactory, force_authenticate
+
+        from nobleseek.views_admin import AdminNewsOverviewView
+        req = APIRequestFactory().get("/api/store/nobleseek/admin/overview/")
+        force_authenticate(req, user=SimpleNamespace(
+            id=2, role="Customer", is_authenticated=True,
+            domain_user_id_id=2))
+        r = AdminNewsOverviewView.as_view()(req)
+        assert r.status_code == 403

@@ -167,3 +167,71 @@ class AdminNewsStatsView(APIView):
             "trends_new": TrendKeyword.objects.filter(status=TrendKeyword.Status.NEW).count(),
             "total_views": Article.objects.aggregate(s=Sum("view_count"))["s"] or 0,
         }, message="News stats")
+
+
+class AdminNewsOverviewView(APIView):
+    """Module overview for the News dashboard: desk KPIs, 14/30-day
+    publishing activity, top stories by views, and desk alerts."""
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated, StaffPerm]
+
+    def get(self, request):
+        from datetime import timedelta
+
+        from django.db.models import Count, Sum
+        from django.db.models.functions import TruncDate
+        try:
+            days = int(request.query_params.get("days", 14))
+        except (TypeError, ValueError):
+            days = 14
+        days = days if days in (7, 14, 30) else 14
+        now = timezone.now()
+        since = now - timedelta(days=days)
+        rows = (
+            Article.objects.filter(status=Article.Status.PUBLISHED,
+                                   published_at__gte=since)
+            .annotate(day=TruncDate("published_at"))
+            .values("day").annotate(n=Count("id")).order_by("day")
+        )
+        by_day = {r["day"]: r["n"] for r in rows}
+        series = []
+        for i in range(days - 1, -1, -1):
+            d = (now - timedelta(days=i)).date()
+            series.append({"day": d.isoformat(), "total": 0.0,
+                           "count": by_day.get(d, 0)})
+        empty_sections = [
+            c.name for c in NewsCategory.objects.filter(is_active=True)
+            if not Article.objects.filter(
+                category=c, status=Article.Status.PUBLISHED).exists()
+        ]
+        return renderResponse(data={
+            "kpis": {
+                "published": Article.objects.filter(
+                    status=Article.Status.PUBLISHED).count(),
+                "drafts": Article.objects.filter(
+                    status=Article.Status.DRAFT).count(),
+                "review": Article.objects.filter(
+                    status=Article.Status.REVIEW).count(),
+                "total_views": Article.objects.aggregate(
+                    s=Sum("view_count"))["s"] or 0,
+                "trends_new": TrendKeyword.objects.filter(
+                    status=TrendKeyword.Status.NEW).count(),
+            },
+            "series": series,
+            "top_stories": list(
+                Article.objects.filter(status=Article.Status.PUBLISHED)
+                .order_by("-view_count")
+                .values("headline", "slug", "view_count",
+                        "published_at")[:5]
+            ),
+            "alerts": {
+                "review_queue": Article.objects.filter(
+                    status=Article.Status.REVIEW).count(),
+                "scheduled": Article.objects.filter(
+                    status=Article.Status.PUBLISHED,
+                    published_at__gt=now).count(),
+                "trends_new": TrendKeyword.objects.filter(
+                    status=TrendKeyword.Status.NEW).count(),
+                "empty_sections": empty_sections,
+            },
+        }, message="News overview")

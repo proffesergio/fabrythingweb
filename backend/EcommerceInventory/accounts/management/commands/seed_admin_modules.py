@@ -2,6 +2,35 @@ from django.core.management.base import BaseCommand
 from accounts.models import Modules
 
 
+# Which business each top-level menu belongs to. Children inherit their
+# parent's module, so only top-level names appear here.
+MODULE_OF = {
+    'Dashboard': 'shared',
+    'Products': 'shop',
+    'Product Import': 'shop',
+    'Orders': 'shop',
+    'Inventory': 'shop',
+    'Settings': 'shared',
+    'Customers': 'shop',
+    'Live Chat': 'shared',
+    'Banners': 'shop',
+    'Affiliate Products': 'shop',
+    'Food': 'food',
+    'Custom Printing': 'shop',
+    'Marketing': 'shared',
+    'Traffic & Analytics': 'shared',
+    'NobleSeek News': 'news',
+}
+
+
+def module_for(entry):
+    if entry.get('module'):
+        return entry['module']
+    if entry['parent'] is None:
+        return MODULE_OF.get(entry['module_name'], 'shared')
+    return None  # resolved from the parent at seed time
+
+
 MODULES = [
     # Parent: Dashboard
     {
@@ -343,9 +372,11 @@ class Command(BaseCommand):
 
         # ── First pass: upsert top-level (parent) modules ─────────────────
         parent_map = {}
+        parent_modules = {}
         for m in MODULES:
             if m['parent'] is not None:
                 continue
+            mod = module_for(m)
             obj, was_created = Modules.objects.update_or_create(
                 module_name=m['module_name'],
                 defaults={
@@ -355,9 +386,11 @@ class Command(BaseCommand):
                     'is_menu': True,
                     'is_active': True,
                     'parent_id': None,
+                    'module': mod,
                 }
             )
             parent_map[m['module_name']] = obj
+            parent_modules[m['module_name']] = mod
             if was_created:
                 created += 1
                 self.stdout.write(f'  Created: {m["module_name"]}')
@@ -387,6 +420,7 @@ class Command(BaseCommand):
                     'is_menu': True,
                     'is_active': True,
                     'parent_id': parent_obj,
+                    'module': m.get('module') or parent_modules.get(m['parent'], 'shared'),
                 }
             )
             if was_created:

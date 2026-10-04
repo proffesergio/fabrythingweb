@@ -432,6 +432,12 @@ class UserShippingAddress(models.Model):
 
 
 class Modules(models.Model):
+    MODULE_CHOICES = (
+        ("shop", "Fabrything Shop"),
+        ("food", "Fabrything Food"),
+        ("news", "NobleSeek News"),
+        ("shared", "Shared (all modules)"),
+    )
     id = models.AutoField(primary_key=True)
     module_name = models.CharField(max_length=50, unique=True)
     module_icon = models.CharField(null=True, blank=True, max_length=50)
@@ -443,6 +449,9 @@ class Modules(models.Model):
     )
     display_order = models.IntegerField(default=0)
     module_description = models.CharField(null=True, blank=True, max_length=255)
+    # Which business this menu belongs to. The admin shell renders one module
+    # at a time (Shop / Food / News switcher); children inherit the parent.
+    module = models.CharField(max_length=16, choices=MODULE_CHOICES, default="shared", db_index=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

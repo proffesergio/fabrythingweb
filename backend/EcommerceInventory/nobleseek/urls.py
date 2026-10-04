@@ -5,9 +5,10 @@ from .views import (AdConfigPublicView, ArticleDetailView, ArticleListView,
                     NewsSitemapView, RelatedArticlesView)
 from .views_admin import (AdminAdConfigView, AdminArticleDetailView,
                            AdminArticleListCreateView, AdminCategoryDetailView,
-                           AdminCategoryListCreateView, AdminNewsStatsView,
-                           AdminTrendCreateDraftView, AdminTrendFetchView,
-                           AdminTrendIgnoreView, AdminTrendListView)
+                           AdminCategoryListCreateView, AdminNewsOverviewView,
+                           AdminNewsStatsView, AdminTrendCreateDraftView,
+                           AdminTrendFetchView, AdminTrendIgnoreView,
+                           AdminTrendListView)
 
 urlpatterns = [
     # Public — mounted under /api/store/nobleseek/
@@ -33,4 +34,5 @@ urlpatterns = [
     path("admin/trends/<int:pk>/ignore/", AdminTrendIgnoreView.as_view(), name="ns_admin_ignore"),
     path("admin/ad-config/", AdminAdConfigView.as_view(), name="ns_admin_adconfig"),
     path("admin/stats/", AdminNewsStatsView.as_view(), name="ns_admin_stats"),
+    path("admin/overview/", AdminNewsOverviewView.as_view(), name="ns_admin_overview"),
 ]
