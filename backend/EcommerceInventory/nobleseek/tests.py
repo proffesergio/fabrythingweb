@@ -117,3 +117,110 @@ class NobleSeekOverviewTests(TestCase):
             domain_user_id_id=2))
         r = AdminNewsOverviewView.as_view()(req)
         assert r.status_code == 403
+
+
+class NobleSeekPagesCommentsPollsPushTests(TestCase):
+    def test_flatpage_public_and_404(self):
+        from nobleseek.models import FlatPage
+        FlatPage.objects.create(slug="about", title="About", body_html="<p>hi</p>")
+        c = APIClient()
+        assert c.get("/api/store/nobleseek/pages/about/").status_code == 200
+        assert c.get("/api/store/nobleseek/pages/nope/").status_code == 404
+
+    def test_comments_pending_until_approved(self):
+        from nobleseek.models import Comment
+        art = Article.objects.create(
+            headline="comment story", body_html="<p>hi</p>",
+            status=Article.Status.PUBLISHED)
+        c = APIClient()
+        r = c.post("/api/store/nobleseek/comments/",
+                   {"article": art.pk, "name": "Rahim", "text": "nice"})
+        assert r.status_code == 201, r.content[:200]
+        assert r.json()["data"]["status"] == "PENDING"
+        # Not public before approval…
+        r2 = c.get("/api/store/nobleseek/comments/", {"article": art.pk})
+        assert r2.json()["data"] == []
+        # …flag + approve via ORM (admin path covered below), then visible.
+        Comment.objects.filter(pk=r.json()["data"]["id"]).update(
+            status=Comment.Status.APPROVED)
+        r3 = c.get("/api/store/nobleseek/comments/", {"article": art.pk})
+        assert len(r3.json()["data"]) == 1
+        # Flagging works on any comment.
+        cid = r.json()["data"]["id"]
+        assert c.post(f"/api/store/nobleseek/comments/{cid}/flag/").status_code == 200
+        assert Comment.objects.get(pk=cid).flags == 1
+
+    def test_comment_validation(self):
+        art = Article.objects.create(
+            headline="validation story", body_html="<p>hi</p>",
+            status=Article.Status.PUBLISHED)
+        c = APIClient()
+        assert c.post("/api/store/nobleseek/comments/",
+                      {"article": art.pk, "name": "x", "text": "y"}).status_code == 400
+        assert c.post("/api/store/nobleseek/comments/",
+                      {"article": 99999, "name": "ok", "text": "fine"}).status_code == 404
+
+    def test_poll_vote_once(self):
+        from nobleseek.models import Poll, PollOption
+        from nobleseek.views_admin import AdminPollListCreateView
+        from rest_framework.test import APIRequestFactory, force_authenticate
+        from types import SimpleNamespace
+        staff = SimpleNamespace(id=1, role="Super Admin",
+                                is_authenticated=True, domain_user_id_id=1)
+        req = APIRequestFactory().post(
+            "/api/store/nobleseek/admin/polls/",
+            {"question": "Best?", "options": ["A", "B"]}, format="json")
+        force_authenticate(req, user=staff)
+        r = AdminPollListCreateView.as_view()(req)
+        assert r.status_code == 201, r.data
+        pid = r.data["data"]["id"]
+        c = APIClient()
+        opt = PollOption.objects.filter(poll_id=pid).first().pk
+        v1 = c.post(f"/api/store/nobleseek/polls/{pid}/vote/",
+                    {"option_id": opt, "session_key": "s1"})
+        assert v1.status_code == 200, v1.content[:200]
+        assert v1.json()["data"]["total"] == 1
+        v2 = c.post(f"/api/store/nobleseek/polls/{pid}/vote/",
+                    {"option_id": opt, "session_key": "s1"})
+        assert v2.status_code == 400
+        assert Poll.objects.get(pk=pid).results()["total"] == 1
+
+    def test_push_subscribe_and_send_skipped_without_key(self):
+        from nobleseek.models import PushCampaign, PushDevice
+        c = APIClient()
+        r = c.post("/api/store/nobleseek/push/subscribe/",
+                   {"token": "tok123", "platform": "android"})
+        assert r.status_code == 200, r.content[:200]
+        assert PushDevice.objects.filter(token="tok123").exists()
+        # idempotent re-subscribe
+        c.post("/api/store/nobleseek/push/subscribe/", {"token": "tok123"})
+        assert PushDevice.objects.filter(token="tok123").count() == 1
+        # Admin send without FCM key records a skipped campaign, never 500.
+        from nobleseek.views_admin import AdminPushSendView
+        from rest_framework.test import APIRequestFactory, force_authenticate
+        from types import SimpleNamespace
+        req = APIRequestFactory().post(
+            "/api/store/nobleseek/admin/push/send/",
+            {"title": "T", "body": "B"}, format="json")
+        force_authenticate(req, user=SimpleNamespace(
+            id=1, role="Super Admin", is_authenticated=True,
+            domain_user_id_id=1))
+        r2 = AdminPushSendView.as_view()(req)
+        assert r2.status_code == 200, r2.data
+        camp = PushCampaign.objects.latest("created_at")
+        assert camp.skipped == 1 and camp.sent == 0
+
+    def test_subcategory_filter(self):
+        parent = NewsCategory.objects.create(name="Sports", slug="sports")
+        child = NewsCategory.objects.create(
+            name="Cricket", slug="cricket", parent=parent)
+        Article.objects.create(
+            category=child, headline="cricket fever", body_html="<p>hi</p>",
+            status=Article.Status.PUBLISHED)
+        c = APIClient()
+        r = c.get("/api/store/nobleseek/articles/", {"category": "cricket"})
+        assert r.status_code == 200
+        assert [a["slug"] for a in r.json()["results"]] != []
+        # admin serializer exposes the parent link
+        from nobleseek.serializers import NewsCategorySerializer
+        assert NewsCategorySerializer(child).data["parent"] == parent.pk

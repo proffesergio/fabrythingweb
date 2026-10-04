@@ -189,7 +189,7 @@ class NotificationsView(APIView):
     permission_classes = [IsAnalyticsStaff]
 
     def get(self, request):
-        from nobleseek.models import Article, TrendKeyword
+        from nobleseek.models import Article, Comment, TrendKeyword
         shop = {
             "pending_orders": Order.objects.filter(
                 status=Order.Status.PENDING_VERIFICATION).count(),
@@ -205,6 +205,8 @@ class NotificationsView(APIView):
             "review_queue": Article.objects.filter(status=Article.Status.REVIEW).count(),
             "trends_new": TrendKeyword.objects.filter(
                 status=TrendKeyword.Status.NEW).count(),
+            "pending_comments": Comment.objects.filter(
+                status=Comment.Status.PENDING).count(),
         }
         total = sum(shop.values()) + sum(food.values()) + sum(news.values())
         return Response({"data": {

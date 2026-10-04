@@ -45,6 +45,9 @@ class NewsCategory(models.Model):
     description = models.CharField(max_length=300, blank=True, default="")
     display_order = models.PositiveIntegerField(default=0)
     is_active = models.BooleanField(default=True)
+    # Optional parent for sub-sections (e.g. খেলা > ক্রিকেট). Null = top level.
+    parent = models.ForeignKey("self", null=True, blank=True,
+                               on_delete=models.SET_NULL, related_name="children")
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -209,3 +212,135 @@ class AdConfig(models.Model):
     def get_solo(cls):
         obj, _ = cls.objects.get_or_create(pk=1)
         return obj
+
+
+class FlatPage(models.Model):
+    """Editable trust/info pages (about, contact, privacy…). The portal
+    renders these when the API answers and falls back to built-in copy
+    otherwise — editing copy never needs a redeploy."""
+
+    slug = models.SlugField(max_length=80, unique=True,
+                            help_text="about | contact | privacy | disclaimer | ethics…")
+    title = models.CharField(max_length=200)
+    intro = models.CharField(max_length=300, blank=True, default="")
+    body_html = models.TextField()
+    is_active = models.BooleanField(default=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["slug"]
+
+    def __str__(self):
+        return f"{self.title} (/{self.slug})"
+
+
+class Comment(models.Model):
+    """On-site reader comments (Facebook embed stays as-is). New comments
+    land PENDING — nothing public until the desk approves it."""
+
+    class Status(models.TextChoices):
+        PENDING = "PENDING", "Pending review"
+        APPROVED = "APPROVED", "Approved"
+        REJECTED = "REJECTED", "Rejected"
+
+    article = models.ForeignKey(Article, on_delete=models.CASCADE,
+                                related_name="comments")
+    name = models.CharField(max_length=80)
+    text = models.CharField(max_length=500)
+    status = models.CharField(max_length=10, choices=Status.choices,
+                              default=Status.PENDING, db_index=True)
+    flags = models.PositiveIntegerField(default=0,
+                                        help_text="Reader reports; moderation queue sorts by this")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        indexes = [models.Index(fields=["article", "status"])]
+
+    def __str__(self):
+        return f"{self.name} on {self.article_id} [{self.status}]"
+
+
+class PushDevice(models.Model):
+    """Push subscriber token (app or, later, web). Tokens are opaque strings;
+    sending happens through FCM and degrades to logged-skip without a key."""
+
+    token = models.CharField(max_length=255, unique=True)
+    platform = models.CharField(max_length=16, default="android",
+                                help_text="android | ios | web")
+    topics = models.JSONField(default=list, blank=True,
+                              help_text='e.g. ["breaking","sports"]')
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.platform}:{self.token[:12]}…"
+
+
+class PushCampaign(models.Model):
+    """One manual send from the desk: what went out, to how many, result."""
+
+    title = models.CharField(max_length=120)
+    body = models.CharField(max_length=300)
+    url = models.URLField(max_length=500, blank=True, default="")
+    audience = models.PositiveIntegerField(default=0)
+    sent = models.PositiveIntegerField(default=0)
+    failed = models.PositiveIntegerField(default=0)
+    skipped = models.PositiveIntegerField(default=0)
+    note = models.CharField(max_length=300, blank=True, default="")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"{self.title} ({self.sent}/{self.audience})"
+
+
+class Poll(models.Model):
+    """Reader poll with one-vote-per-browser enforcement (session key)."""
+
+    question = models.CharField(max_length=255)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return self.question[:60]
+
+    def results(self):
+        from django.db.models import Count
+        total = self.votes.count()
+        opts = list(self.options.annotate(n=Count("votes")).order_by("display_order"))
+        return {
+            "id": self.id, "question": self.question, "total": total,
+            "options": [{"id": o.id, "text": o.text, "votes": o.n,
+                         "pct": round(o.n / total * 100, 1) if total else 0.0}
+                        for o in opts],
+        }
+
+
+class PollOption(models.Model):
+    poll = models.ForeignKey(Poll, on_delete=models.CASCADE, related_name="options")
+    text = models.CharField(max_length=200)
+    display_order = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        ordering = ["display_order"]
+
+    def __str__(self):
+        return f"{self.poll_id}: {self.text[:40]}"
+
+
+class PollVote(models.Model):
+    poll = models.ForeignKey(Poll, on_delete=models.CASCADE, related_name="votes")
+    option = models.ForeignKey(PollOption, on_delete=models.CASCADE, related_name="votes")
+    session_key = models.CharField(max_length=64, db_index=True,
+                                   help_text="Client UUID in localStorage — one vote per browser")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(
+            fields=["poll", "session_key"], name="uq_vote_poll_session")]

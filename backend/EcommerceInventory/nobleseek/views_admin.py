@@ -11,10 +11,13 @@ from core.helpers import (CustomPageNumberPagination, isPlatformStaff,
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from storefront.permissions import IsPlatformStaff as StaffPerm
 
-from .models import AdConfig, Article, NewsCategory, TrendKeyword
+from .models import AdConfig, Article, Comment, FlatPage, NewsCategory, Poll, PollOption, PushCampaign, PushDevice, TrendKeyword
 from .serializers import (AdConfigSerializer, ArticleAdminSerializer,
-                          NewsCategorySerializer, TrendKeywordSerializer)
+                          CommentSerializer, FlatPageSerializer,
+                          NewsCategorySerializer, PollResultsSerializer,
+                          PushCampaignSerializer, TrendKeywordSerializer)
 from .services_ai import ai_draft_for_keyword
+from .services_push import fcm_configured
 from .services_trends import fetch_and_store
 
 
@@ -169,6 +172,180 @@ class AdminNewsStatsView(APIView):
         }, message="News stats")
 
 
+class AdminTagsView(APIView):
+    """Distinct tags with usage counts (tags live as JSON lists, so this
+    aggregates in Python — fine at news-desk scale)."""
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated, StaffPerm]
+
+    def get(self, request):
+        from collections import Counter
+        status = request.query_params.get("status", "")
+        qs = Article.objects.exclude(status=Article.Status.ARCHIVED)
+        if status:
+            qs = qs.filter(status=status)
+        counter = Counter()
+        for tags in qs.values_list("tags", flat=True):
+            for t in (tags or []):
+                t = str(t).strip()
+                if t:
+                    counter[t] += 1
+        data = [{"tag": t, "count": n}
+                for t, n in counter.most_common(100)]
+        return renderResponse(data=data, message="Tags")
+
+
+class AdminFlatPageListCreateView(generics.ListCreateAPIView):
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated, StaffPerm]
+    serializer_class = FlatPageSerializer
+    pagination_class = None
+    queryset = FlatPage.objects.all().order_by("slug")
+
+
+class AdminFlatPageDetailView(generics.RetrieveUpdateDestroyAPIView):
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated, StaffPerm]
+    serializer_class = FlatPageSerializer
+    queryset = FlatPage.objects.all()
+    lookup_field = "slug"
+
+
+class AdminCommentListView(generics.ListAPIView):
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated, StaffPerm]
+    serializer_class = CommentSerializer
+    pagination_class = CustomPageNumberPagination
+
+    def get_queryset(self):
+        qs = Comment.objects.select_related("article").order_by("-flags", "-created_at")
+        p = self.request.query_params
+        if p.get("status"):
+            qs = qs.filter(status=p["status"])
+        return qs
+
+
+class AdminCommentDetailView(generics.RetrieveUpdateDestroyAPIView):
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated, StaffPerm]
+    serializer_class = CommentSerializer
+    queryset = Comment.objects.all()
+
+
+class AdminPushDeviceListView(generics.ListAPIView):
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated, StaffPerm]
+    pagination_class = CustomPageNumberPagination
+
+    def get(self, request):
+        qs = PushDevice.objects.filter(is_active=True)
+        topic = request.query_params.get("topic", "")
+        if topic:
+            # SQLite JSON contains works on serialized lists for exact items.
+            qs = qs.filter(topics__contains=topic)
+        return renderResponse(data={
+            "count": qs.count(),
+            "configured": fcm_configured(),
+        }, message="Push subscribers")
+
+
+class AdminPushSendView(APIView):
+    """Compose + send a breaking-news push. Logged as a campaign; without
+    FCM_SERVER_KEY the run is recorded as skipped, never an exception."""
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated, StaffPerm]
+
+    def post(self, request):
+        from .services_push import send_push
+        title = str(request.data.get("title", ""))[:120].strip()
+        body = str(request.data.get("body", ""))[:300].strip()
+        url = str(request.data.get("url", ""))[:500]
+        topic = str(request.data.get("topic", "")).strip()
+        if not title or not body:
+            return Response({"message": "Title and body required"}, status=400)
+        qs = PushDevice.objects.filter(is_active=True)
+        if topic:
+            qs = qs.filter(topics__contains=topic)
+        devices = list(qs)
+        result = send_push(devices, title, body, url)
+        camp = PushCampaign.objects.create(
+            title=title, body=body, url=url, audience=len(devices),
+            sent=result["sent"], failed=result["failed"],
+            skipped=result["skipped"], note=result.get("note", ""))
+        return renderResponse(data=PushCampaignSerializer(camp).data,
+                              message="Push campaign recorded")
+
+
+class AdminPushCampaignListView(generics.ListAPIView):
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated, StaffPerm]
+    serializer_class = PushCampaignSerializer
+    pagination_class = CustomPageNumberPagination
+    queryset = PushCampaign.objects.all().order_by("-created_at")
+
+
+class AdminPollListCreateView(APIView):
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated, StaffPerm]
+
+    def get(self, request):
+        polls = Poll.objects.prefetch_related("options").order_by("-created_at")
+        return renderResponse(
+            data=PollResultsSerializer(
+                [p.results() for p in polls], many=True).data,
+            message="Polls")
+
+    def post(self, request):
+        question = str(request.data.get("question", ""))[:255].strip()
+        options = [str(o)[:200].strip() for o in request.data.get("options", [])]
+        options = [o for o in options if o][:6]
+        if not question or len(options) < 2:
+            return Response(
+                {"message": "Question + at least 2 options required"},
+                status=400)
+        poll = Poll.objects.create(
+            question=question,
+            is_active=bool(request.data.get("is_active", True)))
+        for i, text in enumerate(options):
+            PollOption.objects.create(poll=poll, text=text, display_order=i)
+        return renderResponse(data=poll.results(), message="Poll created",
+                              status=201)
+
+
+class AdminPollDetailView(APIView):
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated, StaffPerm]
+
+    def _get(self, pk):
+        try:
+            return Poll.objects.prefetch_related("options").get(pk=pk)
+        except Poll.DoesNotExist:
+            return None
+
+    def get(self, request, pk):
+        poll = self._get(pk)
+        if not poll:
+            return Response({"message": "Poll not found"}, status=404)
+        return renderResponse(data=poll.results(), message="Poll")
+
+    def patch(self, request, pk):
+        poll = self._get(pk)
+        if not poll:
+            return Response({"message": "Poll not found"}, status=404)
+        if "is_active" in request.data:
+            poll.is_active = bool(request.data["is_active"])
+        if "question" in request.data and str(request.data["question"]).strip():
+            poll.question = str(request.data["question"])[:255].strip()
+        poll.save()
+        return renderResponse(data=poll.results(), message="Poll updated")
+
+    def delete(self, request, pk):
+        deleted, _ = Poll.objects.filter(pk=pk).delete()
+        if not deleted:
+            return Response({"message": "Poll not found"}, status=404)
+        return renderResponse(data={"id": pk}, message="Poll deleted")
+
+
 class AdminNewsOverviewView(APIView):
     """Module overview for the News dashboard: desk KPIs, 14/30-day
     publishing activity, top stories by views, and desk alerts."""
@@ -204,6 +381,8 @@ class AdminNewsOverviewView(APIView):
             if not Article.objects.filter(
                 category=c, status=Article.Status.PUBLISHED).exists()
         ]
+        from accounts.models import Users
+        from core.helpers import PLATFORM_STAFF_ROLES
         return renderResponse(data={
             "kpis": {
                 "published": Article.objects.filter(
@@ -216,6 +395,7 @@ class AdminNewsOverviewView(APIView):
                     s=Sum("view_count"))["s"] or 0,
                 "trends_new": TrendKeyword.objects.filter(
                     status=TrendKeyword.Status.NEW).count(),
+                "staff": Users.objects.filter(role__in=PLATFORM_STAFF_ROLES).count(),
             },
             "series": series,
             "top_stories": list(
@@ -232,6 +412,9 @@ class AdminNewsOverviewView(APIView):
                     published_at__gt=now).count(),
                 "trends_new": TrendKeyword.objects.filter(
                     status=TrendKeyword.Status.NEW).count(),
+                "pending_comments": Comment.objects.filter(
+                    status=Comment.Status.PENDING).count(),
+                "flagged_comments": Comment.objects.filter(flags__gt=0).count(),
                 "empty_sections": empty_sections,
             },
         }, message="News overview")

@@ -1,5 +1,6 @@
 """Public NobleSeek API — AllowAny, published-only, cached lists."""
 from django.core.cache import cache
+from django.db import models, transaction
 from django.db.models import Count, Q
 from django.utils import timezone
 from rest_framework import generics, status
@@ -9,9 +10,11 @@ from rest_framework.views import APIView
 
 from core.helpers import CustomPageNumberPagination, renderResponse
 
-from .models import AdConfig, Article, NewsCategory
+from .models import AdConfig, Article, Comment, FlatPage, NewsCategory, Poll, PushDevice
 from .serializers import (AdConfigSerializer, ArticleDetailSerializer,
-                          ArticleListSerializer, NewsCategorySerializer)
+                          ArticleListSerializer, CommentSerializer,
+                          FlatPageSerializer, NewsCategorySerializer,
+                          PollResultsSerializer, PushDeviceSerializer)
 
 
 def _visible_qs():
@@ -158,3 +161,128 @@ class AdConfigPublicView(APIView):
         cfg = AdConfig.get_solo()
         return renderResponse(data=AdConfigSerializer(cfg).data,
                               message="Ad config")
+
+
+class FlatPagePublicView(APIView):
+    """Editable trust pages. Inactive/missing slug → 404 and the portal
+    falls back to its built-in copy (never a blank page)."""
+    permission_classes = [AllowAny]
+
+    def get(self, request, slug):
+        try:
+            page = FlatPage.objects.get(slug=slug, is_active=True)
+        except FlatPage.DoesNotExist:
+            return Response({"message": "Page not found"}, status=404)
+        return renderResponse(data=FlatPageSerializer(page).data,
+                              message="Info page")
+
+
+class CommentListCreateView(APIView):
+    """GET ?article=<id> → approved comments only. POST creates PENDING
+    (desk approves; never public on arrival — spam safety)."""
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        try:
+            article_id = int(request.query_params.get("article", 0))
+        except (TypeError, ValueError):
+            return Response({"message": "article id required"}, status=400)
+        qs = Comment.objects.filter(
+            article_id=article_id,
+            status=Comment.Status.APPROVED).order_by("-created_at")[:100]
+        return renderResponse(data=CommentSerializer(qs, many=True).data,
+                              message="Comments")
+
+    def post(self, request):
+        name = str(request.data.get("name", "")).strip()[:80]
+        text = str(request.data.get("text", "")).strip()[:500]
+        try:
+            article_id = int(request.data.get("article", 0))
+        except (TypeError, ValueError):
+            article_id = 0
+        if len(name) < 2 or len(text) < 2:
+            return Response({"message": "Name and comment required"}, status=400)
+        if not _visible_qs().filter(pk=article_id).exists():
+            return Response({"message": "Article not found"}, status=404)
+        # Light spam guard: one comment per 30s per IP.
+        ip = request.META.get("HTTP_X_FORWARDED_FOR", "").split(",")[0].strip() \
+            or request.META.get("REMOTE_ADDR", "")
+        key = f"nobleseek:comment:{ip}"
+        if cache.get(key):
+            return Response(
+                {"message": "A little slower — please wait a few seconds"},
+                status=429)
+        cache.set(key, 1, 30)
+        c = Comment.objects.create(article_id=article_id, name=name, text=text)
+        return renderResponse(data=CommentSerializer(c).data,
+                              message="Received — visible after review", status=201)
+
+
+class CommentFlagView(APIView):
+    """Reader reports a comment; moderation queue sorts by flags."""
+    permission_classes = [AllowAny]
+
+    def post(self, request, pk):
+        updated = Comment.objects.filter(pk=pk).update(
+            flags=models.F("flags") + 1)
+        if not updated:
+            return Response({"message": "Comment not found"}, status=404)
+        return renderResponse(data={"id": pk}, message="Reported — thanks")
+
+
+class PollListView(APIView):
+    """Active polls with live aggregates (no voter identity leaks)."""
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        polls = Poll.objects.filter(is_active=True).prefetch_related("options")[:5]
+        data = PollResultsSerializer([p.results() for p in polls], many=True).data
+        return renderResponse(data=data, message="Active polls")
+
+
+class PollVoteView(APIView):
+    """One vote per browser (client UUID). Repeat votes → 400, not silent."""
+    permission_classes = [AllowAny]
+
+    def post(self, request, pk):
+        try:
+            poll = Poll.objects.prefetch_related("options").get(
+                pk=pk, is_active=True)
+        except Poll.DoesNotExist:
+            return Response({"message": "Poll closed"}, status=404)
+        try:
+            option_id = int(request.data.get("option_id", 0))
+        except (TypeError, ValueError):
+            option_id = 0
+        session_key = str(request.data.get("session_key", ""))[:64]
+        if not session_key or not poll.options.filter(pk=option_id).exists():
+            return Response({"message": "Pick an option"}, status=400)
+        from django.db import IntegrityError
+        from .models import PollVote
+        try:
+            with transaction.atomic():
+                PollVote.objects.create(poll=poll, option_id=option_id,
+                                        session_key=session_key)
+        except IntegrityError:
+            return Response({"message": "Already voted"}, status=400)
+        return renderResponse(data=poll.results(), message="Vote counted")
+
+
+class PushSubscribeView(APIView):
+    """Store/refresh a push token (app today, web tomorrow). Idempotent."""
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        token = str(request.data.get("token", ""))[:255].strip()
+        if not token:
+            return Response({"message": "token required"}, status=400)
+        platform = str(request.data.get("platform", "android"))[:16]
+        topics = request.data.get("topics", [])
+        if not isinstance(topics, list):
+            topics = []
+        PushDevice.objects.update_or_create(
+            token=token,
+            defaults={"platform": platform, "topics": topics[:10],
+                      "is_active": True})
+        return renderResponse(data={"subscribed": True},
+                              message="Subscribed to breaking alerts")

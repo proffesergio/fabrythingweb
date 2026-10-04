@@ -1,12 +1,19 @@
 from django.urls import path
 
 from .views import (AdConfigPublicView, ArticleDetailView, ArticleListView,
+                    CommentFlagView, CommentListCreateView, FlatPagePublicView,
                     LatestStripView, NewsCategoryListView, NewsRssView,
-                    NewsSitemapView, RelatedArticlesView)
+                    NewsSitemapView, PollListView, PollVoteView,
+                    PushSubscribeView, RelatedArticlesView)
 from .views_admin import (AdminAdConfigView, AdminArticleDetailView,
                            AdminArticleListCreateView, AdminCategoryDetailView,
-                           AdminCategoryListCreateView, AdminNewsOverviewView,
-                           AdminNewsStatsView, AdminTrendCreateDraftView,
+                           AdminCategoryListCreateView, AdminCommentDetailView,
+                           AdminCommentListView, AdminFlatPageDetailView,
+                           AdminFlatPageListCreateView, AdminNewsOverviewView,
+                           AdminNewsStatsView, AdminPollDetailView,
+                           AdminPollListCreateView, AdminPushCampaignListView,
+                           AdminPushDeviceListView, AdminPushSendView,
+                           AdminTagsView, AdminTrendCreateDraftView,
                            AdminTrendFetchView, AdminTrendIgnoreView,
                            AdminTrendListView)
 
@@ -23,6 +30,12 @@ urlpatterns = [
     path("sitemap-data/", NewsSitemapView.as_view(), name="ns_sitemap"),
     path("rss-data/", NewsRssView.as_view(), name="ns_rss"),
     path("ad-config/", AdConfigPublicView.as_view(), name="ns_adconfig"),
+    path("pages/<str:slug>/", FlatPagePublicView.as_view(), name="ns_page"),
+    path("comments/", CommentListCreateView.as_view(), name="ns_comments"),
+    path("comments/<int:pk>/flag/", CommentFlagView.as_view(), name="ns_flag"),
+    path("polls/", PollListView.as_view(), name="ns_polls"),
+    path("polls/<int:pk>/vote/", PollVoteView.as_view(), name="ns_vote"),
+    path("push/subscribe/", PushSubscribeView.as_view(), name="ns_push_sub"),
     # Admin
     path("admin/articles/", AdminArticleListCreateView.as_view(), name="ns_admin_articles"),
     path("admin/articles/<int:pk>/", AdminArticleDetailView.as_view(), name="ns_admin_article"),
@@ -35,4 +48,14 @@ urlpatterns = [
     path("admin/ad-config/", AdminAdConfigView.as_view(), name="ns_admin_adconfig"),
     path("admin/stats/", AdminNewsStatsView.as_view(), name="ns_admin_stats"),
     path("admin/overview/", AdminNewsOverviewView.as_view(), name="ns_admin_overview"),
+    path("admin/tags/", AdminTagsView.as_view(), name="ns_admin_tags"),
+    path("admin/pages/", AdminFlatPageListCreateView.as_view(), name="ns_admin_pages"),
+    path("admin/pages/<str:slug>/", AdminFlatPageDetailView.as_view(), name="ns_admin_page"),
+    path("admin/comments/", AdminCommentListView.as_view(), name="ns_admin_comments"),
+    path("admin/comments/<int:pk>/", AdminCommentDetailView.as_view(), name="ns_admin_comment"),
+    path("admin/push/devices/", AdminPushDeviceListView.as_view(), name="ns_admin_push_devices"),
+    path("admin/push/send/", AdminPushSendView.as_view(), name="ns_admin_push_send"),
+    path("admin/push/campaigns/", AdminPushCampaignListView.as_view(), name="ns_admin_push_campaigns"),
+    path("admin/polls/", AdminPollListCreateView.as_view(), name="ns_admin_polls"),
+    path("admin/polls/<int:pk>/", AdminPollDetailView.as_view(), name="ns_admin_poll"),
 ]

@@ -3,7 +3,8 @@ from rest_framework import serializers
 
 from core.helpers import absolutize_media_url
 
-from .models import AdConfig, Article, NewsCategory, TrendKeyword
+from .models import (AdConfig, Article, Comment, FlatPage, NewsCategory,
+                     Poll, PollOption, PushCampaign, PushDevice, TrendKeyword)
 
 
 def absolute_hero(obj, context):
@@ -16,11 +17,12 @@ def absolute_hero(obj, context):
 
 class NewsCategorySerializer(serializers.ModelSerializer):
     article_count = serializers.IntegerField(read_only=True, default=0)
+    parent_name = serializers.CharField(source="parent.name", read_only=True, default="")
 
     class Meta:
         model = NewsCategory
         fields = ["id", "name", "slug", "description", "display_order",
-                  "is_active", "article_count"]
+                  "is_active", "parent", "parent_name", "article_count"]
 
 
 class TrendKeywordSerializer(serializers.ModelSerializer):
@@ -95,3 +97,40 @@ class AdConfigSerializer(serializers.ModelSerializer):
                   "slot_shop_subtle", "auto_ads_low_sitewide",
                   "news_detail_max_ads", "shop_ads_enabled",
                   "anchor_on_news_only"]
+
+
+class FlatPageSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = FlatPage
+        fields = ["slug", "title", "intro", "body_html", "updated_at"]
+
+
+class CommentSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Comment
+        fields = ["id", "article", "name", "text", "status", "flags",
+                  "created_at"]
+        read_only_fields = ["id", "status", "flags", "created_at"]
+
+
+class PushDeviceSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = PushDevice
+        fields = ["token", "platform", "topics"]
+
+
+class PollResultsSerializer(serializers.Serializer):
+    """Read-only aggregate shape from Poll.results()."""
+    id = serializers.IntegerField()
+    question = serializers.CharField()
+    total = serializers.IntegerField()
+    options = serializers.ListField(child=serializers.DictField())
+
+
+class PushCampaignSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = PushCampaign
+        fields = ["id", "title", "body", "url", "audience", "sent",
+                  "failed", "skipped", "note", "created_at"]
+        read_only_fields = ["id", "audience", "sent", "failed", "skipped",
+                            "note", "created_at"]
