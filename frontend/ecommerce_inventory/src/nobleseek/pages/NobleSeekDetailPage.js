@@ -5,6 +5,7 @@ import { fetchNewsDetail, sectionName, fetchNewsCategories } from '../api';
 import { formatNewsTime, formatViews, timeAgoBn } from '../bn';
 import NewsSeo from '../components/NewsSeo';
 import ShareBar, { FacebookComments } from '../components/ShareBar';
+import CommentsSection from '../components/CommentsSection';
 import { RelatedNews } from '../components/RelatedWidgets';
 import MostRead from '../components/MostRead';
 import AdSlot from '../ads/AdSlot';
@@ -157,6 +158,7 @@ export default function NobleSeekDetailPage() {
             <ShareBar title={article.headline_bn || article.headline} />
           </Box>
 
+          <CommentsSection articleId={article.id} />
           <FacebookComments />
           <RelatedNews slug={article.slug} />
         </Grid>

@@ -66,6 +66,8 @@ export const PORTAL_SECTIONS = [
   { slug: 'politics', name: 'রাজনীতি' },
   { slug: 'world', name: 'আন্তর্জাতিক' },
   { slug: 'economy', name: 'অর্থনীতি' },
+  { slug: 'crime', name: 'অপরাধ' },
+  { slug: 'court', name: 'আদালত' },
   { slug: 'opinion', name: 'মতামত' },
   { slug: 'sports', name: 'খেলা' },
   { slug: 'entertainment', name: 'বিনোদন' },
@@ -73,6 +75,8 @@ export const PORTAL_SECTIONS = [
   { slug: 'tech', name: 'প্রযুক্তি' },
   { slug: 'education', name: 'শিক্ষা' },
   { slug: 'health', name: 'স্বাস্থ্য' },
+  { slug: 'environment', name: 'পরিবেশ' },
+  { slug: 'expatriate', name: 'প্রবাস' },
   { slug: 'jobs', name: 'চাকরি' },
 ];
 
@@ -80,6 +84,50 @@ export function sectionName(slug, cats = []) {
   const hit = (cats || []).find((c) => c.slug === slug);
   if (hit) return hit.name;
   return (PORTAL_SECTIONS.find((c) => c.slug === slug) || {}).name || 'সংবাদ';
+}
+
+export async function fetchInfoPage(slug) {
+  const res = await axios.get(`${config.API_URL}${BASE}pages/${slug}/`);
+  return unwrap(res);
+}
+
+export async function fetchComments(articleId) {
+  const res = await axios.get(`${config.API_URL}${BASE}comments/`, { params: { article: articleId } });
+  return unwrap(res) || [];
+}
+
+export async function postComment(articleId, name, text) {
+  const res = await axios.post(`${config.API_URL}${BASE}comments/`, { article: articleId, name, text });
+  return unwrap(res);
+}
+
+export async function flagComment(id) {
+  const res = await axios.post(`${config.API_URL}${BASE}comments/${id}/flag/`, {});
+  return unwrap(res);
+}
+
+export async function fetchPolls() {
+  try {
+    const res = await axios.get(`${config.API_URL}${BASE}polls/`);
+    return unwrap(res) || [];
+  } catch { return []; }
+}
+
+export async function votePoll(pollId, optionId, sessionKey) {
+  const res = await axios.post(`${config.API_URL}${BASE}polls/${pollId}/vote/`,
+    { option_id: optionId, session_key: sessionKey });
+  return unwrap(res);
+}
+
+export function getPollSession() {
+  try {
+    let s = localStorage.getItem('ns_poll_session');
+    if (!s) {
+      s = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+      localStorage.setItem('ns_poll_session', s);
+    }
+    return s;
+  } catch { return `anon-${Date.now().toString(36)}`; }
 }
 
 export function timeAgo(iso) {

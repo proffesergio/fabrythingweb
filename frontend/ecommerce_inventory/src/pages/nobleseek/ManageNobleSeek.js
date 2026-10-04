@@ -17,6 +17,13 @@ import PublishIcon from '@mui/icons-material/Publish';
 import SaveIcon from '@mui/icons-material/Save';
 import { toast } from 'react-toastify';
 import useApi from '../../hooks/APIHandler';
+import DeskHome from './tabs/DeskHome';
+import TagsManager from './tabs/TagsManager';
+import PagesManager from './tabs/PagesManager';
+import CommentsManager from './tabs/CommentsManager';
+import PushManager from './tabs/PushManager';
+import PollsManager from './tabs/PollsManager';
+import ShareMenu from './ShareMenu';
 
 // Last-good snapshot so the desk stays usable while the backend sleeps:
 // categories render instantly from cache, then refresh in background.
@@ -133,7 +140,9 @@ export default function ManageNobleSeek() {
   const [uploading, setUploading] = useState(false);
   const [adCfg, setAdCfg] = useState({});
   const [savingAds, setSavingAds] = useState(false);
-  const [catForm, setCatForm] = useState({ id: null, name: '', slug: '', description: '', display_order: 0, is_active: true });
+  const [breakingOnly, setBreakingOnly] = useState(false);
+  const [tagDrill, setTagDrill] = useState('');
+  const [catForm, setCatForm] = useState({ id: null, name: '', slug: '', description: '', display_order: 0, is_active: true, parent: '' });
 
   const catName = useCallback((id) => cats.find((c) => c.id === id)?.name || '—', [cats]);
 
@@ -158,8 +167,9 @@ export default function ManageNobleSeek() {
       if (catFilter) params.category = catFilter;
       const [s, a, t, c, ad] = await Promise.all([
         api({ url: 'store/nobleseek/admin/stats/', silent: true }),
-        // Backend admin list has no category param — filter client-side below.
-        api({ url: 'store/nobleseek/admin/articles/', params, silent: true }),
+        // Backend admin list has no category/breaking/tag params — fetch a
+        // wide page (100) and filter desk-side so presets stay correct.
+        api({ url: 'store/nobleseek/admin/articles/', params: { ...params, pageSize: 100 }, silent: true }),
         api({ url: 'store/nobleseek/admin/trends/', params: { status: 'NEW', search: trendSearch, geo: trendGeo }, silent: true }),
         api({ url: 'store/nobleseek/admin/categories/', silent: true }),
         api({ url: 'store/nobleseek/admin/ad-config/', silent: true }),
@@ -173,6 +183,8 @@ export default function ManageNobleSeek() {
       if (a?.status === 200) {
         let rows = a.data.data?.results || a.data.data || [];
         if (catFilter) rows = rows.filter((r) => String(r.category) === String(catFilter));
+        if (breakingOnly) rows = rows.filter((r) => r.is_breaking);
+        if (tagDrill) rows = rows.filter((r) => (r.tags || []).includes(tagDrill));
         setArticles(rows);
       }
       if (t?.status === 200) {
@@ -187,17 +199,20 @@ export default function ManageNobleSeek() {
       inflight.current = false;
       setLoading(false);
     }
-  }, [statusFilter, catFilter, search, trendSearch, trendGeo]);
+  }, [statusFilter, catFilter, search, trendSearch, trendGeo, breakingOnly, tagDrill]);
 
   useEffect(() => { loadAll(); }, [loadAll]);
 
-  const statsCards = useMemo(() => ([
-    { label: 'খসড়া', value: stats?.drafts ?? '—', color: 'default', go: () => { setStatusFilter('DRAFT'); setTab(0); } },
-    { label: 'রিভিউতে', value: stats?.review ?? '—', color: 'warning', go: () => { setStatusFilter('REVIEW'); setTab(0); } },
-    { label: 'প্রকাশিত', value: stats?.published ?? '—', color: 'success', go: () => { setStatusFilter('PUBLISHED'); setTab(0); } },
-    { label: 'ট্রেন্ড ইনবক্স', value: stats?.trends_new ?? '—', color: 'info', go: () => setTab(1) },
-    { label: 'মোট পঠিত', value: stats?.total_views ?? '—', color: 'default', go: null },
-  ]), [stats]);
+  // Tab indexes (dashboard-first order, like the reference panel).
+  const TAB = { dashboard: 0, articles: 1, trends: 2, tags: 3, categories: 4, comments: 5, push: 6, polls: 7, pages: 8, ads: 9 };
+  // Dashboard + tag-cloud drills land here with preset filters.
+  const drillArticles = (f = {}) => {
+    setStatusFilter(f.status || '');
+    setBreakingOnly(!!f.breaking);
+    setTagDrill(f.tag || '');
+    setTab(TAB.articles);
+  };
+  const gotoTab = (name) => setTab(TAB[name] ?? TAB.dashboard);
 
   const fetchTrendsNow = async () => {
     const r = await callApi({ url: 'store/nobleseek/admin/trends/fetch/', method: 'POST', body: {} });
@@ -208,7 +223,7 @@ export default function ManageNobleSeek() {
     const r = await callApi({ url: `store/nobleseek/admin/trends/${id}/create-draft/`, method: 'POST', body: {} });
     if (r?.status === 200) {
       toast.success(`খসড়া তৈরি${r.data.data?.ai_generated ? ' (AI সহায়তায়)' : ''} — সম্পাদনা করে প্রকাশ করুন`);
-      loadAll(); setTab(0);
+      loadAll(); setTab(TAB.articles);
     }
   };
 
@@ -288,6 +303,7 @@ export default function ManageNobleSeek() {
       description: catForm.description,
       display_order: Number(catForm.display_order) || 0,
       is_active: !!catForm.is_active,
+      parent: catForm.parent === '' ? null : Number(catForm.parent),
     };
     const isEdit = !!catForm.id;
     const r = await callApi({
@@ -296,7 +312,7 @@ export default function ManageNobleSeek() {
     });
     if (r?.status === 200 || r?.status === 201) {
       toast.success(isEdit ? 'বিভাগ হালনাগাদ হয়েছে' : 'বিভাগ যোগ হয়েছে');
-      setCatForm({ id: null, name: '', slug: '', description: '', display_order: 0, is_active: true });
+      setCatForm({ id: null, name: '', slug: '', description: '', display_order: 0, is_active: true, parent: '' });
       loadAll();
     }
   };
@@ -328,23 +344,17 @@ export default function ManageNobleSeek() {
         <Button startIcon={<AddIcon />} variant="contained" onClick={openNew} size="small">নতুন প্রতিবেদন</Button>
       </Box>
 
-      <Grid container spacing={1.5} sx={{ mb: 2 }}>
-        {statsCards.map((s) => (
-          <Grid item xs={6} sm={4} md={2} key={s.label}>
-            <Card variant="outlined" sx={{ opacity: s.go ? 1 : 0.85 }}>
-              <CardActionArea disabled={!s.go} onClick={s.go} sx={{ p: 0 }}>
-                <CardContent sx={{ py: 1.25, px: 1.5 }}>
-                  <Typography variant="h6" fontWeight={900}>{s.value}</Typography>
-                  <Typography variant="caption" color="text.secondary">{s.label}{s.go ? ' →' : ''}</Typography>
-                </CardContent>
-              </CardActionArea>
-            </Card>
-          </Grid>
-        ))}
-      </Grid>
-
-      <Tabs value={tab} onChange={(_, v) => setTab(v)} sx={{ mb: 2 }}>
-        <Tab label="প্রতিবেদন" /><Tab label={`ট্রেন্ড ইনবক্স (${trends.length})`} /><Tab label={`বিভাগ (${cats.length})`} /><Tab label="বিজ্ঞাপন" />
+      <Tabs value={tab} onChange={(_, v) => setTab(v)} sx={{ mb: 2 }} variant="scrollable" scrollButtons="auto">
+        <Tab label="ড্যাশবোর্ড" />
+        <Tab label="প্রতিবেদন" />
+        <Tab label={`ট্রেন্ড ইনবক্স (${trends.length})`} />
+        <Tab label="ট্যাগ" />
+        <Tab label={`বিভাগ (${cats.length})`} />
+        <Tab label="মন্তব্য" />
+        <Tab label="পুশ" />
+        <Tab label="জরিপ" />
+        <Tab label="পেজ" />
+        <Tab label="বিজ্ঞাপন" />
       </Tabs>
 
       {authError && (
@@ -357,6 +367,10 @@ export default function ManageNobleSeek() {
       )}
 
       {tab === 0 && (
+        <DeskHome cats={cats} onShowArticles={drillArticles} onShowTab={gotoTab} />
+      )}
+
+      {tab === 1 && (
         <Paper sx={{ p: 2 }}>
           <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5} sx={{ mb: 2 }}>
             <TextField size="small" label="অনুসন্ধান" value={searchInput} onChange={(e) => setSearchInput(e.target.value)} sx={{ minWidth: 200 }} />
@@ -364,10 +378,18 @@ export default function ManageNobleSeek() {
               <MenuItem value="">সব</MenuItem>{STATUS.map((s) => <MenuItem key={s} value={s}>{STATUS_BN[s]}</MenuItem>)}
             </TextField>
             <TextField size="small" select label="বিভাগ" value={catFilter} onChange={(e) => setCatFilter(e.target.value)} sx={{ minWidth: 170 }}>
-              <MenuItem value="">সব বিভাগ</MenuItem>{cats.map((c) => <MenuItem key={c.id} value={c.id}>{c.name}</MenuItem>)}
+              <MenuItem value="">সব বিভাগ</MenuItem>{cats.map((c) => <MenuItem key={c.id} value={c.id}>{c.parent_name ? `${c.parent_name} › ${c.name}` : c.name}</MenuItem>)}
             </TextField>
-            {(statusFilter || catFilter || searchInput) && (
-              <Button size="small" onClick={() => { setStatusFilter(''); setCatFilter(''); setSearchInput(''); }}>ফিল্টার মুছুন</Button>
+            <Chip
+              size="small" label="শুধু ব্রেকিং" clickable color={breakingOnly ? 'error' : 'default'}
+              variant={breakingOnly ? 'filled' : 'outlined'} onClick={() => setBreakingOnly((v) => !v)}
+              sx={{ alignSelf: 'center' }}
+            />
+            {tagDrill && (
+              <Chip size="small" label={`#${tagDrill}`} color="primary" onDelete={() => setTagDrill('')} sx={{ alignSelf: 'center' }} />
+            )}
+            {(statusFilter || catFilter || searchInput || breakingOnly || tagDrill) && (
+              <Button size="small" onClick={() => { setStatusFilter(''); setCatFilter(''); setSearchInput(''); setBreakingOnly(false); setTagDrill(''); }}>ফিল্টার মুছুন</Button>
             )}
           </Stack>
           {loadError && !loading && (
@@ -407,6 +429,7 @@ export default function ManageNobleSeek() {
                     <TableCell><Typography variant="caption">{a.published_at ? new Date(a.published_at).toLocaleString('bn-BD') : '—'}</Typography></TableCell>
                     <TableCell align="right" sx={{ whiteSpace: 'nowrap' }}>
                       <Tooltip title="প্রিভিউ"><IconButton size="small" component="a" href={`/nobleseek/${a.slug}`} target="_blank"><VisibilityIcon fontSize="small" /></IconButton></Tooltip>
+                      <ShareMenu article={a} />
                       <Tooltip title="সম্পাদনা"><IconButton size="small" onClick={() => openEdit(a)}><EditIcon fontSize="small" /></IconButton></Tooltip>
                       <Tooltip title="ফিচার্ড টগল"><span><IconButton size="small" color={a.is_featured ? 'secondary' : 'default'} onClick={() => quickPatch(a.id, { is_featured: !a.is_featured }, 'ফিচার্ড হালনাগাদ')}><PublishIcon fontSize="small" /></IconButton></span></Tooltip>
                       <Tooltip title="মুছুন/আর্কাইভ"><IconButton size="small" onClick={() => archiveArticle(a.id)}><DeleteIcon fontSize="small" /></IconButton></Tooltip>
@@ -420,7 +443,7 @@ export default function ManageNobleSeek() {
         </Paper>
       )}
 
-      {tab === 1 && (
+      {tab === 2 && (
         <Paper sx={{ p: 2 }}>
           <Box sx={{ display: 'flex', gap: 1, mb: 2, alignItems: 'center', flexWrap: 'wrap' }}>
             <Alert severity="info" sx={{ flex: 1, minWidth: 240 }}>ক্রন দিনে ২ বার নতুন কীওয়ার্ড আনে। ১ ক্লিকে খসড়া — প্রকাশের আগে অবশ্যই সম্পাদনা করুন।</Alert>
@@ -451,7 +474,11 @@ export default function ManageNobleSeek() {
         </Paper>
       )}
 
-      {tab === 2 && (
+      {tab === 3 && (
+        <TagsManager onDrillTag={(tag) => drillArticles({ tag })} />
+      )}
+
+      {tab === 4 && (
         <Grid container spacing={2}>
           <Grid item xs={12} md={7}>
             <Paper sx={{ p: 2 }}>
@@ -462,13 +489,18 @@ export default function ManageNobleSeek() {
                   {cats.map((c) => (
                     <TableRow key={c.id} hover>
                       <TableCell>{c.display_order}</TableCell>
-                      <TableCell><Typography fontWeight={700}>{c.name}</Typography><Typography variant="caption" color="text.secondary">/{c.slug} • {c.article_count ?? 0}টি খবর</Typography></TableCell>
+                      <TableCell>
+                        <Typography fontWeight={700}>{c.parent_name ? `↳ ${c.name}` : c.name}</Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          /{c.slug} • {c.article_count ?? 0}টি খবর{c.parent_name ? ` • অধীন: ${c.parent_name}` : ''}
+                        </Typography>
+                      </TableCell>
                       <TableCell><Switch size="small" checked={!!c.is_active} onChange={async (e) => {
                         await callApi({ url: `store/nobleseek/admin/categories/${c.id}/`, method: 'PATCH', body: { is_active: e.target.checked }, silent: true });
                         loadAll();
                       }} /></TableCell>
                       <TableCell align="right" sx={{ whiteSpace: 'nowrap' }}>
-                        <IconButton size="small" onClick={() => setCatForm({ id: c.id, name: c.name, slug: c.slug, description: c.description || '', display_order: c.display_order, is_active: c.is_active })}><EditIcon fontSize="small" /></IconButton>
+                        <IconButton size="small" onClick={() => setCatForm({ id: c.id, name: c.name, slug: c.slug, description: c.description || '', display_order: c.display_order, is_active: c.is_active, parent: c.parent || '' })}><EditIcon fontSize="small" /></IconButton>
                         <IconButton size="small" onClick={() => deleteCategory(c.id, c.name)}><DeleteIcon fontSize="small" /></IconButton>
                       </TableCell>
                     </TableRow>
@@ -485,11 +517,15 @@ export default function ManageNobleSeek() {
                 <TextField size="small" fullWidth label="নাম (বাংলা)" value={catForm.name} onChange={(e) => setCatForm({ ...catForm, name: e.target.value, slug: catForm.id ? catForm.slug : slugify(e.target.value) })} />
                 <TextField size="small" fullWidth label="স্লাগ (URL)" value={catForm.slug} onChange={(e) => setCatForm({ ...catForm, slug: e.target.value })} helperText={catForm.slug ? `/nobleseek?category=${catForm.slug}` : 'খালি রাখলে নাম থেকে বানানো হবে'} />
                 <TextField size="small" fullWidth label="বিবরণ (ঐচ্ছিক)" value={catForm.description} onChange={(e) => setCatForm({ ...catForm, description: e.target.value })} />
+                <TextField size="small" fullWidth select label="অভিভাবক বিভাগ (সাব-সেকশন হলে)" value={catForm.parent} onChange={(e) => setCatForm({ ...catForm, parent: e.target.value })}>
+                  <MenuItem value="">— মূল বিভাগ —</MenuItem>
+                  {cats.filter((c) => !c.parent && c.id !== catForm.id).map((c) => <MenuItem key={c.id} value={c.id}>{c.name}</MenuItem>)}
+                </TextField>
                 <TextField size="small" fullWidth type="number" label="ক্রম (ছোট = আগে)" value={catForm.display_order} onChange={(e) => setCatForm({ ...catForm, display_order: e.target.value })} />
                 <FormControlLabel control={<Switch size="small" checked={!!catForm.is_active} onChange={(e) => setCatForm({ ...catForm, is_active: e.target.checked })} />} label="নেভিগেশনে দেখান" />
                 <Box sx={{ display: 'flex', gap: 1 }}>
                   <Button variant="contained" size="small" onClick={saveCategory}>{catForm.id ? 'হালনাগাদ' : 'যোগ করুন'}</Button>
-                  {catForm.id && <Button size="small" onClick={() => setCatForm({ id: null, name: '', slug: '', description: '', display_order: 0, is_active: true })}>বাতিল</Button>}
+                  {catForm.id && <Button size="small" onClick={() => setCatForm({ id: null, name: '', slug: '', description: '', display_order: 0, is_active: true, parent: '' })}>বাতিল</Button>}
                 </Box>
               </Stack>
             </Paper>
@@ -497,9 +533,25 @@ export default function ManageNobleSeek() {
         </Grid>
       )}
 
-      {tab === 3 && (
+      {tab === 5 && (
+        <CommentsManager />
+      )}
+
+      {tab === 6 && (
+        <PushManager />
+      )}
+
+      {tab === 7 && (
+        <PollsManager />
+      )}
+
+      {tab === 8 && (
+        <PagesManager />
+      )}
+
+      {tab === 9 && (
         <Paper sx={{ p: 2, maxWidth: 720 }}>
-          <Typography variant="h6" fontWeight={800} gutterBottom>বিজ্ঞাপন (AdSense)</Typography>
+          <Typography variant="h6" fontWeight={800} gutterBottom>বিজ্ঞাপন (Ad Spaces)</Typography>
           <Alert severity="warning" sx={{ mb: 2 }}>সংবাদ পাতায় ৫টি ম্যানুয়াল স্লট = সর্বোচ্চ আয়। ID নিন: AdSense → Ads → New ad unit।</Alert>
           <Grid container spacing={2}>
             {[['adsense_client', 'AdSense client (ca-pub-…)'], ['slot_top', 'Top leaderboard'], ['slot_inarticle_1', 'In-article 1'], ['slot_inarticle_2', 'In-article 2'], ['slot_sidebar', 'Sidebar sticky'], ['slot_multiplex', 'Multiplex'], ['slot_shop_subtle', 'Portal subtle (ঐচ্ছিক)']].map(([k, label]) => (

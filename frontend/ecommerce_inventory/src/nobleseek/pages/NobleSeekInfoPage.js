@@ -1,7 +1,10 @@
 import React from 'react';
 import { Container, Typography, Box, Divider } from '@mui/material';
 import NewsSeo from '../components/NewsSeo';
+import { fetchInfoPage } from '../api';
 
+// Built-in copy: shown while loading AND as fallback when the API is
+// unreachable. The desk Pages tab upgrades these without a redeploy.
 const DOCS = {
   about: {
     title: 'আমাদের সম্পর্কে',
@@ -16,7 +19,7 @@ const DOCS = {
   privacy: {
     title: 'গোপনীয়তা নীতি',
     intro: 'আপনার তথ্য কীভাবে ব্যবহার হয়।',
-    body: `<p>পাঠকসংখ্যা পরিমাপ ও বিজ্ঞাপন পরিবেশনের জন্য আমরা Google AdSense, Google Analytics ও Meta Pixel ব্যবহার করি। এগুলো কুকি সংরক্ষণ করতে পারে। ব্রাউজার থেকে কুকি বন্ধ করলেও সাইট ব্যবহার করা যায়।</p><p>আমরা কখনো ব্যক্তিগত তথ্য বিক্রি করি না। ফেসবুক মন্তব্য Meta-এর নীতিমালার আওতাধীন। তথ্য-সংক্রান্ত অনুরোধে লিখুন: support@fabrything.com।</p>`,
+    body: `<p>পাঠকসংখ্যা পরিমাপ ও বিজ্ঞাপন পরিবেশনের জন্য আমরা Google AdSense, Google Analytics ও Meta Pixel ব্যবহার করি। এগুলো কুকি সংরক্ষণ করতে পারে। ব্রাউজার থেকে কুকি বন্ধ করলেও সাইট ব্যবহার করা যায়।</p><p>আমরা কখনো ব্যক্তিগত তথ্য বিক্রি করি না। মন্তব্য করতে নাম দিতে হয়; ইমেইল নেওয়া হয় না। তথ্য-সংক্রান্ত অনুরোধে লিখুন: support@fabrything.com।</p>`,
   },
   disclaimer: {
     title: 'ডিসক্লেইমার',
@@ -31,12 +34,25 @@ const DOCS = {
 };
 
 export default function NobleSeekInfoPage({ page = 'about' }) {
-  const doc = DOCS[page] || DOCS.about;
+  const fallback = DOCS[page] || DOCS.about;
+  const [doc, setDoc] = React.useState(fallback);
+  React.useEffect(() => {
+    let live = true;
+    setDoc(DOCS[page] || DOCS.about);
+    fetchInfoPage(page)
+      .then((d) => {
+        if (live && d && d.body_html) {
+          setDoc({ title: d.title, intro: d.intro || '', body: d.body_html });
+        }
+      })
+      .catch(() => {});
+    return () => { live = false; };
+  }, [page]);
   return (
     <Container maxWidth="md" sx={{ py: { xs: 3, md: 5 } }}>
       <NewsSeo title={doc.title} description={`${doc.title} — নোবেলসিক`} slug={page} />
       <Typography variant="h4" fontWeight={900} className="ns-serif" gutterBottom>{doc.title}</Typography>
-      <Typography variant="subtitle1" color="text.secondary" className="ns-sans" sx={{ mb: 1 }}>{doc.intro}</Typography>
+      {doc.intro && <Typography variant="subtitle1" color="text.secondary" className="ns-sans" sx={{ mb: 1 }}>{doc.intro}</Typography>}
       <Divider sx={{ mb: 2.5 }} />
       <Box dangerouslySetInnerHTML={{ __html: doc.body }} className="ns-sans" sx={{ '& p': { lineHeight: 1.9, mb: 1.75, color: '#333' }, '& li': { lineHeight: 1.9, mb: 0.75 } }} />
     </Container>

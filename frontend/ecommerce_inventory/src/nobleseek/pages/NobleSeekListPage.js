@@ -4,6 +4,7 @@ import { useSearchParams, Link } from 'react-router-dom';
 import { fetchNewsList, fetchNewsCategories, fetchSection, sectionName } from '../api';
 import { LeadCard, SecondaryCard, HorizontalCard, SectionHeader } from '../components/NewsCards';
 import MostRead, { OpinionBox } from '../components/MostRead';
+import PollWidget from '../components/PollWidget';
 import NewsSeo from '../components/NewsSeo';
 import AdSlot from '../ads/AdSlot';
 import { useAdConfig } from '../ads/adsConfig';
@@ -98,6 +99,7 @@ function PortalHome() {
             <Grid item xs={12} md={4}>
               <Box sx={{ position: { md: 'sticky' }, top: 70, display: 'flex', flexDirection: 'column', gap: 2 }}>
                 <MostRead latest={latest} />
+                <PollWidget />
                 <AdSlot slot={adConfig.slot_sidebar} format="auto" minHeight={250} />
               </Box>
             </Grid>
