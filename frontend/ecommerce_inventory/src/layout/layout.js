@@ -1,7 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { CssBaseline, ThemeProvider, createTheme, AppBar, Toolbar, IconButton, Typography, Drawer, List, ListItem, ListItemText, Collapse, Divider, Card, CardContent, Fab, Box, Hidden, InputBase, Avatar, Menu, MenuItem, ListItemIcon, BottomNavigation, BottomNavigationAction, Link } from '@mui/material';
-import { getModuleIcon } from './moduleIcons';
-import { isExpandable, resolveMenuTarget, toAdminPath } from './sidebarNav';
 import { LightMode, DarkMode, Menu as MenuIcon, ExpandLess, ExpandMore, Search as SearchIcon, AccountCircle, Settings as SettingsIcon, Notifications as NotificationsIcon, Logout, Home, Code as CodeIcon, Public as PublicIcon, Business as BusinessIcon, AlternateEmail as AlternateEmailIcon, AutoAwesomeTwoTone, Circle, AddCircleOutlineOutlined, DashboardOutlined, ShoppingCartOutlined, StorefrontOutlined, GroupOutlined, InventoryOutlined, CategoryOutlined, Category, ShoppingBasketOutlined, ShoppingBasketRounded, ReceiptOutlined, WarehouseOutlined, Map as MapIcon, ReceiptLong, Restaurant as RestaurantIcon, TwoWheeler, HowToReg, Payments, CloudDownloadOutlined } from '@mui/icons-material';
 import { ThemeProvider as Emotion10ThemeProvider } from '@emotion/react';
 import './style.scss';
@@ -10,8 +8,49 @@ import BrandLogo from '../components/BrandLogo';
 import { GlobalStyles } from './GlobalStyle';
 import TextField from '@mui/material/TextField';
 import { Outlet,useLocation,useNavigate } from 'react-router-dom'; // Import Outlet
-import { expandItem,activateItem,triggerPageChange } from '../redux/reducer/sidebardata';
+import { triggerPageChange } from '../redux/reducer/sidebardata';
 import {useDispatch, useSelector} from 'react-redux';
+import { ModuleProvider, useModule } from '../admin/modules/ModuleContext';
+import ModuleSwitcher from '../admin/modules/ModuleSwitcher';
+import ModuleSidebar from '../admin/modules/ModuleSidebar';
+import ModuleBell from '../admin/modules/ModuleBell';
+import useKeepAlive from '../admin/keepAlive';
+
+// Drawer brand follows the active business: Fabrything mark for shop, food
+// lockup for food, NobleSeek badge for news — the operator always sees which
+// side of the business they are in. Module scope (not inside Layout) so its
+// identity is stable and local state like the menu filter survives renders.
+const DrawerBody = ({ onNavigate }) => {
+  const { active, meta } = useModule();
+  let dark = false;
+  try { dark = (localStorage.getItem('theme') || '').toLowerCase().includes('dark'); } catch { /* private mode */ }
+  return (
+    <>
+      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '8px', py: 2 }}>
+        {active === 'news' ? (
+          <Box
+            component="img" src="/nobleseek-mark.png" alt="NobleSeek News"
+            onError={(e) => { e.currentTarget.style.display = 'none'; }}
+            sx={{ height: 36, width: 'auto' }}
+          />
+        ) : (
+          <BrandLogo
+            brand={active === 'food' ? 'food' : 'fabrything'}
+            variant="horizontal"
+            mode={dark ? 'dark' : 'light'}
+            height={active === 'food' ? 30 : 26}
+          />
+        )}
+      </Box>
+      <Box sx={{ px: 2, pb: 0.5 }}>
+        <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 800, letterSpacing: 1 }}>
+          {meta.label.toUpperCase()}
+        </Typography>
+      </Box>
+      <ModuleSidebar onNavigate={onNavigate} />
+    </>
+  );
+};
 
 const Layout = ({pageTitle,childPage}) => {
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -20,6 +59,8 @@ const Layout = ({pageTitle,childPage}) => {
   const [openChildMenu, setOpenChildMenu] = useState(false);
   const [anchorEl, setAnchorEl] = useState(null);
   const [themeMenu, setThemeMenu] = useState(null);
+  // Keep the (sleep-prone) backend warm while the admin panel is open.
+  useKeepAlive(true);
   // Read the menu from the store, NOT from a prop.
   //
   // App.js builds the router inside useMemo(..., []) and used to pass
@@ -34,10 +75,6 @@ const Layout = ({pageTitle,childPage}) => {
   const navigate=useNavigate();
   const dispatch=useDispatch();
   const location=useLocation();
-  // Every food admin page lives under /admin/manage/food/* (see App.js), so one
-  // prefix test covers dashboard, restaurants, menu, orders, zones, riders and
-  // payments without each page having to declare its own branding.
-  const isFoodSection = location.pathname.startsWith('/admin/manage/food');
 
   useEffect(()=>{
     dispatch(triggerPageChange(location))
@@ -91,6 +128,8 @@ const Layout = ({pageTitle,childPage}) => {
     }
   };
 
+  const closeMobileDrawer = () => setMobileOpen(false);
+
   const toggleTheme = () => {
     const newTheme = themeMode === 'light' ? 'dark' : 'light';
     setThemeMode(newTheme);
@@ -127,26 +166,11 @@ const Layout = ({pageTitle,childPage}) => {
   };
 
   const drawerWidth = 280;
-  const handleSidebarMenuClick=(sidebarItem)=>{
-    // A container (Products, Orders, Inventory, Settings, Food, Custom
-    // Printing) is seeded with no module_url, so the old handler expanded it
-    // and stopped -- the page never changed and it read as a dead button.
-    // Expand AND open the first navigable child. See sidebarNav.js.
-    if(isExpandable(sidebarItem)){
-      dispatch(expandItem({id:sidebarItem.id}));
-    }
-    const target = resolveMenuTarget(sidebarItem);
-    if(!target) return;
-    dispatch(activateItem({item:target}));
-    const adminUrl = toAdminPath(target.module_url);
-    if(adminUrl) navigate(adminUrl);
-  }
 
-  // Table lives in moduleIcons.js so it can be tested against the exact
-  // icon names the backend seeds -- see moduleIcons.test.js.
-  const getIcon = (icon) => getModuleIcon(icon);
-
-  const drawer = (
+  // Menu navigation now lives in ModuleSidebar (module-filtered drawer body).
+  // This wrapper only decides whether a tap should also close the drawer
+  // (mobile) or leave it open (desktop persistent panel).
+  const drawer = (onNavigate) => (
     <div
       style={{
         borderRight: '1px solid ' + theme.palette.background.paper,
@@ -157,50 +181,7 @@ const Layout = ({pageTitle,childPage}) => {
       }}
       className='sidebar'
     >
-      {/* The admin shell is Fabrything-branded, but the Food section carries its
-          own logo so the operator can see which side of the business they are in.
-          Store/ERP pages stay Fabrything — the two brands never mix on one screen. */}
-      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '16px', py: 2 }}>
-        <BrandLogo
-          brand={isFoodSection ? 'food' : 'fabrything'}
-          variant="horizontal"
-          mode={theme.palette.mode === 'dark' ? 'dark' : 'light'}
-          height={isFoodSection ? 30 : 26}
-        />
-      </Box>
-      <List sx={{ '& .MuiListItem-root': { transition: 'background-color 0.3s' } }}>
-        {sidebarItems.map((sidebarItem) => (
-            <React.Fragment key={sidebarItem.id}>
-            <ListItem onClick={()=>handleSidebarMenuClick(sidebarItem)} sx={{ '&.Mui-selected': { backgroundColor: theme.palette.action.selected }, '&:hover': { backgroundColor: theme.palette.primary.light,borderRadius:'10px' } }} className={(sidebarItem?.active && sidebarItem.submenus.length===0)?"active-sidebar":""}>
-                <ListItemIcon>
-                    {getIcon(sidebarItem.module_icon)}
-                </ListItemIcon>
-                <ListItemText primary={sidebarItem.module_name} />
-                {"submenus" in sidebarItem && sidebarItem.submenus.length>0?
-                    <>
-                        {(sidebarItem?.expanded || sidebarItem?.active) ? <ExpandLess /> : <ExpandMore />}
-                    </>
-                :""}
-            </ListItem>
-            {"submenus" in sidebarItem && sidebarItem.submenus.length>0?
-                <Collapse in={sidebarItem?.expanded || sidebarItem?.active} timeout="auto" unmountOnExit>
-                <List component="div" disablePadding>
-              {sidebarItem.submenus.map(child => (
-                            <ListItem button sx={{ pl: 4 }} key={child.module_name} onClick={()=>handleSidebarMenuClick(child)} className={child?.active?"active-sidebar":""}>
-                                <ListItemIcon>
-                                    {getIcon(child.module_icon)}
-                                </ListItemIcon>
-                                <ListItemText primary={child.module_name} />
-                            </ListItem>
-                ))}
-                </List>
-                </Collapse>              
-
-                :""}
-            </React.Fragment>
-        ))}
-
-      </List>
+      <DrawerBody onNavigate={onNavigate} />
     </div>
   );
 
@@ -374,7 +355,7 @@ const Layout = ({pageTitle,childPage}) => {
                 '& .MuiDrawer-paper': { boxSizing: 'border-box', width: drawerWidth },
               }}
             >
-              {drawer}
+              {drawer(closeMobileDrawer)}
             </Drawer>
             <Drawer
               variant="persistent"
@@ -384,7 +365,7 @@ const Layout = ({pageTitle,childPage}) => {
                 '& .MuiDrawer-paper': { boxSizing: 'border-box', width: desktopOpen ? drawerWidth : 0, transition: 'width 0.3s' },
               }}
             >
-              {drawer}
+              {drawer()}
             </Drawer>
           </Box>
           <Box
@@ -423,6 +404,7 @@ const Layout = ({pageTitle,childPage}) => {
                     {pageTitle || 'Dashboard'}
                 </Typography>
                 <Box sx={{ flexGrow: 1 }} />
+                  <ModuleBell />
                   <IconButton
                   className="profile-icon"
                     color="inherit"
@@ -440,6 +422,9 @@ const Layout = ({pageTitle,childPage}) => {
                     <AutoAwesomeTwoTone/>
                   </IconButton>
               </Toolbar>
+              <Box sx={{ borderTop: '1px solid', borderColor: 'divider', px: 2, display: 'flex' }}>
+                <ModuleSwitcher compact />
+              </Box>
             </AppBar>
             {profileMenu}
             {themeMenuUI}
@@ -467,4 +452,10 @@ const Layout = ({pageTitle,childPage}) => {
   );
 };
 
-export default React.memo(Layout);
+export default React.memo(function LayoutWithModules(props) {
+  return (
+    <ModuleProvider>
+      <Layout {...props} />
+    </ModuleProvider>
+  );
+});

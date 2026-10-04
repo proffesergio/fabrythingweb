@@ -23,6 +23,7 @@ import AppSplash from './storefront/components/AppSplash';
 import InstallPrompt from './storefront/components/InstallPrompt';
 import Box from '@mui/material/Box';
 import { trackPageview } from './utils/analytics';
+import useKeepAlive from './admin/keepAlive';
 
 // Vendor (Restaurant-role) dashboard imports
 import VendorLayout from './vendor/VendorLayout';
@@ -69,6 +70,11 @@ const ManageAnalytics = lazy(() => import('./pages/analytics/ManageAnalytics'));
 const ManageAffiliateProducts = lazy(() => import('./pages/affiliate/ManageAffiliateProducts'));
 const ManagePrintRequests = lazy(() => import('./pages/printing/ManagePrintRequests'));
 const PrintSetup = lazy(() => import('./pages/printing/PrintSetup'));
+// ── Modular admin: per-business overview dashboards + index redirect ──
+const ShopOverview = lazy(() => import('./admin/pages/ShopOverview'));
+const FoodOverview = lazy(() => import('./admin/pages/FoodOverview'));
+const NewsOverview = lazy(() => import('./admin/pages/NewsOverview'));
+const AdminIndex = lazy(() => import('./admin/modules/AdminIndex'));
 const RiderDashboard = lazy(() => import('./rider/RiderDashboard'));
 const RiderLogin = lazy(() => import('./rider/RiderLogin'));
 const HomePage = lazy(() => import('./storefront/pages/HomePage'));
@@ -163,6 +169,8 @@ function App() {
   const {status,error}=useSelector(state=>state.sidebardata);
   const {isLoggedIn}=useSelector(state=>state.isLoggedInReducer);
   const dispatch=useDispatch();
+  // Keep the backend warm while any tab is open (visible tabs only).
+  useKeepAlive(true);
 
   useEffect(()=>{
     if(status=='idle'){
@@ -270,13 +278,19 @@ function App() {
       {path:"/rider",element:<ProtectedRoute element={<RiderDashboard/>}/>},
 
       // ── Admin Routes ──
+      // Module homes (/admin/shop|food|news) are the per-business dashboards;
+      // /admin index redirects to the last-used one (AdminIndex). All legacy
+      // /admin/manage/* pages keep their paths, now grouped by the switcher.
       {path:"/admin/auth",element:<Auth/>},
       {
         path:"/admin",
         element:<Layout/>,
         errorElement:<Layout childPage={<Error404Page/>}/>,
         children:[
-          {index:true,element:<ProtectedRoute element={<Home/>}/>},
+          {index:true,element:<ProtectedRoute element={<AdminIndex/>}/>},
+          {path:"shop",element:<ProtectedRoute element={<ShopOverview/>}/>},
+          {path:"food",element:<ProtectedRoute element={<FoodOverview/>}/>},
+          {path:"news",element:<ProtectedRoute element={<NewsOverview/>}/>},
           {path:"home",element:<ProtectedRoute element={<Home/>}/>},
           {path:"form/:formName",element:<ProtectedRoute element={<DynamicForm/>}/>},
           {path:"form/:formName/:id",element:<ProtectedRoute element={<DynamicForm/>}/>},
