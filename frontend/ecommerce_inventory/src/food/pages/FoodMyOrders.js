@@ -5,6 +5,8 @@ import ChevronRightRoundedIcon from '@mui/icons-material/ChevronRightRounded';
 import { motion } from 'framer-motion';
 import useApi from '../../hooks/APIHandler';
 import { isSignedIn } from '../../utils/authToken';
+import GuestOrdersPanel from '../components/GuestOrdersPanel';
+import { readGuestOrders } from '../utils/guestOrders';
 
 const STATUS_COLOR = {
   DELIVERED: 'success', CANCELLED: 'default', OUT_FOR_DELIVERY: 'primary',
@@ -38,9 +40,11 @@ export default function FoodMyOrders() {
   if (!signedIn) {
     const back = encodeURIComponent('/food/orders');
     return (
-      <Box sx={{ textAlign: 'center', py: 10 }}>
-        <Box sx={{ fontSize: 60, mb: 1 }}>🔐</Box>
-        <Typography variant="h6">Sign in to see your orders</Typography>
+      <Box sx={{ maxWidth: 640, mx: 'auto' }}>
+        <GuestOrdersPanel />
+        <Box sx={{ textAlign: 'center', py: 6 }}>
+          <Box sx={{ fontSize: 60, mb: 1 }}>🔐</Box>
+          <Typography variant="h6">Sign in to see your orders</Typography>
         <Typography color="text.secondary" sx={{ mb: 3 }}>
           Your past and ongoing food orders live in your account.
         </Typography>
@@ -48,9 +52,7 @@ export default function FoodMyOrders() {
           <Button variant="contained" component={Link} to={`/auth/login?redirect=${back}`}>Sign in</Button>
           <Button variant="outlined" component={Link} to={`/auth/signup?redirect=${back}`}>Create account</Button>
         </Stack>
-        <Typography variant="body2" color="text.secondary" sx={{ mt: 3 }}>
-          Ordered as a guest? Open the tracking link from your order confirmation.
-        </Typography>
+        </Box>
       </Box>
     );
   }
@@ -93,6 +95,11 @@ export default function FoodMyOrders() {
           </Card>
         </Box>
       ))}
+      {readGuestOrders().length > 0 && (
+        <Box sx={{ mt: 4 }}>
+          <GuestOrdersPanel compact signedIn />
+        </Box>
+      )}
     </Box>
   );
 }

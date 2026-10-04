@@ -38,7 +38,7 @@ class FoodOrderSerializer(serializers.ModelSerializer):
                   "coupon_code", "delivery_fee", "tip", "total", "eta_minutes", "payment_method",
                   "payment_status", "rider_name", "rider_phone",
                   "rider_lat", "rider_lng", "rider_last_seen_at",
-                  "restaurant_lat", "restaurant_lng", "created_at", "items"]
+                  "restaurant_lat", "restaurant_lng", "created_at", "notes", "items"]
 
     def _live_rider(self, obj):
         if obj.status not in LIVE_TRACKING_STATUSES:

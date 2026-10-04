@@ -206,6 +206,12 @@ export default function FoodOrderTrack() {
           </Stack>
         ))}
         <Divider sx={{ my: 1 }} />
+        {order.notes && (
+          <Box sx={{ mb: 1, p: 1.25, borderRadius: 2, bgcolor: 'action.hover' }}>
+            <Typography variant="caption" color="text.secondary">Note for the kitchen</Typography>
+            <Typography variant="body2" sx={{ fontWeight: 600 }}>“{order.notes}”</Typography>
+          </Box>
+        )}
         <Stack direction="row" justifyContent="space-between">
           <Typography fontWeight={800}>Total (COD)</Typography>
           <Typography fontWeight={800} color="primary.main">৳{order.total}</Typography>

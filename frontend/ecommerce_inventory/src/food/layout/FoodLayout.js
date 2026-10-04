@@ -15,6 +15,7 @@ import LocationPicker from '../components/LocationPicker';
 import FoodGalaxy from '../components/FoodGalaxy';
 import NotificationsBell from '../components/NotificationsBell';
 import NoticeMarquee from '../components/NoticeMarquee';
+import FoodFooter from '../components/FoodFooter';
 import FoodBottomNav from '../components/FoodBottomNav';
 import { useFoodTheme } from '../context/FoodThemeContext';
 import BrandLogo from '../../components/BrandLogo';
@@ -149,41 +150,11 @@ export default function FoodLayout() {
         <Outlet />
       </Container>
 
-      {/* Partner recruitment. A footer strip rather than a header button: it is
-          for shop owners, who are a rounding error next to the customers the
-          header serves — but it has to be findable without being told.
-          Not on the cart/checkout pages: those end in a fixed "Place order" bar
-          that this strip scrolls under, and a shop-owner CTA has no business
-          competing with the customer's primary action anyway. */}
-      {!pathname.startsWith('/food/partner') && !onCartPages && (
-        <Container maxWidth="lg" sx={{ position: 'relative', zIndex: 1, pb: 3 }}>
-          <Box sx={{ p: 2.5, borderRadius: 4, border: 1, borderColor: 'divider',
-                     bgcolor: 'background.paper', display: 'flex', gap: 2,
-                     flexDirection: { xs: 'column', sm: 'row' },
-                     alignItems: { xs: 'stretch', sm: 'center' }, justifyContent: 'space-between' }}>
-            <Box>
-              <Typography sx={{ fontWeight: 800 }}>
-                {loc.lang === 'bn' ? 'রেস্তোরাঁর মালিক?' : 'Own a restaurant?'}
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                {loc.lang === 'bn'
-                  ? 'ফেব্রিথিং ফুডে যুক্ত হয়ে আপনার এলাকা থেকে অর্ডার নিন।'
-                  : 'Partner with Fabrything Food and take orders from your area.'}
-              </Typography>
-            </Box>
-            <Box sx={{ display: 'flex', alignItems: 'center', flexShrink: 0 }}>
-              <Button component={Link} to="/food/partner" variant="outlined"
-                sx={{ borderRadius: 999, fontWeight: 800, flexShrink: 0 }}>
-                {loc.lang === 'bn' ? 'পার্টনার হোন' : 'Become a Partner'}
-              </Button>
-              <Button component="a" href="https://www.facebook.com/fabrything" target="_blank"
-                      rel="noopener noreferrer" size="small" sx={{ ml: 1 }}>
-                Facebook
-              </Button>
-            </Box>
-          </Box>
-        </Container>
-      )}
+      {/* Partner recruitment lives in the footer now: it is for shop owners,
+          who are a rounding error next to the browsing customers, so it no
+          longer interrupts the menu as a mid-page card. The /food/partner
+          application page itself is untouched. */}
+      <FoodFooter />
 
       <LocationPicker />
       <FoodBottomNav />

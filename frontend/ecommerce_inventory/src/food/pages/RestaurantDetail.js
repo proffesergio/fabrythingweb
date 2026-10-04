@@ -12,6 +12,7 @@ import useCachedApi from '../../hooks/useCachedApi';
 import { useFoodLocation } from '../context/FoodLocationContext';
 import { addFoodItem, selectFoodRestaurant } from '../redux/foodCartSlice';
 import ItemOptionModal from '../components/ItemOptionModal';
+import DishDetailModal from '../components/DishDetailModal';
 import { nextOpenText, closedToastText, formatTime, dayName } from '../utils/hours';
 import { FOOD } from '../theme';
 
@@ -31,7 +32,7 @@ const TAG_META = {
 };
 const fmt = (t) => (t ? String(t).slice(0, 5) : '');
 
-function DishCard({ item, onClick, restaurantClosed, lang }) {
+function DishCard({ item, onClick, onQuickAdd, restaurantClosed, lang }) {
   const hasOptions = item.option_groups && item.option_groups.length > 0;
   // Two independent reasons a dish can't be ordered: the item has its own
   // availability window (breakfast-only, say), or the whole restaurant is shut.
@@ -96,7 +97,7 @@ function DishCard({ item, onClick, restaurantClosed, lang }) {
         ) : (
           <Button variant="contained" size="small" startIcon={<AddRoundedIcon />}
             sx={{ mt: 'auto', alignSelf: 'flex-start', borderRadius: 999 }}
-            onClick={(e) => { e.stopPropagation(); onClick(); }}>
+            onClick={(e) => { e.stopPropagation(); onQuickAdd(); }}>
             {hasOptions ? 'Choose' : 'Add'}
           </Button>
         )}
@@ -111,6 +112,7 @@ export default function RestaurantDetail() {
   const dispatch = useDispatch();
   const cartRestaurant = useSelector(selectFoodRestaurant);
   const [modalItem, setModalItem] = useState(null);
+  const [detailItem, setDetailItem] = useState(null);
 
   // Stale-while-revalidate: a revisited menu paints instantly from localStorage
   // and refreshes in the background. This is the heaviest payload in the app
@@ -213,7 +215,9 @@ export default function RestaurantDetail() {
           <Grid container spacing={2.5}>
             {cat.items.map((item) => (
               <Grid item xs={6} sm={4} md={3} key={item.id}>
-                <DishCard item={item} onClick={() => onItemClick(item)}
+                <DishCard
+                  item={item} onClick={() => setDetailItem(item)}
+                  onQuickAdd={() => onItemClick(item)}
                   restaurantClosed={!openNow} lang={lang} />
               </Grid>
             ))}
@@ -222,6 +226,21 @@ export default function RestaurantDetail() {
       ))}
 
       <ItemOptionModal open={!!modalItem} item={modalItem} restaurant={data} onClose={() => setModalItem(null)} onAdd={addLine} />
+      <DishDetailModal
+        open={!!detailItem} item={detailItem} restaurantClosed={!openNow} lang={lang}
+        onClose={() => setDetailItem(null)}
+        onCustomize={(it) => { setDetailItem(null); setModalItem(it); }}
+        onAdd={(qty) => {
+          const it = detailItem;
+          setDetailItem(null);
+          if (!it) return;
+          addLine({
+            lineId: `${it.id}:`, restaurantId: data.id, restaurantSlug: data.slug, restaurantName: data.display_name,
+            itemId: it.id, name: it.display_name, image: it.image || '',
+            unitPrice: Number(it.effective_price ?? it.price), quantity: qty, selectedOptions: [],
+          });
+        }}
+      />
     </Box>
   );
 }

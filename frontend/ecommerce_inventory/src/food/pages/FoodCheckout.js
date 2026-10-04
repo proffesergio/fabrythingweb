@@ -13,6 +13,7 @@ import LocalOfferRoundedIcon from '@mui/icons-material/LocalOfferRounded';
 import { motion } from 'framer-motion';
 import { toast } from 'react-toastify';
 import useApi from '../../hooks/APIHandler';
+import { recordGuestOrder } from '../utils/guestOrders';
 import { isSignedIn } from '../../utils/authToken';
 import { useFoodLocation } from '../context/FoodLocationContext';
 import {
@@ -45,7 +46,7 @@ export default function FoodCheckout() {
   const { callApi, loading } = useApi();
   const dispatch = useDispatch();
   const navigate = useNavigate();
-  const [form, setForm] = useState({ name: '', phone: '', address: '' });
+  const [form, setForm] = useState({ name: '', phone: '', address: '', notes: '' });
   const [zone, setZone] = useState(zoneId || '');
   const [village, setVillage] = useState(villageId || '');
   const [err, setErr] = useState('');
@@ -142,7 +143,7 @@ export default function FoodCheckout() {
     if (!zone && !coords) { setErr('Choose a delivery area or use your location.'); return; }
     const body = {
       restaurant_slug: restaurant.slug, contact_name: form.name, contact_phone: form.phone,
-      delivery_address: form.address, tip, payment_method: method,
+      delivery_address: form.address, notes: form.notes.trim(), tip, payment_method: method,
       coupon_code: applied?.code || '', redeem_points: redeem ? points : 0,
       items: items.map((i) => ({ item_id: i.itemId, quantity: i.quantity, option_ids: i.selectedOptions.map((o) => o.optionId) })),
     };
@@ -165,6 +166,11 @@ export default function FoodCheckout() {
     if (res?.status === 201) {
       const code = res.data.data.order_code;
       try { localStorage.setItem(`food_ph_${code}`, form.phone); } catch { /* ignore */ }
+      recordGuestOrder({
+        code, phone: form.phone,
+        restaurant: restaurant?.name || res.data.data?.restaurant_name || '',
+        total: res.data.data?.total ?? grandTotal,
+      });
       dispatch(clearFoodCart());
       toast.success('Order placed!');
       navigate(`/food/order/${code}`, { state: { phone: form.phone } });
@@ -202,6 +208,9 @@ export default function FoodCheckout() {
             InputProps={{ startAdornment: <InputAdornment position="start"><PhoneOutlinedIcon color="action" /></InputAdornment> }} />
           <TextField label="Delivery address" value={form.address} onChange={set('address')} fullWidth multiline rows={2}
             InputProps={{ startAdornment: <InputAdornment position="start" sx={{ alignSelf: 'flex-start', mt: 1.5 }}><PlaceOutlinedIcon color="action" /></InputAdornment> }} />
+          <TextField label="Note for the kitchen (optional)" value={form.notes} onChange={set('notes')} fullWidth multiline rows={2}
+            placeholder="e.g. less spicy, no onion, call on arrival…"
+            inputProps={{ maxLength: 300 }} />
           <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
             <TextField select label="Union" value={zone} fullWidth
               onChange={(e) => { setZone(e.target.value); setVillage(''); }}>
