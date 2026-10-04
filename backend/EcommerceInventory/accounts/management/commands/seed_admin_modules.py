@@ -340,13 +340,86 @@ MODULES = [
         'display_order': 1,
         'parent': 'Marketing',
     },
-    # ── NobleSeek news desk (Trends-driven, max-ad detail pages) ──────────
+    # ── NobleSeek news desk ─────────────────────────────────────────────
+    # Deep links (?tab=) mirror the desk's internal tabs, so the sidebar
+    # reads like a reference news panel: Dashboard, Breaking, Category…
+    # ManageNobleSeek honours ?tab= + ?breaking= on load (no remount needed).
     {
         'module_name': 'NobleSeek News',
         'module_icon': 'Newspaper',
         'module_url': '/manage/nobleseek',
         'display_order': 6,
         'parent': None,
+    },
+    {
+        'module_name': 'News Dashboard',
+        'module_icon': 'Dashboard',
+        'module_url': '/manage/nobleseek?tab=dashboard',
+        'display_order': 1,
+        'parent': 'NobleSeek News',
+    },
+    {
+        'module_name': 'All Articles',
+        'module_icon': 'Article',
+        'module_url': '/manage/nobleseek?tab=articles',
+        'display_order': 2,
+        'parent': 'NobleSeek News',
+    },
+    {
+        'module_name': 'Breaking News',
+        'module_icon': 'Breaking',
+        'module_url': '/manage/nobleseek?tab=articles&breaking=1',
+        'display_order': 3,
+        'parent': 'NobleSeek News',
+    },
+    {
+        'module_name': 'News Categories',
+        'module_icon': 'Category',
+        'module_url': '/manage/nobleseek?tab=categories',
+        'display_order': 4,
+        'parent': 'NobleSeek News',
+    },
+    {
+        'module_name': 'News Tags',
+        'module_icon': 'Tag',
+        'module_url': '/manage/nobleseek?tab=tags',
+        'display_order': 5,
+        'parent': 'NobleSeek News',
+    },
+    {
+        'module_name': 'News Comments',
+        'module_icon': 'Comments',
+        'module_url': '/manage/nobleseek?tab=comments',
+        'display_order': 6,
+        'parent': 'NobleSeek News',
+    },
+    {
+        'module_name': 'Push Alerts',
+        'module_icon': 'Push',
+        'module_url': '/manage/nobleseek?tab=push',
+        'display_order': 7,
+        'parent': 'NobleSeek News',
+    },
+    {
+        'module_name': 'News Polls',
+        'module_icon': 'Poll',
+        'module_url': '/manage/nobleseek?tab=polls',
+        'display_order': 8,
+        'parent': 'NobleSeek News',
+    },
+    {
+        'module_name': 'News Pages',
+        'module_icon': 'Pages',
+        'module_url': '/manage/nobleseek?tab=pages',
+        'display_order': 9,
+        'parent': 'NobleSeek News',
+    },
+    {
+        'module_name': 'Ad Spaces',
+        'module_icon': 'ViewCarousel',
+        'module_url': '/manage/nobleseek?tab=ads',
+        'display_order': 10,
+        'parent': 'NobleSeek News',
     },
 ]
 

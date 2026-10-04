@@ -16,6 +16,7 @@ import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import PublishIcon from '@mui/icons-material/Publish';
 import SaveIcon from '@mui/icons-material/Save';
 import { toast } from 'react-toastify';
+import { useLocation } from 'react-router-dom';
 import useApi from '../../hooks/APIHandler';
 import DeskHome from './tabs/DeskHome';
 import TagsManager from './tabs/TagsManager';
@@ -53,6 +54,15 @@ function useDebounced(value, ms = 450) {
 
 const STATUS = ['DRAFT', 'REVIEW', 'PUBLISHED', 'ARCHIVED'];
 const STATUS_BN = { DRAFT: 'খসড়া', REVIEW: 'রিভিউ', PUBLISHED: 'প্রকাশিত', ARCHIVED: 'আর্কাইভ' };
+
+// Sidebar deep links (?tab=…) land here without a remount — honour them on
+// mount and on every query change.
+const TAB_BY_NAME = { dashboard: 0, articles: 1, trends: 2, tags: 3, categories: 4, comments: 5, push: 6, polls: 7, pages: 8, ads: 9 };
+function tabFromSearch(search) {
+  const q = new URLSearchParams(search || '');
+  const t = TAB_BY_NAME[q.get('tab')];
+  return { tab: t === undefined ? null : t, breaking: q.get('breaking') === '1' };
+}
 const EMPTY = {
   id: null, trend: '', category: '', headline: '', headline_bn: '',
   slug: '', excerpt: '', body_html: '', hero_image: '', hero_image_alt: '',
@@ -115,7 +125,9 @@ function publishGaps(f) {
 
 export default function ManageNobleSeek() {
   const { callApi } = useApi();
-  const [tab, setTab] = useState(0);
+  const location = useLocation();
+  const initial = tabFromSearch(location.search);
+  const [tab, setTab] = useState(initial.tab ?? 0);
   const [stats, setStats] = useState(() => readSnap('ns_stats'));
   const [articles, setArticles] = useState([]);
   const [trends, setTrends] = useState([]);
@@ -138,9 +150,33 @@ export default function ManageNobleSeek() {
   const [form, setForm] = useState(EMPTY);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [quickCatOpen, setQuickCatOpen] = useState(false);
+  const [quickCatName, setQuickCatName] = useState('');
+  const [quickSaving, setQuickSaving] = useState(false);
+
+  // Inline rescue for "no categories": create one without leaving the
+  // article, then continue publishing with it preselected.
+  const quickAddCategory = async () => {
+    const name = quickCatName.trim();
+    if (!name) return;
+    setQuickSaving(true);
+    const r = await callApi({
+      url: 'store/nobleseek/admin/categories/', method: 'POST',
+      body: { name, slug: slugify(name) }, silent: true,
+    });
+    setQuickSaving(false);
+    const id = r?.status === 201 ? (r.data?.data?.id ?? r.data?.id) : null;
+    if (r?.status === 200 || r?.status === 201) {
+      toast.success('বিভাগ যোগ হয়েছে');
+      setQuickCatName('');
+      setQuickCatOpen(false);
+      await loadAll();
+      if (id) setForm((f) => ({ ...f, category: id }));
+    } else toast.error('বিভাগ যোগ ব্যর্থ — বিভাগ ট্যাব থেকে চেষ্টা করুন');
+  };
   const [adCfg, setAdCfg] = useState({});
   const [savingAds, setSavingAds] = useState(false);
-  const [breakingOnly, setBreakingOnly] = useState(false);
+  const [breakingOnly, setBreakingOnly] = useState(() => tabFromSearch(location.search).breaking);
   const [tagDrill, setTagDrill] = useState('');
   const [catForm, setCatForm] = useState({ id: null, name: '', slug: '', description: '', display_order: 0, is_active: true, parent: '' });
 
@@ -204,7 +240,14 @@ export default function ManageNobleSeek() {
   useEffect(() => { loadAll(); }, [loadAll]);
 
   // Tab indexes (dashboard-first order, like the reference panel).
-  const TAB = { dashboard: 0, articles: 1, trends: 2, tags: 3, categories: 4, comments: 5, push: 6, polls: 7, pages: 8, ads: 9 };
+  const TAB = TAB_BY_NAME;
+  // Sidebar deep links share this route (?tab=…&breaking=…) without
+  // remounting — follow the query whenever it changes.
+  useEffect(() => {
+    const { tab: t, breaking } = tabFromSearch(location.search);
+    if (t !== null) setTab(t);
+    if (new URLSearchParams(location.search).has('breaking')) setBreakingOnly(breaking);
+  }, [location.search]);
   // Dashboard + tag-cloud drills land here with preset filters.
   const drillArticles = (f = {}) => {
     setStatusFilter(f.status || '');
@@ -638,6 +681,23 @@ export default function ManageNobleSeek() {
                       <Alert severity="warning" sx={{ mt: 1 }} action={<Button size="small" onClick={loadAll}>আবার লোড</Button>}>
                         বিভাগ তালিকা আসেনি — সার্ভার জেগে উঠলে আবার লোড করুন। বিভাগ ছাড়া প্রকাশ হবে না।
                       </Alert>
+                    )}
+                    {!quickCatOpen ? (
+                      <Button size="small" sx={{ mt: 1 }} onClick={() => setQuickCatOpen(true)}>
+                        ＋ তালিকায় না থাকলে এখানেই নতুন বিভাগ যোগ করুন
+                      </Button>
+                    ) : (
+                      <Box sx={{ display: 'flex', gap: 1, mt: 1 }}>
+                        <TextField
+                          size="small" fullWidth label="নতুন বিভাগের নাম" value={quickCatName}
+                          onChange={(e) => setQuickCatName(e.target.value)}
+                          onKeyDown={(e) => { if (e.key === 'Enter') quickAddCategory(); }}
+                        />
+                        <Button size="small" variant="contained" disabled={quickSaving || !quickCatName.trim()} onClick={quickAddCategory}>
+                          {quickSaving ? '…' : 'যোগ'}
+                        </Button>
+                        <Button size="small" onClick={() => { setQuickCatOpen(false); setQuickCatName(''); }}>✕</Button>
+                      </Box>
                     )}
                   </Grid>
                   <Grid item xs={12} sm={6}><TextField fullWidth size="small" label="ট্রেন্ড ID (ঐচ্ছিক)" value={form.trend} onChange={(e) => setForm({ ...form, trend: e.target.value })} /></Grid>

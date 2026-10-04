@@ -75,19 +75,28 @@ const sidebarSlice=createSlice({
             });
         },
         triggerPageChange(state,action){
+            // Deep links (?tab=…) share one pathname across siblings: a menu
+            // URL carrying a query only matches when the full query is present,
+            // while plain paths keep the old prefix behavior.
+            const locKey = window.location.pathname + window.location.search;
+            const matches = (url) => {
+                if(!url) return false;
+                if(url.includes('?')) return locKey.indexOf(url)!==-1;
+                return window.location.pathname.indexOf(url)!==-1;
+            };
             state.items.forEach(item=>{
                 item.active=false;
                 item.expanded=false;
                 item.submenus.forEach(submenu=>{
                     submenu.active=false;
-                    if(submenu.module_url && window.location.pathname.indexOf(submenu.module_url)!==-1){
+                    if(matches(submenu.module_url)){
                         submenu.active=true;
                         item.active=true;
                         item.expanded=true;
                     }
                 });
 
-                if(item.module_url && window.location.pathname.indexOf(item.module_url)!==-1 && item.submenus.length===0){
+                if(item.module_url && matches(item.module_url) && item.submenus.length===0){
                     item.active=true;
                     item.expanded=true;
                 }

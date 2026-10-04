@@ -151,3 +151,5 @@ class ModuleTagSeedTests(TestCase):
         # children inherit the parent business
         assert by_name["Food Orders"] == "food"
         assert by_name["All Products"] == "shop"
+        # news desk deep-link children resolve to desk tabs
+        assert by_name["Breaking News"] == "news"

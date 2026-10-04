@@ -10,8 +10,11 @@ import {
   Chat as ChatIcon,
   CloudDownloadOutlined,
   DashboardOutlined,
+  Description as DescriptionIcon,
+  FlashOn as FlashOnIcon,
   GroupOutlined,
   HowToReg,
+  HowToVote as HowToVoteIcon,
   InventoryOutlined,
   Map as MapIcon,
   Newspaper as NewspaperIcon,
@@ -19,10 +22,12 @@ import {
   ReceiptLong,
   ReceiptOutlined,
   Restaurant as RestaurantIcon,
+  Send as SendIcon,
   Settings as SettingsIcon,
   ShoppingBasketRounded,
   ShoppingCartOutlined,
   StorefrontOutlined,
+  Tag as TagIcon,
   Tune as TuneIcon,
   TwoWheeler,
   ViewCarousel as ViewCarouselIcon,
@@ -73,6 +78,13 @@ const ICONS = {
   Analytics: AnalyticsIcon,
   Newspaper: NewspaperIcon,
   Article: ArticleIcon,
+  // NobleSeek desk sections (seeded as children of NobleSeek News).
+  Breaking: FlashOnIcon,
+  Tag: TagIcon,
+  Comments: ChatIcon,
+  Push: SendIcon,
+  Poll: HowToVoteIcon,
+  Pages: DescriptionIcon,
 };
 
 // A neutral "module" glyph. The old fallback was AccountCircle, which reads as
