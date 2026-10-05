@@ -111,7 +111,7 @@ const ManageUsers = ({onSupplierSelect}) => {
                     return <>
                     {onSupplierSelect &&
                     <IconButton onClick={()=>onSupplierSelect(params.row)}><Add/></IconButton>}
-                    <IconButton onClick={()=>navigate(`/form/users/${params.row.id}`)}>
+                    <IconButton onClick={()=>navigate(`/admin/form/users/${params.row.id}`)}>
                         <Edit color="primary" />
                     </IconButton>
                     <IconButton onClick={()=>{ setOpenPermissionUserId(params.row.id); setOpenPermission(true); }}><SecurityOutlined color="primary"/></IconButton>
@@ -182,10 +182,10 @@ const ManageUsers = ({onSupplierSelect}) => {
             {!onSupplierSelect &&
             <Box display={"flex"} justifyContent={"space-between"}>
                 <Breadcrumbs>
-                    <Typography variant="body2" onClick={()=>navigate('/')}>Home</Typography>
-                    <Typography variant="body2" onClick={()=>navigate('/manage/users')}>Manage (Customer/Supplier/Admin/Staff)</Typography>
+                    <Typography variant="body2" onClick={()=>navigate('/admin')}>Home</Typography>
+                    <Typography variant="body2" onClick={()=>navigate('/admin/manage/users')}>Manage (Customer/Supplier/Admin/Staff)</Typography>
                 </Breadcrumbs>
-                <Button startIcon={<AddCircle/>} variant="contained" onClick={()=>{ navigate('/form/users') }}>Add Users</Button>
+                <Button startIcon={<AddCircle/>} variant="contained" onClick={()=>{ navigate('/admin/form/users') }}>Add Users</Button>
             </Box>}
             <Grid container spacing={2}>
                 <Grid item xs={12} sm={(showImages || showAddReviews)?8:12} lg={(showImages || showAddReviews)?9:12}>

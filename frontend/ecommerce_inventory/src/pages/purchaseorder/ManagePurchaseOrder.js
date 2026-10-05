@@ -82,7 +82,7 @@ const ManagePurchaseOrder = ({onProductSelected}) => {
     }
     const onEditClick=(params)=>{
         devLog(params);
-        navigate(`/create/po/${params.row.id}`)
+        navigate(`/admin/create/po/${params.row.id}`)
     }
 
     const showJSONData=(item,title)=>{
@@ -105,7 +105,7 @@ const ManagePurchaseOrder = ({onProductSelected}) => {
                     {params.row.status==='DRAFT' ?<IconButton onClick={()=>onEditClick(params)}>
                         <Edit color="primary" />
                     </IconButton>:
-                    <IconButton onClick={()=>navigate(`/po/details/${params.row.id}`)}>
+                    <IconButton onClick={()=>navigate(`/admin/create/po/${params.row.id}`)}>
                         <Dashboard color="primary" />
                     </IconButton>
                     }
@@ -150,7 +150,7 @@ const ManagePurchaseOrder = ({onProductSelected}) => {
             {!onProductSelected &&
             <Breadcrumbs>
                 <Typography variant="body2" onClick={()=>navigate('/')}>Home</Typography>
-                <Typography variant="body2" onClick={()=>navigate('/manage/purchaseorder')}>Manage Purchase Order</Typography>
+                <Typography variant="body2" onClick={()=>navigate('/admin/manage/purchaseorder')}>Manage Purchase Order</Typography>
             </Breadcrumbs>}
             <Grid container spacing={2}>
             <Grid item xs={12} sm={showImages?8:12} lg={showImages?9:12}>

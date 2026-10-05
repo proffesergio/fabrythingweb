@@ -51,7 +51,7 @@ const ManageModuleUrls = () => {
     return <Box>
         <Breadcrumbs>
             <Typography variant="body2" onClick={()=>navigate('/')}>Home</Typography>
-            <Typography variant="body2" onClick={()=>navigate('/manage/moduleUrls/')}>Manage Module Urls</Typography>
+            <Typography variant="body2" onClick={()=>navigate('/admin/manage/moduleurls')}>Manage Module Urls</Typography>
         </Breadcrumbs>
         <Grid container spacing={2} mt={2}>
                 {

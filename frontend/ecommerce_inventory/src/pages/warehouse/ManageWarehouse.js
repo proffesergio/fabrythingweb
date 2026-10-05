@@ -75,11 +75,11 @@ const ManageWarhouse = () => {
 
     const onEditClick=(params)=>{
         devLog(params);
-        navigate(`/form/warehouse/${params.row.id}`)
+        navigate(`/admin/form/warehouse/${params.row.id}`)
     }
     const onAddClick=(params)=>{
         devLog(params);
-        navigate('/form/warehouse')
+        navigate('/admin/form/warehouse')
     }
 
 
@@ -167,7 +167,7 @@ const ManageWarhouse = () => {
             <Box display={"flex"} justifyContent={"space-between"} mb={3}>
             <Breadcrumbs mt={2}>
                 <Typography variant="body2" onClick={()=>navigate('/')}>Home</Typography>
-                <Typography variant="body2" onClick={()=>navigate('/manage/warehouse')}>Manage Warehouse</Typography>
+                <Typography variant="body2" onClick={()=>navigate('/admin/manage/warehouse')}>Manage Warehouse</Typography>
             </Breadcrumbs>
             <Button variant="contained" onClick={()=>navigate('/form/warehouse')} startIcon={<AddOutlined/>}>Add Warehouse</Button>
             </Box>

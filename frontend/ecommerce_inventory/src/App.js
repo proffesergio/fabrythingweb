@@ -1,7 +1,7 @@
 import './App.css';
 import Home from './pages/Home';
 import Layout from './layout/layout';
-import {RouterProvider, createBrowserRouter} from 'react-router-dom'
+import {RouterProvider, createBrowserRouter, Navigate, useLocation} from 'react-router-dom'
 import ProtectedRoute from './utils/ProtectedRoute';
 import VendorRoute from './utils/VendorRoute';
 import {ToastContainer} from 'react-toastify';
@@ -141,13 +141,18 @@ function FoodApp() {
     </FoodThemeProvider>
   );
 }
-
 function StorefrontAuthTheme({ children }) {
   const theme = useMemo(
     () => getStorefrontTheme(localStorage.getItem('sf_dark') === 'true' ? 'dark' : 'light'),
     []
   );
   return <ThemeProvider theme={theme}>{children}</ThemeProvider>;
+}
+
+// See the legacy-redirect routes above: re-homes unprefixed admin URLs.
+function AdminPrefixRedirect() {
+  const loc = useLocation();
+  return <Navigate to={`/admin${loc.pathname}${loc.search}`} replace />;
 }
 
 // Shown while a route's JS chunk downloads. Every page below is code-split
@@ -276,6 +281,15 @@ function App() {
       // because that page defaults its post-login redirect to "/".
       {path:"/rider/login",element:<RiderLogin/>},
       {path:"/rider",element:<ProtectedRoute element={<RiderDashboard/>}/>},
+
+      // ── Legacy unprefixed admin links ─────────────────────────────────
+      // Old admin pages navigate('/form/…') / navigate('/manage/…') without
+      // the /admin prefix (fixed at the call sites, but stale cached bundles
+      // and old bookmarks still hit these). Bounce them into /admin instead
+      // of the 404 page. No legitimate storefront route uses these prefixes.
+      {path:"/form/*",element:<AdminPrefixRedirect/>},
+      {path:"/manage/*",element:<AdminPrefixRedirect/>},
+      {path:"/create/*",element:<AdminPrefixRedirect/>},
 
       // ── Admin Routes ──
       // Module homes (/admin/shop|food|news) are the per-business dashboards;

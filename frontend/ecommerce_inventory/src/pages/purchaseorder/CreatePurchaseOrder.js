@@ -140,7 +140,7 @@ const CreatePurchaseOrder = () => {
         methods.reset();
         toast.success(response.data.message);
         if(id){
-          navigate('/manage/purchaseorder')
+          navigate('/admin/manage/purchaseorder')
         }
     }
   }
