@@ -74,6 +74,26 @@ const EMPTY = {
 
 const stripTags = (s) => String(s || '').replace(/<[^>]+>/g, ' ');
 const wordCount = (s) => stripTags(s).split(/\s+/).filter(Boolean).length;
+// DRF validation errors come as {field: [msgs]} (no message key), while our
+// renderResponse errors look like {message, errors}. Flatten any shape into
+// one readable line so the desk shows the SERVER's reason verbatim.
+function drfErrorText(data, fallback) {
+  if (!data) return fallback;
+  if (typeof data.message === 'string' && data.message) return data.message;
+  const bits = [];
+  const push = (k, v) => {
+    const msgs = Array.isArray(v) ? v : [v];
+    msgs.forEach((m) => { if (m) bits.push(`${k}: ${m}`); });
+  };
+  Object.entries(data).forEach(([k, v]) => {
+    if (k === 'message' || k === 'data') return;
+    if (Array.isArray(v) && v.every((x) => typeof x === 'string')) push(k, v);
+    else if (typeof v === 'string') push(k, v);
+    else if (v && typeof v === 'object') Object.entries(v).forEach(([k2, v2]) => push(`${k}.${k2}`, v2));
+  });
+  if (Array.isArray(data.errors)) data.errors.forEach((m) => { if (m) bits.push(String(m)); });
+  return bits.length ? bits.join(' | ') : fallback;
+}
 const slugify = (s) => String(s || '').trim().toLowerCase().replace(/[\s_]+/g, '-').replace(/[^\p{L}\p{N}-]+/gu, '').replace(/-+/g, '-').replace(/^-|-$/g, '');
 const toLocalInput = (iso) => {
   if (!iso) return '';
@@ -175,10 +195,7 @@ export default function ManageNobleSeek() {
       await loadAll();
       if (id) setForm((f) => ({ ...f, category: id }));
     } else {
-      const msg = r?.data?.message
-        || (Array.isArray(r?.data?.errors) ? r.data.errors.join(', ') : null)
-        || 'বিভাগ যোগ ব্যর্থ — বিভাগ ট্যাব থেকে চেষ্টা করুন';
-      toast.error(msg);
+      toast.error(drfErrorText(r?.data, 'বিভাগ যোগ ব্যর্থ — বিভাগ ট্যাব থেকে চেষ্টা করুন'), { autoClose: 8000 });
     }
   };
   const [adCfg, setAdCfg] = useState({});
@@ -367,12 +384,14 @@ export default function ManageNobleSeek() {
     const isEdit = !!catForm.id;
     const r = await callApi({
       url: isEdit ? `store/nobleseek/admin/categories/${catForm.id}/` : 'store/nobleseek/admin/categories/',
-      method: isEdit ? 'PATCH' : 'POST', body: payload,
+      method: isEdit ? 'PATCH' : 'POST', body: payload, rawError: true,
     });
     if (r?.status === 200 || r?.status === 201) {
       toast.success(isEdit ? 'বিভাগ হালনাগাদ হয়েছে' : 'বিভাগ যোগ হয়েছে');
       setCatForm({ id: null, name: '', slug: '', description: '', display_order: 0, is_active: true, parent: '' });
       loadAll();
+    } else {
+      toast.error(drfErrorText(r?.data, 'বিভাগ সংরক্ষণ ব্যর্থ'), { autoClose: 8000 });
     }
   };
 
