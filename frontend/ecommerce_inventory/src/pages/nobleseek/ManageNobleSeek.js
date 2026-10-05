@@ -162,17 +162,22 @@ export default function ManageNobleSeek() {
     setQuickSaving(true);
     const r = await callApi({
       url: 'store/nobleseek/admin/categories/', method: 'POST',
-      body: { name, slug: slugify(name) }, silent: true,
+      body: { name, slug: slugify(name) }, silent: true, rawError: true,
     });
     setQuickSaving(false);
-    const id = r?.status === 201 ? (r.data?.data?.id ?? r.data?.id) : null;
+    const id = r?.data?.data?.id ?? r?.data?.id;
     if (r?.status === 200 || r?.status === 201) {
       toast.success('বিভাগ যোগ হয়েছে');
       setQuickCatName('');
       setQuickCatOpen(false);
       await loadAll();
       if (id) setForm((f) => ({ ...f, category: id }));
-    } else toast.error('বিভাগ যোগ ব্যর্থ — বিভাগ ট্যাব থেকে চেষ্টা করুন');
+    } else {
+      const msg = r?.data?.message
+        || (Array.isArray(r?.data?.errors) ? r.data.errors.join(', ') : null)
+        || 'বিভাগ যোগ ব্যর্থ — বিভাগ ট্যাব থেকে চেষ্টা করুন';
+      toast.error(msg);
+    }
   };
   const [adCfg, setAdCfg] = useState({});
   const [savingAds, setSavingAds] = useState(false);
@@ -525,7 +530,21 @@ export default function ManageNobleSeek() {
         <Grid container spacing={2}>
           <Grid item xs={12} md={7}>
             <Paper sx={{ p: 2 }}>
-              <Typography variant="subtitle1" fontWeight={800} gutterBottom>বিভাগসমূহ (পোর্টাল নেভিগেশন ক্রম)</Typography>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                <Typography variant="subtitle1" fontWeight={800} sx={{ flex: 1 }}>বিভাগসমূহ (পোর্টাল নেভিগেশন ক্রম)</Typography>
+                <Button
+                  size="small" variant="outlined"
+                  onClick={async () => {
+                    const r = await callApi({ url: 'store/nobleseek/admin/categories/restore/', method: 'POST' });
+                    if (r?.status === 200) {
+                      toast.success('ডিফল্ট বিভাগ ফিরিয়ে আনা হয়েছে');
+                      loadAll();
+                    }
+                  }}
+                >
+                  ডিফল্ট ফিরিয়ে আনুন
+                </Button>
+              </Box>
               <Table size="small">
                 <TableHead><TableRow><TableCell>ক্রম</TableCell><TableCell>নাম</TableCell><TableCell>সক্রিয়</TableCell><TableCell align="right">অ্যাকশন</TableCell></TableRow></TableHead>
                 <TableBody>

@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Box, Collapse, List, ListItem, ListItemIcon, ListItemText, ListSubheader, TextField } from '@mui/material';
 import { ExpandLess, ExpandMore, Dashboard as DashboardIcon } from '@mui/icons-material';
 import { useDispatch, useSelector } from 'react-redux';
@@ -23,6 +23,21 @@ export default function ModuleSidebar({ onNavigate }) {
   const { mine, shared } = useMemo(() => splitItems(items, active), [items, active]);
   const shownMine = useMemo(() => filterMenuItems(mine, q), [mine, q]);
   const shownShared = useMemo(() => filterMenuItems(shared, q), [shared, q]);
+
+  // Keep the active business's group open (e.g. NobleSeek News with its desk
+  // deep-links) across refreshes and module switches. Guarded so a manual
+  // collapse is never fought: each module auto-expands at most once.
+  const autoExpanded = useRef(null);
+  useEffect(() => {
+    const group = items.find(
+      (it) => (it.module || 'shared') === active && (it.submenus || []).length > 0
+    );
+    if (group && !group.expanded && !group.active
+        && autoExpanded.current !== `${active}:${group.id}`) {
+      autoExpanded.current = `${active}:${group.id}`;
+      dispatch(expandItem({ id: group.id }));
+    }
+  }, [active, items, dispatch]);
 
   const go = (sidebarItem) => {
     if (isExpandable(sidebarItem)) dispatch(expandItem({ id: sidebarItem.id }));

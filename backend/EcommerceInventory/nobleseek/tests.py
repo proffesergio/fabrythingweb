@@ -224,3 +224,58 @@ class NobleSeekPagesCommentsPollsPushTests(TestCase):
         # admin serializer exposes the parent link
         from nobleseek.serializers import NewsCategorySerializer
         assert NewsCategorySerializer(child).data["parent"] == parent.pk
+
+
+class NobleSeekCategorySafetyTests(TestCase):
+    """Deleting a referenced section must fail; the restore endpoint must
+    bring back defaults without touching articles."""
+
+    def _staff(self):
+        from types import SimpleNamespace
+
+        from rest_framework.test import APIRequestFactory, force_authenticate
+        req = APIRequestFactory().get("/")
+        force_authenticate(req, user=SimpleNamespace(
+            id=1, role="Super Admin", is_authenticated=True,
+            domain_user_id_id=1))
+        return req
+
+    def test_delete_blocked_while_referenced(self):
+        from nobleseek.views_admin import AdminCategoryDetailView
+        cat = NewsCategory.objects.create(name="Sports", slug="sports")
+        Article.objects.create(
+            category=cat, headline="in sports", body_html="<p>hi</p>",
+            status=Article.Status.PUBLISHED)
+        req = self._staff()
+        req.method = "DELETE"
+        r = AdminCategoryDetailView.as_view()(req, pk=cat.pk)
+        assert r.status_code == 400, r.data
+        assert NewsCategory.objects.filter(pk=cat.pk).exists()
+
+    def test_delete_empty_category_allowed(self):
+        from nobleseek.views_admin import AdminCategoryDetailView
+        cat = NewsCategory.objects.create(name="Empty", slug="empty")
+        req = self._staff()
+        req.method = "DELETE"
+        r = AdminCategoryDetailView.as_view()(req, pk=cat.pk)
+        assert r.status_code == 204, r.status_code
+        assert not NewsCategory.objects.filter(pk=cat.pk).exists()
+
+    def test_restore_recreates_defaults_idempotently(self):
+        from nobleseek.models import FlatPage
+        from nobleseek.views_admin import AdminCategoryRestoreView
+        assert NewsCategory.objects.count() == 0
+        req = self._staff()
+        req.method = "POST"
+        r = AdminCategoryRestoreView.as_view()(req)
+        assert r.status_code == 200, r.data
+        assert NewsCategory.objects.count() == 16
+        assert FlatPage.objects.count() == 5
+        # second run changes nothing, articles untouched
+        art = Article.objects.create(
+            headline="kept", body_html="<p>hi</p>",
+            status=Article.Status.DRAFT)
+        r2 = AdminCategoryRestoreView.as_view()(req)
+        assert r2.status_code == 200
+        assert NewsCategory.objects.count() == 16
+        assert Article.objects.filter(pk=art.pk).exists()

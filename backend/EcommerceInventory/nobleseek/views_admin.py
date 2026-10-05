@@ -79,6 +79,18 @@ class AdminCategoryDetailView(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = NewsCategorySerializer
     queryset = NewsCategory.objects.all()
 
+    def destroy(self, request, *args, **kwargs):
+        # Deleting a section orphans its stories (they stay published but
+        # category-less, invisible in sections and pie charts) — refuse while
+        # referenced so the desk can never wipe its own taxonomy by accident.
+        obj = self.get_object()
+        n = Article.objects.filter(category=obj).count()
+        if n:
+            return Response(
+                {"message": f"মোছা যাবে না — {n}টি প্রতিবেদন এই বিভাগে আছে। আগে সেগুলো অন্য বিভাগে সরান।"},
+                status=400)
+        return super().destroy(request, *args, **kwargs)
+
 
 class AdminTrendListView(generics.ListAPIView):
     authentication_classes = [JWTAuthentication]
@@ -193,6 +205,20 @@ class AdminTagsView(APIView):
         data = [{"tag": t, "count": n}
                 for t, n in counter.most_common(100)]
         return renderResponse(data=data, message="Tags")
+
+
+class AdminCategoryRestoreView(APIView):
+    """Re-run the taxonomy seed on demand (idempotent, create-only): restores
+    deleted default sections without touching articles or redeploying."""
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated, StaffPerm]
+
+    def post(self, request):
+        from django.core.management import call_command
+        call_command("seed_nobleseek")
+        return renderResponse(
+            data={"categories": NewsCategory.objects.filter(is_active=True).count()},
+            message="ডিফল্ট বিভাগ ফিরিয়ে আনা হয়েছে")
 
 
 class AdminFlatPageListCreateView(generics.ListCreateAPIView):
