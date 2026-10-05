@@ -133,6 +133,8 @@ export default function ManageNobleSeek() {
   const [trends, setTrends] = useState([]);
   const [cats, setCats] = useState(() => readSnap('ns_cats') || []);
   const [loadError, setLoadError] = useState(false);
+  const [catsFailed, setCatsFailed] = useState(false);
+  const [lastErrors, setLastErrors] = useState([]);
   // All five admin endpoints share one staff gate: when they answer 401/403
   // the login itself isn't platform staff (menus still render for domain
   // owners, and stats cards may show stale cache) — say so explicitly with
@@ -220,6 +222,15 @@ export default function ManageNobleSeek() {
       const denied = all.filter((r) => r && (r.status === 401 || r.status === 403)).length;
       if (ok === 0 && denied > 0) setAuthError(true);
       else if (ok === 0) setLoadError(true);
+      // Per-endpoint failure readout: a failed tab must never look identical
+      // to an empty one. `null` = no HTTP response at all (offline, blocked
+      // by an extension, or timed out); a number = the backend answered.
+      const label = (key, r) => (!r ? `${key}: no response` : (r.status === 200 ? null : `${key}: HTTP ${r.status}`));
+      setLastErrors(
+        [['stats', s], ['articles', a], ['trends', t], ['categories', c], ['ad-config', ad]]
+          .map(([key, r]) => label(key, r)).filter(Boolean)
+      );
+      setCatsFailed(!(c?.status === 200));
       if (s?.status === 200) { setStats(s.data.data); writeSnap('ns_stats', s.data.data); }
       if (a?.status === 200) {
         let rows = a.data.data?.results || a.data.data || [];
@@ -414,6 +425,16 @@ export default function ManageNobleSeek() {
         </Alert>
       )}
 
+      {loadError && !loading && (
+        <Alert
+          severity="warning" sx={{ mb: 2 }}
+          action={<Button size="small" variant="contained" onClick={loadAll}>পুনরায় চেষ্টা</Button>}
+        >
+          সার্ভারে পৌঁছানো যাচ্ছে না। ব্যর্থ কল: {lastErrors.length ? lastErrors.join(' • ') : 'অজানা'}।
+          (no response = অফলাইন, অ্যাড-ব্লকার, বা টাইমআউট; HTTP নম্বর = ব্যাকএন্ড উত্তর দিয়েছে।)
+        </Alert>
+      )}
+
       {tab === 0 && (
         <DeskHome cats={cats} onShowArticles={drillArticles} onShowTab={gotoTab} />
       )}
@@ -440,11 +461,6 @@ export default function ManageNobleSeek() {
               <Button size="small" onClick={() => { setStatusFilter(''); setCatFilter(''); setSearchInput(''); setBreakingOnly(false); setTagDrill(''); }}>ফিল্টার মুছুন</Button>
             )}
           </Stack>
-          {loadError && !loading && (
-            <Alert severity="warning" sx={{ mb: 2 }} action={<Button size="small" variant="contained" onClick={loadAll}>পুনরায় চেষ্টা</Button>}>
-              সার্ভারে পৌঁছানো যাচ্ছে না (Render free tier ঘুমিয়ে থাকলে প্রথমবার ৩০–৬০ সেকেন্ড লাগে)। একটু অপেক্ষা করে পুনরায় চেষ্টা করুন — বিভাগগুলো শেষবারের সংরক্ষিত তালিকা থেকে দেখানো হচ্ছে।
-            </Alert>
-          )}
           {loading ? <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}><CircularProgress /></Box> : (
             <Table size="small">
               <TableHead><TableRow><TableCell>প্রতিবেদন</TableCell><TableCell>বিভাগ</TableCell><TableCell>স্ট্যাটাস</TableCell><TableCell>পঠিত</TableCell><TableCell>হালনাগাদ</TableCell><TableCell align="right">অ্যাকশন</TableCell></TableRow></TableHead>
@@ -567,7 +583,19 @@ export default function ManageNobleSeek() {
                       </TableCell>
                     </TableRow>
                   ))}
-                  {!cats.length && <TableRow><TableCell colSpan={4} align="center">কোনো বিভাগ নেই।</TableCell></TableRow>}
+                  {!cats.length && (catsFailed ? (
+                    <TableRow><TableCell colSpan={4} align="center">
+                      <Alert
+                        severity="warning"
+                        action={<Button size="small" variant="contained" onClick={loadAll}>পুনরায় চেষ্টা</Button>}
+                      >
+                        বিভাগ তালিকা লোড হয়নি ({lastErrors.find((e) => e.startsWith('categories:')) || 'অজানা ত্রুটি'}) —
+                        এটি খালি টেবিল নয়, সার্ভার থেকে উত্তর আসেনি।
+                      </Alert>
+                    </TableCell></TableRow>
+                  ) : (
+                    <TableRow><TableCell colSpan={4} align="center">কোনো বিভাগ নেই — ডান পাশে নতুন যোগ করুন বা “ডিফল্ট ফিরিয়ে আনুন” চাপুন।</TableCell></TableRow>
+                  ))}
                 </TableBody>
               </Table>
             </Paper>
