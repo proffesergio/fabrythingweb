@@ -8,10 +8,10 @@ import { FALLBACK_ICON, getModuleIconComponent } from './moduleIcons';
 // If the backend seeds a new icon name, this list is what should be updated
 // first -- an unmapped name is silent in the UI, it just renders a wrong glyph.
 const SEEDED_ICON_NAMES = [
-  'AccountCircle', 'Add', 'Analytics', 'Breaking', 'Campaign', 'Category',
+  'AccountCircle', 'Add', 'Analytics', 'Breaking', 'Business', 'Campaign', 'Category',
   'Chat', 'Checkroom', 'CloudDownload', 'Comments',
   'Dashboard', 'HowToReg', 'Inventory', 'Map', 'Newspaper', 'Article',
-  'Pages', 'Payments', 'Poll', 'Push', 'Receipt',
+  'Pages', 'Payments', 'Poll', 'Print', 'Push', 'Receipt',
   'ReceiptLong', 'Redeem', 'Restaurant', 'Settings', 'Store', 'Storefront',
   'Tag', 'Tune', 'TwoWheeler', 'ViewCarousel', 'Warehouse',
 ];

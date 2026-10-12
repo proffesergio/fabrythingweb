@@ -2,7 +2,7 @@ from django.urls import path
 
 from .views import EventsView, IngestView, OverviewView, ProvidersView
 from .views_overview import (FoodOverviewView, NotificationsView,
-                             ShopOverviewView)
+                             PrintOverviewView, ShopOverviewView)
 
 urlpatterns = [
     # Public beacon receiver (throttled, allow-listed event names only).
@@ -15,5 +15,6 @@ urlpatterns = [
     # Module overview dashboards (Shop / Food) + topbar bell rollup.
     path("admin/shop-overview/", ShopOverviewView.as_view(), name="analytics_shop_overview"),
     path("admin/food-overview/", FoodOverviewView.as_view(), name="analytics_food_overview"),
+    path("admin/print-overview/", PrintOverviewView.as_view(), name="analytics_print_overview"),
     path("admin/notifications/", NotificationsView.as_view(), name="analytics_notifications"),
 ]

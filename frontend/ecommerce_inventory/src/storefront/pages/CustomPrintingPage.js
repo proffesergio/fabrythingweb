@@ -8,6 +8,7 @@ import { useNavigate } from 'react-router-dom';
 import useApi from '../../hooks/APIHandler';
 import { isAuthenticated } from '../../utils/Helper';
 import PrintCatalogue from './printing/PrintCatalogue';
+import PressStorefront from './printing/PressStorefront';
 import { useT } from '../i18n/LanguageContext';
 
 const STATUS_COLORS = {
@@ -54,7 +55,7 @@ export default function CustomPrintingPage() {
     }, []);
 
     useEffect(() => {
-        if (loggedIn && tab === 1) fetchRequests();
+        if (loggedIn && tab === 2) fetchRequests();
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [loggedIn, tab]);
 
@@ -133,6 +134,7 @@ export default function CustomPrintingPage() {
 
             <Tabs value={tab} onChange={(_, v) => setTab(v)} sx={{ mb: 3 }}>
                 <Tab label={t('printing.tab.submit')} />
+                <Tab label="Press Printing" />
                 <Tab label={t('printing.tab.mine')} />
             </Tabs>
 
@@ -252,6 +254,12 @@ export default function CustomPrintingPage() {
             )}
 
             {tab === 1 && (
+                <Box>
+                    <PressStorefront />
+                </Box>
+            )}
+
+            {tab === 2 && (
                 <Box>
                     {!loggedIn ? (
                         <Card sx={{ p: 4, textAlign: 'center' }}>

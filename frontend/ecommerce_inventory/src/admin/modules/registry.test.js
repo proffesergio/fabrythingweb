@@ -4,10 +4,13 @@ describe('moduleForPath', () => {
   test('maps module homes', () => {
     expect(moduleForPath('/admin/shop')).toBe('shop');
     expect(moduleForPath('/admin/food')).toBe('food');
+    expect(moduleForPath('/admin/print')).toBe('print');
     expect(moduleForPath('/admin/news')).toBe('news');
   });
   test('maps business prefixes', () => {
     expect(moduleForPath('/admin/manage/food/orders')).toBe('food');
+    expect(moduleForPath('/admin/manage/print/press-orders')).toBe('print');
+    expect(moduleForPath('/admin/manage/print/catalog')).toBe('print');
     expect(moduleForPath('/admin/manage/nobleseek')).toBe('news');
     expect(moduleForPath('/admin/manage/product')).toBe('shop');
     expect(moduleForPath('/admin/manage/salesorder')).toBe('shop');

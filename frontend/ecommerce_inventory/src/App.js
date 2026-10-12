@@ -70,10 +70,15 @@ const ManageAnalytics = lazy(() => import('./pages/analytics/ManageAnalytics'));
 const ManageAffiliateProducts = lazy(() => import('./pages/affiliate/ManageAffiliateProducts'));
 const ManagePrintRequests = lazy(() => import('./pages/printing/ManagePrintRequests'));
 const PrintSetup = lazy(() => import('./pages/printing/PrintSetup'));
+const ManagePressOrders = lazy(() => import('./pages/printing/ManagePressOrders'));
+const PressCatalogSetup = lazy(() => import('./pages/printing/PressCatalogSetup'));
+const ManageCorporate = lazy(() => import('./pages/printing/ManageCorporate'));
+const ManageShowcase = lazy(() => import('./pages/printing/ManageShowcase'));
 // ── Modular admin: per-business overview dashboards + index redirect ──
 const ShopOverview = lazy(() => import('./admin/pages/ShopOverview'));
 const FoodOverview = lazy(() => import('./admin/pages/FoodOverview'));
 const NewsOverview = lazy(() => import('./admin/pages/NewsOverview'));
+const PrintOverview = lazy(() => import('./admin/pages/PrintOverview'));
 const AdminIndex = lazy(() => import('./admin/modules/AdminIndex'));
 const RiderDashboard = lazy(() => import('./rider/RiderDashboard'));
 const RiderLogin = lazy(() => import('./rider/RiderLogin'));
@@ -304,6 +309,7 @@ function App() {
           {index:true,element:<ProtectedRoute element={<AdminIndex/>}/>},
           {path:"shop",element:<ProtectedRoute element={<ShopOverview/>}/>},
           {path:"food",element:<ProtectedRoute element={<FoodOverview/>}/>},
+          {path:"print",element:<ProtectedRoute element={<PrintOverview/>}/>},
           {path:"news",element:<ProtectedRoute element={<NewsOverview/>}/>},
           {path:"home",element:<ProtectedRoute element={<Home/>}/>},
           {path:"form/:formName",element:<ProtectedRoute element={<DynamicForm/>}/>},
@@ -340,6 +346,10 @@ function App() {
           {path:"manage/affiliate",element:<ProtectedRoute element={<ManageAffiliateProducts/>}/>},
           {path:"manage/print/requests",element:<ProtectedRoute element={<ManagePrintRequests/>}/>},
           {path:"manage/print/setup",element:<ProtectedRoute element={<PrintSetup/>}/>},
+          {path:"manage/print/press-orders",element:<ProtectedRoute element={<ManagePressOrders/>}/>},
+          {path:"manage/print/catalog",element:<ProtectedRoute element={<PressCatalogSetup/>}/>},
+          {path:"manage/print/corporate",element:<ProtectedRoute element={<ManageCorporate/>}/>},
+          {path:"manage/print/showcase",element:<ProtectedRoute element={<ManageShowcase/>}/>},
           {path:"*",element:<Error404Page/>},
         ]},
     ]

@@ -33,6 +33,7 @@ export default function ModuleBell() {
   const rows = data ? [
     { id: 'shop', count: Object.values(data.shop || {}).reduce((a, b) => a + (b || 0), 0), to: MODULES.shop.home },
     { id: 'food', count: Object.values(data.food || {}).reduce((a, b) => a + (b || 0), 0), to: MODULES.food.home },
+    { id: 'print', count: Object.values(data.print || {}).reduce((a, b) => a + (b || 0), 0), to: MODULES.print.home },
     { id: 'news', count: Object.values(data.news || {}).reduce((a, b) => a + (b || 0), 0), to: '/admin/manage/nobleseek' },
   ] : [];
 

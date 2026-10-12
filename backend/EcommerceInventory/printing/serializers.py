@@ -11,9 +11,16 @@ MAX_REFERENCE_IMAGES = 10
 
 
 class PrintShowcaseItemSerializer(serializers.ModelSerializer):
+    press_product_name = serializers.CharField(source="press_product.name", read_only=True, allow_null=True, default=None)
+
     class Meta:
         model = PrintShowcaseItem
-        fields = ["id", "name", "category", "note", "image", "is_active", "display_order"]
+        fields = [
+            "id", "name", "category", "note", "description", "image",
+            "file_url", "file_type", "badge", "price_bdt", "is_top_pick",
+            "press_product", "press_product_name",
+            "is_active", "display_order",
+        ]
 
 
 class PrintAreaSerializer(serializers.ModelSerializer):

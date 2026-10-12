@@ -128,9 +128,9 @@ class NotificationsTests(TestCase):
                    "/api/store/analytics/admin/notifications/")
         assert r.status_code == 200, r.data
         d = r.data["data"]
-        assert set(d) == {"shop", "food", "news", "total"}
+        assert set(d) == {"shop", "food", "print", "news", "total"}
         assert d["total"] == (sum(d["shop"].values()) + sum(d["food"].values())
-                              + sum(d["news"].values()))
+                              + sum(d["print"].values()) + sum(d["news"].values()))
 
     def test_forbidden_for_customer(self):
         r = authed(NotificationsView, customer(),

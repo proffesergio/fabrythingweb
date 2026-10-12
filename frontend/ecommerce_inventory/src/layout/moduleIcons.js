@@ -19,6 +19,7 @@ import {
   Map as MapIcon,
   Newspaper as NewspaperIcon,
   Payments,
+  Print as PrintIcon,
   ReceiptLong,
   ReceiptOutlined,
   Restaurant as RestaurantIcon,
@@ -85,6 +86,8 @@ const ICONS = {
   Push: SendIcon,
   Poll: HowToVoteIcon,
   Pages: DescriptionIcon,
+  Print: PrintIcon,
+  Business: BusinessIcon,
 };
 
 // A neutral "module" glyph. The old fallback was AccountCircle, which reads as

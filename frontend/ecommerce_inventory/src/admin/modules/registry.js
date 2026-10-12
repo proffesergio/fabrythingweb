@@ -38,9 +38,19 @@ export const MODULES = {
     overviewApi: 'store/nobleseek/admin/overview/',
     searchTarget: '/admin/manage/nobleseek',
   },
+  print: {
+    id: 'print',
+    label: 'Printing Press',
+    short: 'Print',
+    icon: 'Print',
+    color: '#6A1B9A',
+    home: '/admin/print',
+    overviewApi: 'store/analytics/admin/print-overview/',
+    searchTarget: '/admin/manage/print/press-orders',
+  },
 };
 
-export const MODULE_ORDER = ['shop', 'food', 'news'];
+export const MODULE_ORDER = ['shop', 'food', 'print', 'news'];
 export const NOTIFICATIONS_API = 'store/analytics/admin/notifications/';
 
 /** Which module a route belongs to. Shared pages return null (keep current). */
@@ -51,7 +61,9 @@ export function moduleForPath(pathname = '') {
   if (pathname === '/admin/shop') return 'shop';
   if (pathname === '/admin/food') return 'food';
   if (pathname === '/admin/news') return 'news';
+  if (pathname === '/admin/print') return 'print';
   if (pathname.startsWith('/admin/manage/food')) return 'food';
+  if (pathname.startsWith('/admin/manage/print')) return 'print';
   if (pathname.startsWith('/admin/manage/nobleseek')) return 'news';
   if (SHARED_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`))) return null;
   if (pathname.startsWith('/admin/')) return 'shop';

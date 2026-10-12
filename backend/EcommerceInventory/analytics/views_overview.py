@@ -184,12 +184,72 @@ class FoodOverviewView(APIView):
         return Response({"data": food_numbers(_days(request))})
 
 
+# ── Printing press (web-to-press orders + garment requests) ───────────────
+PRESS_LIVE = ["ARTWORK_REVIEW", "IN_PRODUCTION", "READY_FOR_DISPATCH", "SHIPPED", "DELIVERED"]
+PRESS_COUNTED = ["PENDING_PAYMENT"] + PRESS_LIVE
+
+
+def print_numbers(days=14):
+    from printing.models import PressOrder, PressProduct, PrintRequest, Quotation
+
+    counted = PressOrder.objects.filter(status__in=PRESS_COUNTED)
+    live = PressOrder.objects.filter(status__in=PRESS_LIVE)
+    rev, prev_rev, n, prev_n = _window_sums(live, "created_at", "total_bdt")
+    aov = round(rev / n, 2) if n else 0.0
+    return {
+        "kpis": {
+            "revenue_7d": rev,
+            "revenue_delta": _delta(rev, prev_rev),
+            "orders_7d": n,
+            "orders_delta": _delta(n, prev_n),
+            "avg_order_value": aov,
+            "pending_payment": PressOrder.objects.filter(status="PENDING_PAYMENT").count(),
+            "artwork_review": PressOrder.objects.filter(status="ARTWORK_REVIEW").count(),
+            "in_production": PressOrder.objects.filter(status="IN_PRODUCTION").count(),
+            "garment_queue": PrintRequest.objects.exclude(
+                status__in=["COMPLETED", "CANCELLED"]).count(),
+        },
+        "series": _series(live, "created_at", "total_bdt", days),
+        "top_products": [
+            {"name": r["product__name"], "qty": r["qty"],
+             "revenue": float(r["revenue"] or 0)}
+            for r in live.values("product__name")
+            .annotate(qty=Count("id"), revenue=Sum("total_bdt"))
+            .order_by("-qty")[:5]
+        ],
+        "recent_orders": [
+            {"id": o["id"], "status": o["status"],
+             "total": float(o["total_bdt"]), "product": o["product__name"],
+             "customer": o["customer__username"], "created_at": o["created_at"]}
+            for o in PressOrder.objects.select_related("product", "customer")
+            .order_by("-created_at")
+            .values("id", "status", "total_bdt", "product__name",
+                    "customer__username", "created_at")[:6]
+        ],
+        "alerts": {
+            "pending_payment": PressOrder.objects.filter(status="PENDING_PAYMENT").count(),
+            "artwork_review": PressOrder.objects.filter(status="ARTWORK_REVIEW").count(),
+            "failed_payments": PressOrder.objects.filter(payment_status="FAILED").count(),
+            "open_quotations": Quotation.objects.filter(status__in=["DRAFT", "SENT"]).count(),
+            "active_products": PressProduct.objects.filter(is_active=True).count(),
+        },
+    }
+
+
+class PrintOverviewView(APIView):
+    permission_classes = [IsAnalyticsStaff]
+
+    def get(self, request):
+        return Response({"data": print_numbers(_days(request))})
+
+
 # ── Notifications rollup (topbar bell) ────────────────────────────────────
 class NotificationsView(APIView):
     permission_classes = [IsAnalyticsStaff]
 
     def get(self, request):
         from nobleseek.models import Article, Comment, TrendKeyword
+        from printing.models import PressOrder
         shop = {
             "pending_orders": Order.objects.filter(
                 status=Order.Status.PENDING_VERIFICATION).count(),
@@ -208,7 +268,11 @@ class NotificationsView(APIView):
             "pending_comments": Comment.objects.filter(
                 status=Comment.Status.PENDING).count(),
         }
-        total = sum(shop.values()) + sum(food.values()) + sum(news.values())
+        print_ = {
+            "pending_payment": PressOrder.objects.filter(status="PENDING_PAYMENT").count(),
+            "artwork_review": PressOrder.objects.filter(status="ARTWORK_REVIEW").count(),
+        }
+        total = sum(shop.values()) + sum(food.values()) + sum(news.values()) + sum(print_.values())
         return Response({"data": {
-            "shop": shop, "food": food, "news": news, "total": total,
+            "shop": shop, "food": food, "news": news, "print": print_, "total": total,
         }})

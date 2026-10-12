@@ -247,15 +247,65 @@ class PrintProofDecisionView(APIView):
 
 class PrintShowcaseListView(APIView):
     """GET /api/print/showcase/ -- public. What we can print, for the Custom
-    Printing page. Active items only, in display order."""
+    Printing page. Active items only, in display order.
+    ``?category=<key>`` filters to one strip; ``?top_picks=1`` returns only
+    flagged Top Picks (the storefront's HOT grid)."""
     authentication_classes = []
     permission_classes = []
 
     def get(self, request):
-        items = PrintShowcaseItem.objects.filter(is_active=True)
+        items = PrintShowcaseItem.objects.filter(is_active=True).select_related("press_product")
+        category = request.query_params.get("category")
+        if category:
+            items = items.filter(category=category)
+        if str(request.query_params.get("top_picks", "")).lower() in ("1", "true", "yes"):
+            items = items.filter(is_top_pick=True)
         return renderResponse(
             data=PrintShowcaseItemSerializer(items, many=True).data,
             message="Showcase retrieved")
+
+
+SHOWCASE_ALLOWED_EXTENSIONS = {
+    "pdf", "ai", "psd", "eps", "tiff", "tif", "png", "jpg", "jpeg", "svg", "webp",
+}
+SHOWCASE_IMAGE_EXTENSIONS = {"png", "jpg", "jpeg", "svg", "webp", "tiff", "tif"}
+
+
+class AdminPrintShowcaseUploadView(APIView):
+    """Multipart design-file upload in any print format. Images double as
+    their own preview (``image`` = file URL); print formats (pdf/ai/psd/eps)
+    pair with a separately uploaded thumbnail image."""
+
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsPrintStaff]
+    parser_classes = (MultiPartParser, FormParser)
+
+    def post(self, request):
+        from printing.models import PressShopConfig
+
+        file_obj = request.FILES.get("file")
+        if not file_obj:
+            return renderResponse(data="No file provided.", message="Validation error", status=400)
+        ext = (file_obj.name.rsplit(".", 1)[-1].lower() if "." in file_obj.name else "")
+        if ext not in SHOWCASE_ALLOWED_EXTENSIONS:
+            return renderResponse(
+                data=f".{ext or '?'} is not accepted. Use: {', '.join(sorted(SHOWCASE_ALLOWED_EXTENSIONS))}.",
+                message="Validation error", status=400,
+            )
+        config = PressShopConfig.get_solo()
+        if file_obj.size > int(config.max_upload_mb or 100) * 1024 * 1024:
+            return renderResponse(
+                data=f"File exceeds the {config.max_upload_mb}MB limit.",
+                message="Validation error", status=400,
+            )
+        unique_name = os.urandom(24).hex() + "_" + file_obj.name.replace(" ", "_")
+        url = save_file(unique_name, file_obj.read(), file_obj.content_type)
+        return renderResponse(
+            data={
+                "file_url": url, "file_type": ext, "name": file_obj.name,
+                "size": file_obj.size, "is_image": ext in SHOWCASE_IMAGE_EXTENSIONS,
+            },
+            message="Design file uploaded", status=201)
 
 
 class AdminPrintShowcaseListCreateView(APIView):

@@ -16,7 +16,8 @@ MODULE_OF = {
     'Banners': 'shop',
     'Affiliate Products': 'shop',
     'Food': 'food',
-    'Custom Printing': 'shop',
+    'Custom Printing': 'print',
+    'Printing Press': 'print',
     'Marketing': 'shared',
     'Traffic & Analytics': 'shared',
     'NobleSeek News': 'news',
@@ -303,27 +304,57 @@ MODULES = [
         'display_order': 10,
         'parent': 'Food',
     },
-    # ── Custom print-on-demand (SP6) ────────────────────────────────────
+    # ── Printing press business (web-to-press + garment custom print) ──
+    # Own admin module ('print') with its own overview dashboard at
+    # /admin/print, just like Shop / Food / News.
     {
-        'module_name': 'Custom Printing',
-        'module_icon': 'Checkroom',
+        'module_name': 'Printing Press',
+        'module_icon': 'Print',
         'module_url': None,
         'display_order': 10,
         'parent': None,
     },
     {
+        'module_name': 'Press Orders',
+        'module_icon': 'ReceiptLong',
+        'module_url': '/manage/print/press-orders',
+        'display_order': 1,
+        'parent': 'Printing Press',
+    },
+    {
+        'module_name': 'Press Catalog',
+        'module_icon': 'Category',
+        'module_url': '/manage/print/catalog',
+        'display_order': 2,
+        'parent': 'Printing Press',
+    },
+    {
+        'module_name': 'Corporate & Quotations',
+        'module_icon': 'Business',
+        'module_url': '/manage/print/corporate',
+        'display_order': 3,
+        'parent': 'Printing Press',
+    },
+    {
+        'module_name': 'Design Showcase',
+        'module_icon': 'ViewCarousel',
+        'module_url': '/manage/print/showcase',
+        'display_order': 4,
+        'parent': 'Printing Press',
+    },
+    {
         'module_name': 'Print Requests',
         'module_icon': 'Checkroom',
         'module_url': '/manage/print/requests',
-        'display_order': 1,
-        'parent': 'Custom Printing',
+        'display_order': 5,
+        'parent': 'Printing Press',
     },
     {
         'module_name': 'Print Setup',
         'module_icon': 'Tune',
         'module_url': '/manage/print/setup',
-        'display_order': 2,
-        'parent': 'Custom Printing',
+        'display_order': 6,
+        'parent': 'Printing Press',
     },
     # ── Traffic & analytics (plugin-based panel) ───────────────────────
     {
