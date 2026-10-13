@@ -2,6 +2,7 @@ from decimal import Decimal
 
 from rest_framework import serializers
 
+from printing.fields import MediaURLField
 from printing.models import (
     PrintShowcaseItem,
     PrintArea, PrintablePreset, PrintPricingConfig, PrintProof, PrintRequest, PrintRosterLine,
@@ -12,6 +13,10 @@ MAX_REFERENCE_IMAGES = 10
 
 class PrintShowcaseItemSerializer(serializers.ModelSerializer):
     press_product_name = serializers.CharField(source="press_product.name", read_only=True, allow_null=True, default=None)
+    # Site-relative /api/media/<sha>/ URLs from the upload endpoint must
+    # validate (see printing.fields.MediaURLField).
+    image = MediaURLField(required=False, allow_blank=True)
+    file_url = MediaURLField(required=False, allow_blank=True)
 
     class Meta:
         model = PrintShowcaseItem
@@ -94,7 +99,7 @@ class PrintRequestCreateSerializer(serializers.Serializer):
     quantity = serializers.IntegerField(min_value=1, default=1)
     brief = serializers.CharField(allow_blank=False, trim_whitespace=True)
     reference_images = serializers.ListField(
-        child=serializers.URLField(), required=False, default=list, max_length=MAX_REFERENCE_IMAGES,
+        child=MediaURLField(), required=False, default=list, max_length=MAX_REFERENCE_IMAGES,
     )
     print_areas = serializers.ListField(child=serializers.IntegerField(), required=False, default=list)
     roster_lines = serializers.ListField(required=False, default=list)
@@ -200,7 +205,7 @@ class AdminPrintRequestDetailSerializer(AdminPrintRequestListSerializer, PrintRe
 
 
 class AdminProofCreateSerializer(serializers.Serializer):
-    image = serializers.URLField()
+    image = MediaURLField()
     note = serializers.CharField(required=False, allow_blank=True, default="")
 
 

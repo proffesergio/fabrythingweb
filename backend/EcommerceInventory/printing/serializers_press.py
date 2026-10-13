@@ -4,6 +4,7 @@ from decimal import Decimal
 
 from rest_framework import serializers
 
+from printing.fields import MediaURLField
 from printing.models import (
     CorporateAccount, FinishingOption, PaperStock, PressOrder, PressProduct,
     PressShippingRate, PressShopConfig, PressSizePreset, Quotation,
@@ -128,7 +129,7 @@ class PressQuoteRequestSerializer(serializers.Serializer):
 
 
 class ArtworkFileSerializer(serializers.Serializer):
-    url = serializers.URLField()
+    url = MediaURLField()
     name = serializers.CharField(required=False, allow_blank=True, default="")
     size = serializers.IntegerField(required=False, default=0)
     content_type = serializers.CharField(required=False, allow_blank=True, default="")

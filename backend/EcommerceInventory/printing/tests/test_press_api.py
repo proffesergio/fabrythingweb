@@ -147,6 +147,53 @@ class ShowcaseUploadTests(TestCase):
         }, format="multipart")
         self.assertEqual(res.status_code, 400, res.content)
 
+    def test_create_accepts_relative_media_urls(self):
+        """Regression: save_file returns /api/media/<sha>/ without S3 keys
+        (the live server) — the showcase form posts those URLs straight back
+        and DRF's URLField used to 400 them with 'Enter a valid URL.'"""
+        auth(self.client, self.staff)
+        res = self.client.post("/api/print/admin/showcase/", {
+            "name": "Relative URL cards", "category": "business-cards",
+            "image": "/api/media/abc123def456/",
+            "file_url": "/api/media/789xyz000000/", "file_type": "pdf",
+            "badge": "HOT", "price_bdt": "450",
+            "is_top_pick": True, "is_active": True, "display_order": 0,
+        }, format="json")
+        self.assertEqual(res.status_code, 201, res.content)
+        self.assertEqual(res.data["data"]["image"], "/api/media/abc123def456/")
+
+    def test_create_still_rejects_garbage_urls(self):
+        auth(self.client, self.staff)
+        res = self.client.post("/api/print/admin/showcase/", {
+            "name": "Bad URL cards", "category": "business-cards",
+            "image": "not a url with spaces",
+        }, format="json")
+        self.assertEqual(res.status_code, 400, res.content)
+
+    def test_proof_and_reference_images_accept_relative_urls(self):
+        from printing.serializers import AdminProofCreateSerializer, PrintRequestCreateSerializer
+
+        proof = AdminProofCreateSerializer(data={"image": "/api/media/proofsha/"})
+        self.assertTrue(proof.is_valid(), proof.errors)
+
+        req = PrintRequestCreateSerializer(data={
+            "brief": "Team jerseys", "quantity": 2,
+            "reference_images": ["/api/media/refsha/"],
+        })
+        self.assertTrue(req.is_valid(), req.errors)
+
+    def test_press_checkout_artwork_accepts_relative_url(self):
+        customer = make_customer("artcust")
+        product = make_press_product(slug="art-cards")
+        auth(self.client, customer)
+        res = self.client.post("/api/print/press/checkout/", {
+            "product": product.id, "width": "3.5", "height": "2",
+            "quantity": 10, "payment_method": "COD",
+            "shipping_zone": "HUB_PICKUP",
+            "artwork_files": [{"url": "/api/media/artsha/", "name": "art.pdf", "size": 123}],
+        }, format="json")
+        self.assertEqual(res.status_code, 201, res.content)
+
     def test_accepts_pdf_and_lists_by_category(self):
         auth(self.client, self.staff)
         res = self.client.post("/api/print/admin/showcase/upload/", {
