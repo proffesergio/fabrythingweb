@@ -109,7 +109,7 @@ class PublicProductListView(generics.ListAPIView):
     authentication_classes = []
 
     def get_queryset(self):
-        queryset = Products.objects.filter(status='ACTIVE')
+        queryset = annotate_product_cards(Products.objects.filter(status='ACTIVE'))
         params = self.request.query_params
 
         category_slug = params.get('category')
@@ -185,9 +185,9 @@ class PublicProductDetailView(APIView):
 
         data = StorefrontProductDetailSerializer(product, context={'request': request}).data
         if product.category_id:
-            related = Products.objects.filter(
+            related = annotate_product_cards(Products.objects.filter(
                 category_id=product.category_id, status='ACTIVE'
-            ).exclude(id=product.id)[:8]
+            )).exclude(id=product.id)[:8]
             data['related_products'] = StorefrontProductListSerializer(
                 related, many=True, context={'request': request}).data
         else:

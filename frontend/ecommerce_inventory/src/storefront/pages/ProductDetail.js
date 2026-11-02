@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import useSeo from '../useSeo';
 import {
     Box, Container, Grid, Typography, Button, Rating, Chip, Divider,
     Tab, Tabs, IconButton, Dialog, DialogTitle, DialogContent, Paper,
@@ -18,6 +19,11 @@ import { trackViewItem, trackAddToCart } from '../../utils/analytics';
 export default function ProductDetail() {
     const { slug } = useParams();
     const [product, setProduct] = useState(null);
+    useSeo({
+        title: product ? `${product.name} — Fabrything` : 'Product — Fabrything',
+        description: (product?.description || 'Explore product details and order online from Fabrything.').replace(/<[^>]*>/g, '').slice(0, 160),
+        path: `/product/${slug}`,
+    });
     const [selectedImage, setSelectedImage] = useState(0);
     const [selectedSize, setSelectedSize] = useState('');
     const [quantity, setQuantity] = useState(1);

@@ -17,6 +17,8 @@ mediafiles/
 
 # Environment
 .env
+*.env
+.vercel/
 *.env.local
 
 # Node
@@ -53,3 +55,7 @@ backend/backenv/
 # Added by code-review-graph
 .code-review-graph/
 .neon
+
+# Cloudflare CLI local state and exported DNS snapshot
+.cloudflare/
+fabrything.com.txt

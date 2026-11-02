@@ -1,4 +1,5 @@
 from django.urls import path
+from .seo import sitemap
 
 from .views import (
     # Public
@@ -87,6 +88,7 @@ def affiliate_routes(public, click, admin, suffix=''):
 
 
 urlpatterns = [
+    path('sitemap.xml', sitemap, name='store_sitemap'),
     # Public (no auth)
     path('config/', StoreConfigView.as_view(), name='store_config'),
     path('homepage/', PublicHomepageView.as_view(), name='store_homepage'),

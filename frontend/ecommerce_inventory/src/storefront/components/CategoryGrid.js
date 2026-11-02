@@ -22,7 +22,7 @@ export default function CategoryGrid({ categories = [] }) {
                 {categories.map((cat, i) => {
                     const meta = metaFor(cat.slug);
                     return (
-                        <Grid item xs={3} sm={3} key={cat.id} sx={{ flexBasis: { md: '12.5%' }, maxWidth: { md: '12.5%' } }}>
+                        <Grid item xs={6} sm={3} key={cat.id} sx={{ flexBasis: { md: '12.5%' }, maxWidth: { md: '12.5%' } }}>
                             <motion.div
                                 initial={{ opacity: 0, y: 20 }}
                                 whileInView={{ opacity: 1, y: 0 }}
@@ -35,7 +35,10 @@ export default function CategoryGrid({ categories = [] }) {
                                     sx={{
                                         display: 'flex', flexDirection: 'column', alignItems: 'center',
                                         gap: 1, textDecoration: 'none', color: 'text.primary',
-                                        p: { xs: 1, sm: 1.5 }, borderRadius: 3,
+                                        p: { xs: 2, sm: 1.5 }, borderRadius: 3,
+                                        height: '100%', bgcolor: 'background.paper',
+                                        border: '1px solid', borderColor: 'divider',
+                                        '&:focus-visible': { outline: '3px solid', outlineColor: 'primary.main', outlineOffset: 3 },
                                         transition: 'transform 0.2s ease, background 0.2s ease',
                                         '&:hover': { transform: 'translateY(-4px)', bgcolor: 'action.hover' },
                                         '&:hover .cat-icon': { boxShadow: `0 8px 20px ${meta.color}55` },
@@ -57,7 +60,7 @@ export default function CategoryGrid({ categories = [] }) {
                                     </Box>
                                     <Typography
                                         variant="caption"
-                                        sx={{ fontWeight: 600, textAlign: 'center', lineHeight: 1.2, fontSize: { xs: '0.7rem', sm: '0.78rem' } }}
+                                        sx={{ fontWeight: 600, textAlign: 'center', lineHeight: 1.4, fontSize: { xs: '0.85rem', sm: '0.78rem' } }}
                                     >
                                         {cat.name}
                                     </Typography>

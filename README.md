@@ -30,24 +30,30 @@ git clone https://github.com/proffesergio/fabrythingweb.git
 cd fabrythingweb
 
 # Backend
-cd backend
+cd backend/EcommerceInventory
+python3 -m venv .venv
+source .venv/bin/activate
 pip install -r requirements.txt
+# Configure local database/settings before migrating.
 python manage.py migrate
 python manage.py runserver
 
 # Frontend
-cd ../frontend
+cd ../../frontend/ecommerce_inventory
 npm install
-npm run dev
+npm start
 ```
 
 ### Stack
 
-- **Frontend:** Next.js 14, TypeScript, Tailwind, Zustand
-- **Backend:** Django/DRF or NestJS (dual setup)
-- **DB:** PostgreSQL, Redis
-- **Payments:** SSLCommerz, bKash API
-- **Deploy:** Vercel + Railway
+- **Frontend:** React 18, Create React App, Material UI, Redux Toolkit
+- **Backend:** Django 5, Django REST Framework
+- **DB:** Neon PostgreSQL
+- **Payments:** Shop orders use Cash on Delivery; food also supports bKash/Nagad
+- **Deploy:** Vercel (frontend + Django API) + Neon Postgres
+
+Production release and verification: [release status](docs/PRODUCTION_RELEASE.md).
+Domain configuration: [Cloudflare DNS](docs/CLOUDFLARE_DNS_SETUP.md).
 
 ### Why Fabrything?
 

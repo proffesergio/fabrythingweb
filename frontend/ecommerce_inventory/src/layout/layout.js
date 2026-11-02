@@ -14,7 +14,6 @@ import { ModuleProvider, useModule } from '../admin/modules/ModuleContext';
 import ModuleSwitcher from '../admin/modules/ModuleSwitcher';
 import ModuleSidebar from '../admin/modules/ModuleSidebar';
 import ModuleBell from '../admin/modules/ModuleBell';
-import useKeepAlive from '../admin/keepAlive';
 
 // Drawer brand follows the active business: Fabrything mark for shop, food
 // lockup for food, NobleSeek badge for news — the operator always sees which
@@ -59,8 +58,6 @@ const Layout = ({pageTitle,childPage}) => {
   const [openChildMenu, setOpenChildMenu] = useState(false);
   const [anchorEl, setAnchorEl] = useState(null);
   const [themeMenu, setThemeMenu] = useState(null);
-  // Keep the (sleep-prone) backend warm while the admin panel is open.
-  useKeepAlive(true);
   // Read the menu from the store, NOT from a prop.
   //
   // App.js builds the router inside useMemo(..., []) and used to pass

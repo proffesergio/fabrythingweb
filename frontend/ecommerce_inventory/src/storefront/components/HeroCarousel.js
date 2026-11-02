@@ -14,36 +14,12 @@ import useCachedApi from '../../hooks/useCachedApi';
 // ever rendering an empty hero.
 const FALLBACK_SLIDES = [
     {
-        title: 'Eid Collection 2026',
-        subtitle: 'Discover premium Panjabis, Sarees & festive wear for the whole family',
-        cta: 'Shop Eid Collection',
+        title: 'Find your next favourite',
+        subtitle: 'Explore fashion, electronics and everyday essentials in one place.',
+        cta: 'Explore products',
         link: '/shop',
-        image: 'https://picsum.photos/seed/eid_fashion/1600/700',
-        overlay: 'linear-gradient(135deg, rgba(26,26,46,0.82) 0%, rgba(15,52,96,0.72) 100%)',
-    },
-    {
-        title: 'Summer Sale — Up to 50% Off',
-        subtitle: 'Limited time offer on selected men\'s, women\'s & kids\' styles.',
-        cta: 'Shop the Sale',
-        link: '/shop?ordering=price_low',
-        image: 'https://picsum.photos/seed/summer_sale/1600/700',
-        overlay: 'linear-gradient(135deg, rgba(232,93,74,0.80) 0%, rgba(192,57,43,0.70) 100%)',
-    },
-    {
-        title: 'New Arrivals Every Week',
-        subtitle: 'Fresh styles added constantly. Stay ahead of the trends.',
-        cta: 'See What\'s New',
-        link: '/shop?ordering=newest',
-        image: 'https://picsum.photos/seed/new_arrivals/1600/700',
-        overlay: 'linear-gradient(135deg, rgba(45,45,45,0.82) 0%, rgba(99,99,99,0.72) 100%)',
-    },
-    {
-        title: 'Free Delivery Nationwide',
-        subtitle: 'Fast delivery nationwide. Cash on Delivery available.',
-        cta: 'Start Shopping',
-        link: '/shop',
-        image: 'https://picsum.photos/seed/delivery_fashion/1600/700',
-        overlay: 'linear-gradient(135deg, rgba(27,94,32,0.82) 0%, rgba(56,142,60,0.72) 100%)',
+        image: '/logo512.png',
+        overlay: 'linear-gradient(135deg, rgba(26,26,46,0.96) 0%, rgba(15,52,96,0.94) 100%)',
     },
 ];
 

@@ -3,4 +3,4 @@ User-agent: *
 Disallow:
 
 # Sitemap for Google Search Console (submit this same URL in GSC > Sitemaps).
-Sitemap: https://fabrything.com/sitemap.xml
+Sitemap: https://www.fabrything.com/sitemap.xml

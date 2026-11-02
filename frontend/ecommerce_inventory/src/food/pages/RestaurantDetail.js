@@ -216,7 +216,11 @@ export default function RestaurantDetail() {
             {cat.items.map((item) => (
               <Grid item xs={6} sm={4} md={3} key={item.id}>
                 <DishCard
-                  item={item} onClick={() => setDetailItem(item)}
+                  item={item}
+                  onClick={() => {
+                    if (!openNow) { announceClosed(); return; }
+                    setDetailItem(item);
+                  }}
                   onQuickAdd={() => onItemClick(item)}
                   restaurantClosed={!openNow} lang={lang} />
               </Grid>

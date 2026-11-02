@@ -23,7 +23,6 @@ import AppSplash from './storefront/components/AppSplash';
 import InstallPrompt from './storefront/components/InstallPrompt';
 import Box from '@mui/material/Box';
 import { trackPageview } from './utils/analytics';
-import useKeepAlive from './admin/keepAlive';
 
 // Vendor (Restaurant-role) dashboard imports
 import VendorLayout from './vendor/VendorLayout';
@@ -179,8 +178,6 @@ function App() {
   const {status,error}=useSelector(state=>state.sidebardata);
   const {isLoggedIn}=useSelector(state=>state.isLoggedInReducer);
   const dispatch=useDispatch();
-  // Keep the backend warm while any tab is open (visible tabs only).
-  useKeepAlive(true);
 
   useEffect(()=>{
     if(status=='idle'){

@@ -41,7 +41,7 @@ jest.mock('swiper/modules', () => ({ Autoplay: {}, Pagination: {}, EffectFade: {
 import HeroCarousel from './HeroCarousel';
 
 const renderHero = () => render(<MemoryRouter><HeroCarousel /></MemoryRouter>);
-const FALLBACK_HEADLINE = 'Eid Collection 2026';
+const FALLBACK_HEADLINE = 'Find your next favourite';
 
 beforeEach(() => {
   mockUseCachedApi.mockReset();

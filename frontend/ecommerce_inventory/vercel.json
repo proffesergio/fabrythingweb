@@ -1,7 +1,16 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "buildCommand": "CI=false react-scripts build",
+  "outputDirectory": "build",
   "rewrites": [
+    {
+      "source": "/sitemap.xml",
+      "destination": "https://fabrythingapi.vercel.app/api/store/sitemap.xml"
+    },
+    {
+      "source": "/api/:path*",
+      "destination": "https://fabrythingapi.vercel.app/api/:path*"
+    },
     {
       "source": "/(.*)",
       "destination": "/index.html"

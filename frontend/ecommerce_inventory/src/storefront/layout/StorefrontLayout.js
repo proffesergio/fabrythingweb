@@ -7,7 +7,7 @@ import {
     useMediaQuery, useTheme, GlobalStyles, Tooltip, useScrollTrigger,
 } from '@mui/material';
 import {
-    ShoppingCart, Person, Menu as MenuIcon, Search, Close,
+    ShoppingCart, Person, Menu as MenuIcon,
     Home as HomeIcon, Category, AccountCircle,
     Phone, Email, Facebook, Instagram,
     DarkMode, LightMode, Restaurant as RestaurantIcon, KeyboardArrowUp,
@@ -19,6 +19,7 @@ import { isAuthenticated } from '../../utils/Helper';
 import useApi from '../../hooks/APIHandler';
 import MegaMenu, { MobileCategoryMenu } from '../components/MegaMenu';
 import LiveSearch from '../components/LiveSearch';
+import useSeo from '../useSeo';
 import BrandLogo from '../../components/BrandLogo';
 import MessengerButton from '../components/MessengerButton';
 import WhatsAppButton from '../../components/WhatsAppButton';
@@ -114,11 +115,26 @@ function LanguageSwitcher() {
 
 function StorefrontLayoutInner({ toggleDarkMode, darkMode }) {
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-    const [searchOpen, setSearchOpen]         = useState(false);
     const [categories, setCategories]         = useState([]);
     const cartItemCount = useSelector(selectCartItemCount);
     const navigate      = useNavigate();
     const location      = useLocation();
+    const routeTitle = {
+        '/': 'Fabrything — Shop Online in Bangladesh',
+        '/shop': 'Shop Products — Fabrything',
+        '/deals': 'Product Deals — Fabrything',
+        '/about': 'About Fabrything',
+        '/custom-printing': 'Custom Printing — Fabrything',
+        '/privacy': 'Privacy Policy — Fabrything',
+        '/terms': 'Terms of Use — Fabrything',
+        '/shipping': 'Delivery & Shipping Conditions — Fabrything',
+    }[location.pathname] || 'Fabrything';
+    useSeo({
+        title: location.pathname.startsWith('/product/') ? null : routeTitle,
+        description: 'Browse fashion, electronics and everyday products at Fabrything. Explore categories, compare products and order online in Bangladesh.',
+        path: location.pathname,
+        noindex: /^\/(cart|checkout|account|auth|admin)(\/|$)/.test(location.pathname),
+    });
     const theme         = useTheme();
     const isMobile      = useMediaQuery(theme.breakpoints.down('md'));
     const isLoggedIn    = isAuthenticated();
@@ -306,11 +322,6 @@ function StorefrontLayoutInner({ toggleDarkMode, darkMode }) {
 
                             {/* Right: dark mode, account, cart */}
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexShrink: 0 }}>
-                                {isMobile && (
-                                    <IconButton color="inherit" size="small" onClick={() => setSearchOpen(v => !v)}>
-                                        {searchOpen ? <Close /> : <Search />}
-                                    </IconButton>
-                                )}
 
                                 {/* Dark mode toggle */}
                                 <Tooltip title={darkMode ? 'Switch to light mode' : 'Switch to dark mode'}>
@@ -334,9 +345,9 @@ function StorefrontLayoutInner({ toggleDarkMode, darkMode }) {
                         </Toolbar>
 
                         {/* Mobile search bar */}
-                        {isMobile && searchOpen && (
+                        {isMobile && (
                             <Box sx={{ px: 2, pb: 1.25 }}>
-                                <LiveSearch fullWidth autoFocus onNavigate={() => setSearchOpen(false)} />
+                                <LiveSearch fullWidth />
                             </Box>
                         )}
 

@@ -46,24 +46,18 @@ helpers `moduleForPath`, `visibleModules`, `splitItems`,
 Tests: `analytics/test_overview.py` (incl. seed-tag test),
 `nobleseek/tests.py::NobleSeekOverviewTests`.
 
-## Keep-alive (free-tier sleep)
+## Keep-alive (retired)
 
-Render sleeps the backend after ~15 min idle, which used to mean every
-dashboard load paid a 30–60s cold start. Two layers now:
-
-1. `useKeepAlive()` (`src/admin/keepAlive.js`) pings public
-   `GET /api/health/` every 9 minutes — mounted in the admin Layout and
-   the app root, visibility-guarded (background tabs cost nothing),
-   fully silent. Keeps the service warm while anyone has a tab open.
-2. For true 24/7 warmth with zero visitors, add an external monitor
-   (e.g. UptimeRobot free, 5-min interval) on
-   `https://<api>/api/health/` — frontend pings can't cover idle nights.
+The backend now runs on Vercel Functions (`https://fabrythingapi.vercel.app`)
+instead of Render's sleep-prone free tier, so the Render keep-alive workaround
+was removed from the app and the GitHub Actions cron was deleted. Vercel
+Functions scale on demand; no warm-up pings are needed.
 
 ## Files
 
 - Frontend: `src/admin/modules/` (registry, context, switcher, sidebar,
   bell, index redirect), `src/admin/widgets.jsx`, `src/admin/pages/`
   (`ShopOverview`, `FoodOverview`, `NewsOverview`, `useOverview`),
-  `src/admin/keepAlive.js`, `src/admin/snap.js`
+  `src/admin/snap.js`
 - Backend: `analytics/views_overview.py`, `nobleseek` overview view,
   `Modules.module` + seeder tags

@@ -1,0 +1,20 @@
+# Deploys run from the repository root; nested ignore files are insufficient.
+.env*
+**/.env*
+*.env
+**/*.env
+.cloudflare/
+fabrything.com.txt
+.agents/
+.codebuddy/
+.cursor/
+.gemini/
+.kiro/
+.qoder/
+**/__pycache__/
+**/*.pyc
+**/*.sqlite3
+**/.venv/
+**/venv/
+**/benv/
+**/node_modules/

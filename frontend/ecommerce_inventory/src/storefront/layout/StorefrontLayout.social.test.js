@@ -11,10 +11,10 @@ jest.mock('../../hooks/APIHandler', () => () => ({ callApi: jest.fn().mockResolv
 // for the same rationale: keeps axios ESM / thunk wiring out of this render).
 const store = configureStore({ reducer: { cart: cartReducer } });
 
-const renderLayout = () =>
+const renderLayout = (path = '/') =>
   render(
     <Provider store={store}>
-      <MemoryRouter>
+      <MemoryRouter initialEntries={[path]}>
         <StorefrontLayout />
       </MemoryRouter>
     </Provider>
@@ -32,4 +32,16 @@ test('renders Messenger link to the fabrything messenger', async () => {
   const messenger = await screen.findByRole('link', { name: /messenger/i });
   expect(messenger).toHaveAttribute('href', 'https://m.me/fabrything');
   expect(messenger).toHaveAttribute('target', '_blank');
+});
+
+test.each([
+  ['/privacy', 'Privacy Policy'],
+  ['/terms', 'Terms of Use'],
+  ['/shipping', 'Delivery & Shipping Conditions'],
+])('keeps a descriptive title and canonical URL for %s', (path, title) => {
+  renderLayout(path);
+  expect(document.title).toBe(`${title} — Fabrything`);
+  expect(document.querySelector('link[rel="canonical"]')).toHaveAttribute(
+    'href', `https://www.fabrything.com${path}`,
+  );
 });

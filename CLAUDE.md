@@ -62,8 +62,10 @@ path that no longer exists (see the note at the end). Use grep.
 ## Stack & layout
 
 Django 5 + DRF backend, Create-React-App (React 18 + MUI 5 + Redux Toolkit)
-frontend, Postgres (Neon) in prod. Backend deploys to Render
-(`https://fabrythingweb.onrender.com`), frontend to Vercel (fabrything.com).
+frontend, Postgres (Neon) in prod. Both deploy to Vercel: the Django API as
+project `fabrythingapi` (`https://fabrythingapi.vercel.app`, root directory
+`backend/EcommerceInventory`) and the frontend as project `fabrythingweb`
+(fabrything.com). Render is legacy — do not deploy there.
 
 ```
 backend/EcommerceInventory/     Django project (manage.py lives here)
@@ -112,17 +114,17 @@ What that means when you edit this repo:
 
 **Status as of 2026-07-27.** `main` is in sync with `origin/main`; the mobile
 enablers (SP0) are merged and **live in production** — verified with
-`curl https://fabrythingweb.onrender.com/api/food/mobile/config/`, which
+`curl https://fabrythingapi.vercel.app/api/food/mobile/config/`, which
 returns real JSON. Any doc still describing `feature/mobile-enablers` as
 unmerged is out of date; that branch is gone.
 
 ## Diagnosing a production 500 — do this FIRST
 
-A blank `Server Error (500)` page from `fabrythingweb.onrender.com` carries no
+A blank `Server Error (500)` page from `fabrythingapi.vercel.app` carries no
 traceback (`DEBUG=False`). Do **not** start grepping views. Cost of the wrong
 order here has been measured in whole sessions.
 
-1. **`curl https://fabrythingweb.onrender.com/api/health/`** (`core.views.HealthView`).
+1. **`curl https://fabrythingapi.vercel.app/api/health/`** (`core.views.HealthView`).
    It reports `pending_migrations` and answers 503 when the schema lags the code.
    *A schema that lags the deployed code is the single most common cause of a
    cluster of unrelated 500s* — it has happened twice.
@@ -150,11 +152,11 @@ Neon project `fabrything` = `crimson-wind-60301476`, org `org-restless-field-325
 explanation to chase. Useful probes: `SELECT app,name FROM django_migrations`,
 and `information_schema.columns` for the suspect table.
 
-**`render.yaml` describes a service named `fabrything-api`, but the live host is
-`fabrythingweb.onrender.com`** — the running service was created by hand, so its
-Build Command is whatever the dashboard says and **may not be `./build.sh`**.
-That is why migrations can be missing even though `build.sh` runs `migrate` under
-`set -o errexit`. Never conclude "migrations ran because build.sh runs them".
+**`render.yaml` and `build.sh` are legacy Render files.** The live backend is
+the Vercel project `fabrythingapi`. Its production build runs
+`python manage.py migrate --noinput` (see
+`backend/EcommerceInventory/vercel.json`), and Vercel runs `collectstatic`
+automatically. Do not assume the Render build script ran on Vercel.
 
 ## Conventions that bite
 
@@ -218,7 +220,7 @@ That is why migrations can be missing even though `build.sh` runs `migrate` unde
   **partner** stores (potakait.com, canvasit.com.bd — explicit reseller permission) and
   are the *only* rows `sync_source_prices` will re-price. `build.sh` deliberately runs
   `seed_store_catalog --categories-only`: full seeding downloads and re-hosts images,
-  which lands on the ephemeral Render filesystem unless S3 keys are set.
+  which lands on an ephemeral server filesystem unless S3/R2 keys are set.
 - **`FoodItem.category_id` is a ForeignKey literally named `category_id`.**
   Not a raw id column. Serializers expose it as a pk int.
 - Admin sidebar modules are DB-driven — a new admin page needs a module row
@@ -409,9 +411,9 @@ When that happens the username/email is stuck — `prune_orphan_logins` won't he
 because it only prunes `Rider`/`Restaurant` roles. Use `release_login`
 (`accounts/management/commands/`), which refuses admins, accounts already owning a
 Rider/Restaurant, and anything with order history, and prints the exact cascade
-before acting. On Render (free plan, no Shell) set `RELEASE_LOGIN=<username>` in
-the dashboard, deploy once, then **remove the variable** — same opt-in pattern as
-`PRUNE_ORPHAN_LOGINS`.
+before acting. On Vercel (no shell) set `RELEASE_LOGIN=<username>` in the
+project's environment variables, deploy once, then **remove the variable** — same
+opt-in pattern as `PRUNE_ORPHAN_LOGINS`.
 
 ### Traps that have bitten this module
 
@@ -539,7 +541,14 @@ background**, never inside a card.
 
 ```bash
 # Is prod healthy? (schema vs. deployed code) — always the first move on a 500
-curl https://fabrythingweb.onrender.com/api/health/
+curl https://fabrythingapi.vercel.app/api/health/
+
+# Deploy from the REPO ROOT. Both projects have a rootDirectory configured, so
+# deploying from the subdirectory fails with "Root Directory does not exist".
+vercel --prod --yes --project fabrythingapi   # backend
+vercel --prod --yes                           # frontend (linked project)
+# Git auto-deploy is enabled for main on both projects; CLI deploys are only
+# needed to ship uncommitted changes.
 
 # backend (from backend/EcommerceInventory, venv at .venv)
 # Tests REQUIRE config.settings.test — it uses SQLite. The manage.py default is

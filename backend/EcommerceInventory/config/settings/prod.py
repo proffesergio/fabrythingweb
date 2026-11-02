@@ -3,11 +3,15 @@
 from .base import *  # noqa: F401,F403
 
 DEBUG = False
+# The app uses synchronous ORM views; deploy its WSGI entrypoint on Vercel.
+if os.getenv("VERCEL"):  # noqa: F405
+    del ASGI_APPLICATION
 
 # ALLOWED_HOSTS and CORS_ALLOWED_ORIGINS MUST be provided via env in prod.
 ALLOWED_HOSTS = env_list("ALLOWED_HOSTS", "")  # noqa: F405
 CORS_ALLOW_ALL_ORIGINS = False
 CORS_ALLOWED_ORIGINS = env_list("CORS_ALLOWED_ORIGINS", "")  # noqa: F405
+CSRF_TRUSTED_ORIGINS = env_list("CSRF_TRUSTED_ORIGINS", "")  # noqa: F405
 
 # Security hardening
 SECURE_SSL_REDIRECT = env_bool("SECURE_SSL_REDIRECT", True)  # noqa: F405
@@ -32,3 +36,6 @@ STORAGES = {
 # Neon (managed Postgres) requires SSL. Default the prod connection to require it
 # even if DATABASE_SSLMODE isn't explicitly set in the environment.
 DATABASES["default"]["OPTIONS"]["sslmode"] = os.getenv("DATABASE_SSLMODE", "require")  # noqa: F405
+DATABASES["default"]["CONN_HEALTH_CHECKS"] = True  # noqa: F405
+DATABASES["default"]["DISABLE_SERVER_SIDE_CURSORS"] = True  # noqa: F405
+DATABASES["default"]["OPTIONS"]["connect_timeout"] = 10  # noqa: F405
