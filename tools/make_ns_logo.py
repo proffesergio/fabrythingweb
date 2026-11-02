@@ -2,7 +2,7 @@
 
 Usage (repo root):  python tools/make_ns_logo.py
 
-Reads  frontend/ecommerce_inventory/public/nobleseek_logo.png  (kept as-is),
+Reads  frontend/public/nobleseek_logo.png  (kept as-is),
 writes transparent derivatives next to it:
   nobleseek-logo-wide.png  horizontal lockup — masthead + drawer
   nobleseek-logo-white.png white silhouette — dark footer only
@@ -16,7 +16,7 @@ import os
 from PIL import Image
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-PUBLIC = os.path.join(ROOT, "frontend", "ecommerce_inventory", "public")
+PUBLIC = os.path.join(ROOT, "frontend", "public")
 SRC = os.path.join(PUBLIC, "nobleseek_logo.png")
 
 Image.MAX_IMAGE_PIXELS = None

@@ -14,7 +14,7 @@ memory are versioned together on `main`, targeting
 - Direct and frontend-proxied health report reachable database and no pending
   migrations. Sitemap has 521 canonical www URLs; sampled media GET succeeds.
 - Neon PostgreSQL and Cloudflare R2 remain the data/media services. Preserve the
-  frontend API trailing-slash rewrites; Render deployment files are legacy.
+  frontend API trailing-slash rewrites; obsolete Render deployment files are removed.
 
 ## Delivered and verified
 
@@ -43,6 +43,24 @@ memory are versioned together on `main`, targeting
   GENERATE_SOURCEMAP=false. Existing lint/dependency warnings remain.
 - Code-review-graph MCP was unavailable; app/service/release relationships are in
   graph.json and mirrored in MCP memory under Fabrything.
-- Unrelated deletions under .codebuddy/.kiro/.qoder, local .codex/.superdesign
-  caches, and the obsolete overflow screenshot are intentionally outside this release.
 - Never commit credentials, environment exports, customer data, or access tokens.
+
+## Active structure cleanup — 2026-11-03
+
+- User requested flattening both applications and removing unused files before
+  the next push. Application roots are now backend/ and frontend/; their redundant
+  wrappers are gone, including for ignored local configuration and dependencies.
+- Both Vercel project rootDirectory settings are updated to backend and frontend.
+  Existing production deployments are unchanged until a release completes.
+- Removed legacy Render bootstrap/config/export, duplicate OpenCode config,
+  unused WSGI/Gunicorn shims, non-idempotent module bootstrap, unused source SVGs,
+  retired agent guides/configs/backups and completed implementation checklists.
+  User-deleted files stay deleted. Useful future specs are now in docs/design/.
+- Setup guides are consolidated under docs/; root and frontend READMEs describe
+  the actual stack, migration workflow and current structure.
+- Full backend run: 1105/1105 tests pass after fixing a currency-default regression.
+  Dynamic-form validation respects model defaults; focused checks also pass.
+- Frontend: 68/68 suites and 509/509 tests pass; production build passes with
+  existing warnings. Migration drift check is clean. Staged review confirms no
+  secrets or generated artifacts are included. Vercel upload previews exclude
+  private state. Cleanup is verified and ready for its GitHub push.

@@ -102,8 +102,8 @@ environment variables in Vercel so uploads fall back to DB-backed
 ## Related
 
 - Vercel backend project: `fabrythingapi`, root directory
-  `backend/EcommerceInventory`, Git auto-deploy enabled for `main`.
+  `backend`, Git auto-deploy enabled for `main`.
 - Frontend project: `fabrythingweb`, root directory
-  `frontend/ecommerce_inventory`, Git auto-deploy enabled for `main`.
+  `frontend`, Git auto-deploy enabled for `main`.
 - Pushing to `main` triggers both Vercel projects; no GitHub Actions deploy
   workflow is required.

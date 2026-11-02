@@ -18,3 +18,10 @@ fabrything.com.txt
 **/venv/
 **/benv/
 **/node_modules/
+
+.aws/
+.codex/
+.superdesign/
+.code-review-graph/
+**/build/
+**/staticfiles/

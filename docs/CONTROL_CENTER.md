@@ -4,12 +4,12 @@ The control center reads `/api/products/admin/` with a platform staff JWT. Its s
 
 ## Setup
 
-Apply the catalog migrations through `0019_products_source_currency` in the target environment using the normal release migration step. Do not point local tests or commands at the live database. Install `backend/EcommerceInventory/requirements.txt` so `google-auth` is available for provider jobs.
+Apply the catalog migrations through `0019_products_source_currency` in the target environment using the normal release migration step. Do not point local tests or commands at the live database. Install `backend/requirements.txt` so `google-auth` is available for provider jobs.
 
 Start at least one persistent worker alongside the Django web process:
 
 ```sh
-cd backend/EcommerceInventory
+cd backend
 python manage.py run_sync_jobs --loop --poll-seconds 15
 ```
 
@@ -17,7 +17,7 @@ For a cron deployment, call `python manage.py run_sync_jobs` once per minute. A 
 
 ## Pricing
 
-`IMPORT` and `PRICE` jobs may carry `pricing_policy`, with `source_currency`, a dated `fx_rate_to_bdt`, `fee_percent`, `target_margin_percent`, `shipping_base_bdt`, `shipping_per_kg_bdt`, and `weight_grams`. The full schema and calculation are in [backend/EcommerceInventory/docs/SYNC_JOBS.md](../backend/EcommerceInventory/docs/SYNC_JOBS.md). Staff must provide a current exchange rate and observed timestamp from their chosen trusted source. This service does not fetch one, guess one, or silently reuse a stale value. A quote fails closed when an FX rate or required weight is invalid. Supplier shipping cost is covered in the item price, independent of any customer delivery fee or free-shipping promotion. Catalog and Merchant prices remain BDT; supplier price and currency are retained separately.
+`IMPORT` and `PRICE` jobs may carry `pricing_policy`, with `source_currency`, a dated `fx_rate_to_bdt`, `fee_percent`, `target_margin_percent`, `shipping_base_bdt`, `shipping_per_kg_bdt`, and `weight_grams`. The full schema and calculation are in [backend/docs/SYNC_JOBS.md](../backend/docs/SYNC_JOBS.md). Staff must provide a current exchange rate and observed timestamp from their chosen trusted source. This service does not fetch one, guess one, or silently reuse a stale value. A quote fails closed when an FX rate or required weight is invalid. Supplier shipping cost is covered in the item price, independent of any customer delivery fee or free-shipping promotion. Catalog and Merchant prices remain BDT; supplier price and currency are retained separately.
 
 ## Google provider configuration
 

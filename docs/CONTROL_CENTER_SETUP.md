@@ -1,12 +1,12 @@
 # Control center: production setup
 
-This is the operator checklist for the Google providers and sync worker. The [control center operations guide](CONTROL_CENTER.md) describes job behavior; the [sync job reference](../backend/EcommerceInventory/docs/SYNC_JOBS.md) has the full pricing policy schema. Keep provider credentials out of job payloads and this repository; dated exchange rates belong in the job's pricing policy.
+This is the operator checklist for the Google providers and sync worker. The [control center operations guide](CONTROL_CENTER.md) describes job behavior; the [sync job reference](../backend/docs/SYNC_JOBS.md) has the full pricing policy schema. Keep provider credentials out of job payloads and this repository; dated exchange rates belong in the job's pricing policy.
 
 ## 1. Deploy the worker and database changes
 
-Production uses the Vercel projects **fabrythingapi** (Django API) and **fabrythingweb** (frontend), backed by Neon PostgreSQL. The API deployment installs `backend/EcommerceInventory/requirements.txt` and runs all migrations through its production build command. Catalog migrations through `0019_products_source_currency` were applied successfully on 2026-11-02.
+Production uses the Vercel projects **fabrythingapi** (Django API) and **fabrythingweb** (frontend), backed by Neon PostgreSQL. The API deployment installs `backend/requirements.txt` and runs all migrations through its production build command. Catalog migrations through `0019_products_source_currency` were applied successfully on 2026-11-02.
 
-The `render.yaml` web Blueprint is legacy and does not provision a sync worker. Add a separate persistent worker on Render, Railway, or an existing VPS using the same released code, Neon database, Django production settings, and provider environment as the API. The infinite worker loop must run on that worker host, not inside a Vercel HTTP function: [Vercel functions have bounded execution durations](https://vercel.com/docs/functions/runtimes). From `backend/EcommerceInventory`, its command is:
+The former Render Blueprint has been removed; Vercel does not provision a persistent sync worker. Add a separate persistent worker on Render, Railway, or an existing VPS using the same released code, Neon database, Django production settings, and provider environment as the API. The infinite worker loop must run on that worker host, not inside a Vercel HTTP function: [Vercel functions have bounded execution durations](https://vercel.com/docs/functions/runtimes). From `backend`, its command is:
 
 ```sh
 python manage.py run_sync_jobs --loop --poll-seconds 15
@@ -14,7 +14,7 @@ python manage.py run_sync_jobs --loop --poll-seconds 15
 
 For cron, run `python manage.py run_sync_jobs` once per minute instead. The web request only queues a run. Create provider jobs through `/api/products/admin/sync-jobs/` with a platform staff JWT; jobs start paused by default. After configuration, resume or manually run them and inspect `/api/products/admin/sync-runs/` and `/api/products/admin/insights/` for actual results. A submitted Merchant product still requires Google processing and approval.
 
-For a worker host, install with `pip install -r requirements.txt`, use Python 3.12, and set `DJANGO_SETTINGS_MODULE=config.settings.prod`. Copy the existing backend `SECRET_KEY`, database connection variables (`DATABASE_HOST`, `DATABASE_NAME`, `DATABASE_USER`, `DATABASE_PASSWORD`, `DATABASE_PORT`, `DATABASE_SSLMODE=require`), and the provider settings below into its private environment. Do not replace the existing database or rotate secrets as part of this setup. The Vercel API and worker must both receive the Google configuration. See [backend environment settings](../backend/EcommerceInventory/.env.example) for names; placeholder values are not production credentials.
+For a worker host, install with `pip install -r requirements.txt`, use Python 3.12, and set `DJANGO_SETTINGS_MODULE=config.settings.prod`. Copy the existing backend `SECRET_KEY`, database connection variables (`DATABASE_HOST`, `DATABASE_NAME`, `DATABASE_USER`, `DATABASE_PASSWORD`, `DATABASE_PORT`, `DATABASE_SSLMODE=require`), and the provider settings below into its private environment. Do not replace the existing database or rotate secrets as part of this setup. The Vercel API and worker must both receive the Google configuration. See [backend environment settings](../backend/.env.example) for names; placeholder values are not production credentials.
 
 ## 2. Create and store the Google service account
 
@@ -61,4 +61,4 @@ If both are set, this adapter uses the file path. Never put the JSON in frontend
 
 ## 6. Import and price jobs: dated FX policy
 
-For an `IMPORT` or `PRICE` job that converts supplier currency, supply `pricing_policy.source_currency`, `fx_rate_to_bdt`, and an ISO 8601 `fx_rate_observed_at` with timezone. Set `fx_max_age_hours` according to the team's refresh cadence; update the rate and observation time from a trusted source before it expires. The application does not fetch an FX rate. A missing, stale, future-dated, invalid, or non-positive rate fails the affected quote. If using `shipping_per_kg_bdt`, also provide `weight_grams`; review supplier shipping, fees, target margin, final BDT shelf price, and customer delivery charge before resuming a job. See the [policy example and formula](../backend/EcommerceInventory/docs/SYNC_JOBS.md#pricing-policy).
+For an `IMPORT` or `PRICE` job that converts supplier currency, supply `pricing_policy.source_currency`, `fx_rate_to_bdt`, and an ISO 8601 `fx_rate_observed_at` with timezone. Set `fx_max_age_hours` according to the team's refresh cadence; update the rate and observation time from a trusted source before it expires. The application does not fetch an FX rate. A missing, stale, future-dated, invalid, or non-positive rate fails the affected quote. If using `shipping_per_kg_bdt`, also provide `weight_grams`; review supplier shipping, fees, target margin, final BDT shelf price, and customer delivery charge before resuming a job. See the [policy example and formula](../backend/docs/SYNC_JOBS.md#pricing-policy).

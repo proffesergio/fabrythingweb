@@ -168,16 +168,12 @@ Any product whose price data can't be processed (e.g. a corrupted negative
 price) is printed by name and reason under "Skipped" rather than silently
 dropped from the run.
 
-### Running it on Render (no shell on the free plan)
+### Running against production
 
-Mirrors the existing `PURGE_DEMO_CATALOG` two-stage pattern in `build.sh`:
-
-1. Set the Render env var **`APPLY_PRICING_MARKUP=report`**, deploy, and read
-   the dry-run before/after table in the build log.
-2. Once it looks right, set **`APPLY_PRICING_MARKUP=apply`** and deploy again
-   — this writes the new prices and updates variants.
-3. **Remove the variable.** Leaving it set is harmless (the command is
-   idempotent), but there's no reason to keep re-running it on every deploy.
+Run the management command above from a trusted operator environment with the
+released code and production configuration. Review the dry run before using
+`--apply`. The former Render environment-variable deploy hooks have been removed;
+setting those variables on Vercel does not run maintenance commands.
 
 **Do this soon, and before making further manual price edits** in the admin
 quick-update tool on any of the pre-existing products: the backfill treats
@@ -187,6 +183,6 @@ made in between would be treated as a new "supplier price" and get marked up
 on top, rather than treated as the final customer-facing price it was meant
 to be.
 
-Take a Neon branch/backup before step 2, same advice as for
+Take a Neon branch/backup before applying, same advice as for
 `PURGE_DEMO_CATALOG` — writing prices is easy to get right in a dry run and
 still worth being able to roll back.

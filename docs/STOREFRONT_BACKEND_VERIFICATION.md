@@ -11,7 +11,7 @@ Verified locally on 2026-11-03 with `DJANGO_SETTINGS_MODULE=config.settings.test
 
 ## Checks
 
-From `backend/EcommerceInventory`, using `/tmp/fabrything-discovery-venv/bin/python`:
+From `backend`, using `/tmp/fabrything-discovery-venv/bin/python`:
 
 | Check | Result |
 | --- | --- |

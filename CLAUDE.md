@@ -25,7 +25,7 @@ working features per token, not for documentation.
 
 ## Test budget — run what you shipped, not the world
 
-The suite is ~680 tests. Running all of it after every edit is the single
+The backend suite contains 1105 tests (November 2026). Running all of it after every edit is the single
 biggest avoidable token/time cost in this repo.
 
 - **While iterating: run only the app or module you are changing.**
@@ -36,9 +36,7 @@ biggest avoidable token/time cost in this repo.
 - **Run the full suite once, immediately before committing** — not after every
   edit, and not "to be safe" mid-task.
 - **Frontend: `npm test -- --watchAll=false` only when you touched
-  `frontend/`.** Never run it for a backend-only change. `App.test.js` has a
-  **pre-existing** failure (missing `swiper` dep) that is not yours — do not
-  chase it.
+  `frontend/`.** Never run it for a backend-only change. The frontend has 68 suites; run them serially on low-memory machines.
 - **Do not run a full `react-scripts build` to check a backend change.** It
   takes minutes and proves nothing about Python.
 - Skip work the task did not ask for: don't re-verify a module you didn't
@@ -49,7 +47,7 @@ biggest avoidable token/time cost in this repo.
 1. This file. The layout, the API surface and the traps below are current.
 2. A targeted `Grep` for a **symbol** (`grep -rn "domain_user_id\.id"`), not a
    concept. One grep across the repo beats opening five files to compare them.
-3. Run the tests (~200, ~5s) — they answer "is the code broken?" far more cheaply
+3. Run focused tests — they answer "is the code broken?" far more cheaply
    than reading the code does, and they tell you *which* layer to open.
 4. Only then `Read`, and read the *one* file the evidence pointed at.
 
@@ -64,18 +62,18 @@ path that no longer exists (see the note at the end). Use grep.
 Django 5 + DRF backend, Create-React-App (React 18 + MUI 5 + Redux Toolkit)
 frontend, Postgres (Neon) in prod. Both deploy to Vercel: the Django API as
 project `fabrythingapi` (`https://fabrythingapi.vercel.app`, root directory
-`backend/EcommerceInventory`) and the frontend as project `fabrythingweb`
+`backend`) and the frontend as project `fabrythingweb`
 (fabrything.com). Render is legacy — do not deploy there.
 
 ```
-backend/EcommerceInventory/     Django project (manage.py lives here)
+backend/     Django project (manage.py lives here)
   config/settings/{base,dev,prod,test}.py   dev is the manage.py default
   accounts/    custom User (roles), auth, dynamic-form controllers
   core/        helpers.py, middleware, S3/local file upload view
   catalog/ inventory/ purchasing/ orders/   original ERP/inventory domain
   storefront/  public e-commerce storefront API
   food/        food-delivery marketplace  ← most active area
-frontend/ecommerce_inventory/src/
+frontend/src/
   pages/       admin panel (Auth.js, DynamicForm.js, food/, products/, users/…)
   food/        customer-facing food ordering (pages/, components/, redux/, context/)
   vendor/      restaurant-owner panel
@@ -133,7 +131,7 @@ order here has been measured in whole sessions.
    `rider/earnings` + `admin/riders` + `admin/dashboard` all failing at once is
    not five bugs, it is one missing column on `food_rider`.
 3. **Run the suite before reading code**: `DJANGO_SETTINGS_MODULE=config.settings.test
-   python manage.py test`. ~200 tests, ~5s. **Green suite + broken prod ⇒ the bug
+   python manage.py test`. **Green suite + broken prod ⇒ the bug
    is environmental, not in the code** — stop reading views and go look at the
    database or the deploy.
 4. Only then read source, and only the views for the *shared* model from step 2.
@@ -152,10 +150,10 @@ Neon project `fabrything` = `crimson-wind-60301476`, org `org-restless-field-325
 explanation to chase. Useful probes: `SELECT app,name FROM django_migrations`,
 and `information_schema.columns` for the suspect table.
 
-**`render.yaml` and `build.sh` are legacy Render files.** The live backend is
+**The obsolete Render Blueprint and build script have been removed.** The live backend is
 the Vercel project `fabrythingapi`. Its production build runs
 `python manage.py migrate --noinput` (see
-`backend/EcommerceInventory/vercel.json`), and Vercel runs `collectstatic`
+`backend/vercel.json`), and Vercel runs `collectstatic`
 automatically. Do not assume the Render build script ran on Vercel.
 
 ## Conventions that bite
@@ -218,8 +216,8 @@ automatically. Do not assume the Render build script ran on Vercel.
   `tools/scrape/` and by `services_price_sync.py` at runtime. Committed fixtures live in
   `catalog/fixtures/seed/*.json`. Products carrying a `source_url` came from the two
   **partner** stores (potakait.com, canvasit.com.bd — explicit reseller permission) and
-  are the *only* rows `sync_source_prices` will re-price. `build.sh` deliberately runs
-  `seed_store_catalog --categories-only`: full seeding downloads and re-hosts images,
+  are the *only* rows `sync_source_prices` will re-price. Seeding is now an explicit
+  operator action; full seeding downloads and re-hosts images,
   which lands on an ephemeral server filesystem unless S3/R2 keys are set.
 - **`FoodItem.category_id` is a ForeignKey literally named `category_id`.**
   Not a raw id column. Serializers expose it as a pk int.
@@ -550,24 +548,24 @@ vercel --prod --yes                           # frontend (linked project)
 # Git auto-deploy is enabled for main on both projects; CLI deploys are only
 # needed to ship uncommitted changes.
 
-# backend (from backend/EcommerceInventory, venv at .venv)
+# backend (from backend, venv at .venv)
 # Tests REQUIRE config.settings.test — it uses SQLite. The manage.py default is
 # config.settings.dev, which points at a local Postgres that usually isn't running.
 DJANGO_SETTINGS_MODULE=config.settings.test python manage.py test food
 python manage.py migrate
 python manage.py runserver
 
-# Repair / maintenance (all idempotent; the first two run in build.sh)
+# Repair / maintenance (explicit operator commands; not run on deploy)
 python manage.py seed_bancharampur          # create-only; --force-update to overwrite
 python manage.py backfill_settlements       # settlements for pre-ledger delivered orders
 python manage.py prune_orphan_logins        # dry run; --apply to actually delete
 python manage.py release_login <user|email> # dry run; --apply frees the name for reuse
 python manage.py sweep_delivery_offers       # expire timed-out offers + re-offer (cron backstop)
 python manage.py seed_store_catalog          # store taxonomy + fixture products; create-only
-                                             # --categories-only (what build.sh runs), --fixture <name>, --force-update
+                                             # --categories-only (taxonomy only), --fixture <name>, --force-update
 python manage.py sync_source_prices          # re-price partner-sourced products; --dry-run
 
-# frontend (from frontend/ecommerce_inventory)
+# frontend (from frontend)
 npm start        # CRA dev server
 npm test         # react-scripts test (jest + RTL); tests sit beside sources
 npm run build    # CI=false — see below
@@ -580,7 +578,7 @@ plain `react-scripts build` fails while the real deploy succeeds. Verify with
 `CI=false npx react-scripts build`; only treat *new* warnings in your own files
 as something to fix.
 
-Specs and design docs live in `docs/superpowers/specs/`.
+Specs and design docs live in `docs/design/`.
 
 <!-- code-review-graph MCP tools -->
 ## MCP Tools: code-review-graph

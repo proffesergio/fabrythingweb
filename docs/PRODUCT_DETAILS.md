@@ -1,6 +1,6 @@
 # Product detail page: the overlap fix, the size chart, and the visual refresh
 
-Covers three changes to `frontend/ecommerce_inventory/src/storefront/pages/ProductDetail.js`
+Covers three changes to `frontend/src/storefront/pages/ProductDetail.js`
 and the catalog backend behind the size chart, done in that order on
 `fix/product-details-ui` (Task 1 fixed and committed alone first because it
 was a visible, live bug on every product page).
@@ -135,18 +135,9 @@ candidate again (idempotent, safe to re-run). **Do not run this yourself for
 the owner** — per the repo's test/token budget, hand this one-time,
 network-heavy job (up to 64 outbound requests) to the owner to run.
 
-**On Render (no shell on the free plan)** — mirrors the
-`PURGE_DEMO_CATALOG`/`APPLY_PRICING_MARKUP` two-stage pattern in `build.sh`:
-
-1. Set **`BACKFILL_FABRILIFE_SIZE_CHART=report`** in the Render dashboard,
-   deploy, and read the dry-run (which products matched with a chart, which
-   matched but have no chart on the live site, which had no exact-name match,
-   which errored) in the build log.
-2. Once it looks right, set **`BACKFILL_FABRILIFE_SIZE_CHART=apply`** and
-   deploy again — this writes `size_chart` onto the matched products.
-3. **Remove the variable.** The command is idempotent (matched products are
-   never candidates again), but there's no reason to keep re-running it on
-   every deploy.
+Run the command from a trusted operator environment with the released code and
+production configuration. Review its dry run before using `--apply`. The former
+Render deploy hooks have been removed; Vercel deployments do not run this backfill.
 
 ### Presentation
 

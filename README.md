@@ -1,69 +1,68 @@
-<img width="100%" src="https://capsule-render.vercel.app/api?type=waving&color=0:0F172A,100:EC4899&height=180&section=header&text=Fabrything&fontSize=40&fontColor=fff&animation=fadeIn&fontAlignY=35&desc=Modern%20E-commerce%20Platform%20for%20Bangladesh&descAlignY=55&descAlign=50" />
+# Fabrything
 
-<div align="center">
+Commerce platform for Bangladesh: product storefront, inventory and orders,
+food delivery, printing services, and the NobleSeek news desk.
 
-### 🛍️ A modern ecommerce platform
-**Fast, Bangla-ready, bKash/Nagad integrated - for Bangladeshi brands.**
+Production: https://www.fabrything.com. React and Django run on Vercel, with
+Neon PostgreSQL and Cloudflare R2. Store orders use Cash on Delivery.
 
-[Python](https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white)
-[Django](https://img.shields.io/badge/Django-092E20?style=for-the-badge&logo=django&logoColor=white)
-[Next.js](https://img.shields.io/badge/Next.js-000000?style=for-the-badge&logo=nextdotjs&logoColor=white)
-[Tailwind](https://img.shields.io/badge/Tailwind-06B6D4?style=for-the-badge&logo=tailwindcss&logoColor=white)
+## Project structure
 
-</div>
+```text
+backend/       Django entrypoints, settings, domain apps, migrations and tests
+frontend/      React app, public assets, browser checks and npm configuration
+docs/          Setup, feature guides, production evidence and recovery memory
+tools/         Asset-generation utilities
+.github/       Repository instructions
+```
 
----
+Backend domain modules are independent Django apps: accounts, catalog, inventory,
+purchasing, orders, storefront, food, printing, nobleseek, chat, analytics and core.
+Frontend customer, admin, vendor and rider interfaces live under frontend/src/.
 
-### Features
+## Development
 
-- 🛒 Product catalog with variants, Bangla description
-- 💳 bKash, Nagad, COD, SSLCommerz
-- 📦 Inventory, order tracking
-- 🎨 Modern UI - Tailwind, mobile-first
-- 📊 Admin dashboard - sales analytics
-- 🚀 SEO optimized, fast
-
-### Quick Start
+Follow [local setup](docs/SETUP.md) for environment variables, database migrations
+and admin creation. After setup, use separate terminals:
 
 ```bash
-git clone https://github.com/proffesergio/fabrythingweb.git
-cd fabrythingweb
-
-# Backend
-cd backend/EcommerceInventory
-python3 -m venv .venv
+# API, from the repository root
+cd backend
 source .venv/bin/activate
-pip install -r requirements.txt
-# Configure local database/settings before migrating.
-python manage.py migrate
 python manage.py runserver
 
-# Frontend
-cd ../../frontend/ecommerce_inventory
-npm install
+# React, from the repository root in another terminal
+cd frontend
+npm ci
 npm start
 ```
 
-### Stack
+API: http://localhost:8000/api/. Frontend: http://localhost:3000/.
+Admin sign-in: http://localhost:3000/admin/auth.
 
-- **Frontend:** React 18, Create React App, Material UI, Redux Toolkit
-- **Backend:** Django 5, Django REST Framework
-- **DB:** Neon PostgreSQL
-- **Payments:** Shop orders use Cash on Delivery; food also supports bKash/Nagad
-- **Deploy:** Vercel (frontend + Django API) + Neon Postgres
+## Verification
 
-Production release and verification: [release status](docs/PRODUCTION_RELEASE.md).
-Domain configuration: [Cloudflare DNS](docs/CLOUDFLARE_DNS_SETUP.md).
+```bash
+# From backend/, with its environment active; isolated SQLite
+python manage.py test --settings=config.settings.test --noinput
+python manage.py makemigrations --check --dry-run --settings=config.settings.test
 
-### Why Fabrything?
+# From frontend/; run separately on low-memory machines
+CI=true NODE_OPTIONS=--max-old-space-size=1024 npm test -- --watchAll=false --runInBand --silent
+NODE_OPTIONS=--max-old-space-size=1536 GENERATE_SOURCEMAP=false REACT_APP_API_URL=/api/ npm run build
+```
 
-For PotakaIT.com experience - I built computer parts e-commerce from 0. This is v2, AI-powered.
+## Operations
 
-### Roadmap
+Vercel project roots are `frontend` for `fabrythingweb` and `backend` for
+`fabrythingapi`. Each service owns its vercel.json. Preserve the frontend API
+rewrites and their trailing-slash behavior.
 
-- [ ] AI product description generator (Bangla + English)
-- [ ] AI chatbot for customer support
+- [Recovery checkpoint and memory graph](docs/project-memory/CURRENT.md)
+- [Production release](docs/PRODUCTION_RELEASE.md)
+- [Domain configuration](docs/CLOUDFLARE_DNS_SETUP.md)
+- [Control Center worker and provider setup](docs/CONTROL_CENTER_SETUP.md)
+- [NobleSeek setup](docs/NOBLESEEK_SETUP.md)
 
-<div align="center">
-E-commerce for Bangladesh, built in Bangladesh 🛍️
-</div>
+Environment files, credentials, builds and local CLI state are ignored. Commit
+migrations and environment examples; keep live data and secrets out of Git.

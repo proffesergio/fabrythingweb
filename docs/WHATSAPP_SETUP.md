@@ -163,15 +163,15 @@ If you rename any of these in Meta, update the matching constant in code:
 
 ## Files touched
 
-- `backend/EcommerceInventory/core/whatsapp.py` — new, the provider.
-- `backend/EcommerceInventory/core/models.py` — `WhatsAppAlertLog` model,
+- `backend/core/whatsapp.py` — new, the provider.
+- `backend/core/models.py` — `WhatsAppAlertLog` model,
   `StoreConfiguration.whatsapp_admin_number` field.
-- `backend/EcommerceInventory/core/migrations/0003_storeconfiguration_whatsapp_admin_number_and_more.py` — new.
-- `backend/EcommerceInventory/core/admin.py` — registers `WhatsAppAlertLog`
+- `backend/core/migrations/0003_storeconfiguration_whatsapp_admin_number_and_more.py` — new.
+- `backend/core/admin.py` — registers `WhatsAppAlertLog`
   (read-only list) and shows the admin number on `StoreConfiguration`.
-- `backend/EcommerceInventory/orders/services.py` — `place_cod_order` sends
+- `backend/orders/services.py` — `place_cod_order` sends
   the store-order-admin alert on commit.
-- `backend/EcommerceInventory/food/services_dispatch.py` — `offer_order`
+- `backend/food/services_dispatch.py` — `offer_order`
   sends the rider alert on a successful offer and the admin fallback alert
   when no rider is found.
 - Tests: `core/test_whatsapp.py`, `storefront/test_whatsapp_alerts.py`,

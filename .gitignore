@@ -24,13 +24,13 @@ mediafiles/
 # Node
 node_modules/
 npm-debug.log*
-# The real frontend project lives in frontend/ecommerce_inventory/.
+# The frontend project lives in frontend/.
 # Ignore stray root-level npm files (e.g. an accidental `npm i` at the repo root).
 /package.json
 /package-lock.json
 
 # React build
-frontend/ecommerce_inventory/build/
+frontend/build/
 
 # IDE
 .vscode/
@@ -59,3 +59,11 @@ backend/backenv/
 # Cloudflare CLI local state and exported DNS snapshot
 .cloudflare/
 fabrything.com.txt
+
+# Private environment files and local agent/CLI state
+.env.*
+!.env.example
+.aws/
+.codex/
+.superdesign/
+*.bak

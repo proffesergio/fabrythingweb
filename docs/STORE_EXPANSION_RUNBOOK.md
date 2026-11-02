@@ -50,7 +50,7 @@ still empty until we add stock for them.
 
 Branch: `feature/store-expansion`. Everything below is safe to run repeatedly.
 
-Run all commands from `backend/EcommerceInventory`. On Windows PowerShell the
+Run all commands from `backend`. On Windows PowerShell the
 Python is `.\.venv\Scripts\python.exe`; in Git Bash it is
 `./.venv/Scripts/python.exe`.
 
@@ -157,45 +157,14 @@ deployed:
 
 ---
 
-## 4. Merge to main and deploy to the live server
+## 4. Release
 
-Only after step 1 is done and I've confirmed the fixtures. Then:
-
-```bash
-cd /c/Users/bhnbi/Music/SaaS/fabrything/fabrythingweb
-
-# 1. Confirm the whole suite is green on the branch
-cd backend/EcommerceInventory
-DJANGO_SETTINGS_MODULE=config.settings.test ./.venv/Scripts/python.exe manage.py test
-cd ../..
-
-# 2. Merge (no fast-forward, so the feature stays one reviewable unit)
-git checkout main
-git pull origin main
-git merge --no-ff feature/store-expansion -m "Store expansion: category editor fix, expanded taxonomy, real seed data"
-
-# 3. Push — Render auto-deploys from main
-git push origin main
-```
-
-**Then watch the deploy:**
-
-```bash
-# Wait for Render to finish, then confirm the schema matches the code.
-# 200 = healthy. 503 = migrations pending; do not ignore it.
-curl https://fabrythingweb.onrender.com/api/health/
-```
-
-A new migration ships in this branch (`catalog` — the three `source_*`
-columns on Products). `build.sh` runs `migrate`, **but the live Render service
-was created by hand and its Build Command may not be `./build.sh`** — that has
-bitten this project before. If `/api/health/` reports pending migrations after
-the deploy, that is the cause; tell me and we'll fix the deploy config rather
-than guessing.
-
-**Rollback if needed:** `git revert -m 1 <merge-commit-sha> && git push origin main`.
-
----
+Run the isolated test suite from backend/ and build the frontend from frontend/.
+Follow [the current production guide](PRODUCTION_RELEASE.md) to release on Vercel.
+The API build applies migrations; catalog seeding remains an explicit operator
+action. Verify both https://fabrythingapi.vercel.app/api/health/ and
+https://www.fabrything.com/api/health/ after deployment. A 503 health response
+indicates pending migrations and needs investigation.
 
 ## What's already done on this branch
 
@@ -208,7 +177,7 @@ than guessing.
 | Fabrilife fashion fixture                                  | 64 real products with real prices, sizes and images                                                                    |
 | Product seeding                                            | Fixtures → products + sellable variants, images downloaded, compressed to 800×800 JPEG and re-hosted                   |
 | Partner price sync                                         | `sync_source_prices` command + admin "Sync prices" button; only ever touches products with a `source_url`              |
-| Deploy wiring                                              | `build.sh` seeds categories on every deploy (safe/idempotent); product seeding stays manual — see the S3 warning above |
+| Deploy wiring                                              | Vercel applies migrations; taxonomy and product seeding are explicit operator actions |
 
 Backend suite: **432 tests green**.
 

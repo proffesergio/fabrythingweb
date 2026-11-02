@@ -35,7 +35,7 @@ over everything below it, including the promo rule in the next section.
 
 The rule lives in exactly one place: `StoreConfiguration.shipping_for(subtotal,
 product_shipping_fees, free_shipping_flags)` in
-`backend/EcommerceInventory/core/models.py`. The COD checkout
+`backend/core/models.py`. The COD checkout
 (`orders/services.py::place_cod_order`) is the only caller — there is no
 second copy of this logic anywhere in the storefront views.
 

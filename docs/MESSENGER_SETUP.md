@@ -104,22 +104,22 @@ how well Meta's own tools can label where a conversation came from.
 
 ## Files touched
 
-- `backend/EcommerceInventory/core/models.py` —
+- `backend/core/models.py` —
   `StoreConfiguration.messenger_page_id` (blank by default).
-- `backend/EcommerceInventory/core/migrations/0004_storeconfiguration_messenger_page_id.py` — new, single-field migration.
-- `backend/EcommerceInventory/core/admin.py` — shows the field on the
+- `backend/core/migrations/0004_storeconfiguration_messenger_page_id.py` — new, single-field migration.
+- `backend/core/admin.py` — shows the field on the
   `StoreConfiguration` admin list.
-- `backend/EcommerceInventory/storefront/views.py` — `StoreConfigView`
+- `backend/storefront/views.py` — `StoreConfigView`
   exposes `messenger_page_id` (empty string when unset).
-- `backend/EcommerceInventory/storefront/test_store_config.py` — new,
+- `backend/storefront/test_store_config.py` — new,
   covers the default-empty and configured cases.
-- `frontend/ecommerce_inventory/src/storefront/components/MessengerButton.js`
+- `frontend/src/storefront/components/MessengerButton.js`
   — new, the floating action button. Fetches `store/config/`, renders
   nothing when `messenger_page_id` is empty.
-- `frontend/ecommerce_inventory/src/storefront/components/MessengerButton.test.js`
+- `frontend/src/storefront/components/MessengerButton.test.js`
   — new, covers dormant (empty/missing config), configured with a username,
   and configured with a numeric Page ID.
-- `frontend/ecommerce_inventory/src/storefront/layout/StorefrontLayout.js`
+- `frontend/src/storefront/layout/StorefrontLayout.js`
   — renders `<MessengerButton />` once, alongside the existing mobile
   bottom navigation.
 
