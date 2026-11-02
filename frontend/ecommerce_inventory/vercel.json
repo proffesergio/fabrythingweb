@@ -8,6 +8,10 @@
       "destination": "https://fabrythingapi.vercel.app/api/store/sitemap.xml"
     },
     {
+      "source": "/api/:path*/",
+      "destination": "https://fabrythingapi.vercel.app/api/:path*/"
+    },
+    {
       "source": "/api/:path*",
       "destination": "https://fabrythingapi.vercel.app/api/:path*"
     },
