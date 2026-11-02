@@ -155,7 +155,8 @@ class BrowseCandidatesTests(AdminProductImportTestBase):
     def test_browse_canvasit_search_works(self):
         def fake_fetch(url):
             if "route=product/search" in url:
-                return OPENCART_LISTING
+                # A supplier listing must link back to that supplier's host.
+                return OPENCART_LISTING.replace('potakait.com', 'canvasit.com.bd')
             return _opencart_product_page("Canvasit Phone", 20000)
 
         with patch("catalog.services_scrape_import.polite_get", side_effect=fake_fetch):

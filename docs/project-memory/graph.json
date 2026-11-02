@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "updated_at": "2026-11-03",
+  "nodes": [
+    { "id": "fabrything", "type": "application", "url": "https://www.fabrything.com", "repository": "https://github.com/proffesergio/fabrythingweb" },
+    { "id": "frontend", "type": "service", "platform": "Vercel", "project": "fabrythingweb", "path": "frontend/ecommerce_inventory" },
+    { "id": "api", "type": "service", "platform": "Vercel", "project": "fabrythingapi", "url": "https://fabrythingapi.vercel.app", "path": "backend/EcommerceInventory" },
+    { "id": "database", "type": "storage", "platform": "Neon PostgreSQL" },
+    { "id": "media", "type": "storage", "platform": "Cloudflare R2" },
+    { "id": "control-center", "type": "feature", "guide": "docs/CONTROL_CENTER_SETUP.md", "provider_activation": "Requires configured credentials, grants, and a separately hosted persistent worker" },
+    { "id": "discovery", "type": "feature", "popular_limit": 12, "discovery_limit": 16, "related_limit": 8, "motion": "Respects reduced-motion preference", "related_order": ["category", "brand", "recent"] },
+    { "id": "release-2026-11-03", "type": "release", "status": "deployed_and_verified", "checkpoint": "docs/project-memory/CURRENT.md", "frontend_deployment": "dpl_7xcuNBtuWZVGwyH7L2x4xsAGg5kB", "api_deployment": "dpl_5Y716VeysyDzkqLLmsXWmYfA33X5", "frontend_tests": 509, "backend_regression_tests": 48, "browser_checks": ["desktop", "mobile", "reduced_motion", "live_catalog"], "domain_configuration": "retained" }
+  ],
+  "edges": [
+    { "from": "fabrything", "to": "frontend", "relation": "served_by" },
+    { "from": "frontend", "to": "api", "relation": "proxies_api_to" },
+    { "from": "api", "to": "database", "relation": "stores_data_in" },
+    { "from": "api", "to": "media", "relation": "stores_media_in" },
+    { "from": "fabrything", "to": "control-center", "relation": "includes" },
+    { "from": "fabrything", "to": "discovery", "relation": "includes" },
+    { "from": "release-2026-11-03", "to": "fabrything", "relation": "verifies_and_updates" }
+  ]
+}

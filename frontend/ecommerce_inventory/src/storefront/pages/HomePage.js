@@ -1,7 +1,7 @@
 import React from 'react';
 import { Box, Container, Typography, Grid, Card, Skeleton } from '@mui/material';
 import { LocalShipping, Payment, Verified, Support } from '@mui/icons-material';
-import { motion } from 'framer-motion';
+import { motion, useReducedMotion } from 'framer-motion';
 import useCachedApi from '../../hooks/useCachedApi';
 import HeroCarousel from '../components/HeroCarousel';
 import FlashSaleSection from '../components/FlashSaleSection';
@@ -16,6 +16,7 @@ export default function HomePage() {
     // Stale-while-revalidate: renders instantly from the last cached homepage,
     // then refreshes in the background (masks the free-tier backend cold start).
     const { data, loading } = useCachedApi('store/homepage/');
+    const reduceMotion = useReducedMotion();
 
     const trustSignals = [
         { icon: <LocalShipping />, title: 'Free Delivery', desc: 'On orders over ৳1,500' },
@@ -35,7 +36,7 @@ export default function HomePage() {
                     {trustSignals.map((signal, i) => (
                         <Grid item xs={6} md={3} key={i}>
                             <motion.div
-                                initial={{ opacity: 0, y: 20 }}
+                                initial={reduceMotion ? false : { opacity: 0, y: 20 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ duration: 0.4, delay: i * 0.1 }}
                             >
@@ -77,6 +78,14 @@ export default function HomePage() {
                         bestSellers={data?.best_sellers}
                     />
                 )}
+            </Container>
+
+            <Container maxWidth="lg">
+                <ProductCarousel
+                    title="Discover More"
+                    products={data?.discover_products}
+                    viewAllLink="/shop"
+                />
             </Container>
 
             {/* Partner deals carousel (Rokomari) — multi-card Swiper fed by the

@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Box, Collapse, List, ListItem, ListItemIcon, ListItemText, ListSubheader, TextField } from '@mui/material';
-import { ExpandLess, ExpandMore, Dashboard as DashboardIcon } from '@mui/icons-material';
+import { ExpandLess, ExpandMore, Dashboard as DashboardIcon, QueryStats as ControlCenterIcon } from '@mui/icons-material';
 import { useDispatch, useSelector } from 'react-redux';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { getModuleIcon } from '../../layout/moduleIcons';
@@ -105,6 +105,17 @@ export default function ModuleSidebar({ onNavigate }) {
           <ListItemIcon sx={{ color: meta.color }}><DashboardIcon /></ListItemIcon>
           <ListItemText primary={`${meta.short} Overview`} />
         </ListItem>
+        {active === 'shop' && (
+          <ListItem
+            component={Link} to="/admin/shop/control-center"
+            onClick={onNavigate}
+            className={location.pathname === '/admin/shop/control-center' ? 'active-sidebar' : ''}
+            sx={{ borderLeft: '3px solid transparent', mb: 0.5 }}
+          >
+            <ListItemIcon><ControlCenterIcon /></ListItemIcon>
+            <ListItemText primary="Control Center" />
+          </ListItem>
+        )}
         {shownMine.map((it) => renderItem(it))}
         {shownShared.length > 0 && (
           <>

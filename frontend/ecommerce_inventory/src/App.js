@@ -75,6 +75,7 @@ const ManageCorporate = lazy(() => import('./pages/printing/ManageCorporate'));
 const ManageShowcase = lazy(() => import('./pages/printing/ManageShowcase'));
 // ── Modular admin: per-business overview dashboards + index redirect ──
 const ShopOverview = lazy(() => import('./admin/pages/ShopOverview'));
+const ShopControlCenter = lazy(() => import('./admin/pages/ShopControlCenter'));
 const FoodOverview = lazy(() => import('./admin/pages/FoodOverview'));
 const NewsOverview = lazy(() => import('./admin/pages/NewsOverview'));
 const PrintOverview = lazy(() => import('./admin/pages/PrintOverview'));
@@ -305,6 +306,7 @@ function App() {
         children:[
           {index:true,element:<ProtectedRoute element={<AdminIndex/>}/>},
           {path:"shop",element:<ProtectedRoute element={<ShopOverview/>}/>},
+          {path:"shop/control-center",element:<ProtectedRoute element={<ShopControlCenter/>}/>},
           {path:"food",element:<ProtectedRoute element={<FoodOverview/>}/>},
           {path:"print",element:<ProtectedRoute element={<PrintOverview/>}/>},
           {path:"news",element:<ProtectedRoute element={<NewsOverview/>}/>},

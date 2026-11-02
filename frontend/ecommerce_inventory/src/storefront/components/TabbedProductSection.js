@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Box, Typography, Tabs, Tab, Grid } from '@mui/material';
 import { TrendingUp, FiberNew, Star } from '@mui/icons-material';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import ProductCard from './ProductCard';
 
 const tabs = [
@@ -12,6 +12,7 @@ const tabs = [
 
 export default function TabbedProductSection({ trending, newArrivals, bestSellers }) {
     const [activeTab, setActiveTab] = useState(0);
+    const reduceMotion = useReducedMotion();
 
     const data = { trending, newArrivals, bestSellers };
     const activeKey = tabs[activeTab].key;
@@ -21,7 +22,7 @@ export default function TabbedProductSection({ trending, newArrivals, bestSeller
 
     return (
         <motion.div
-            initial={{ opacity: 0, y: 30 }}
+            initial={reduceMotion ? false : { opacity: 0, y: 30 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, margin: '-50px' }}
             transition={{ duration: 0.5 }}
@@ -34,6 +35,10 @@ export default function TabbedProductSection({ trending, newArrivals, bestSeller
                     <Tabs
                         value={activeTab}
                         onChange={(_, v) => setActiveTab(v)}
+                        variant="scrollable"
+                        scrollButtons="auto"
+                        allowScrollButtonsMobile
+                        aria-label="Popular product collections"
                         sx={{
                             '& .MuiTab-root': {
                                 textTransform: 'none',
@@ -48,7 +53,7 @@ export default function TabbedProductSection({ trending, newArrivals, bestSeller
                         }}
                     >
                         {tabs.map((tab, i) => (
-                            <Tab key={i} icon={tab.icon} iconPosition="start" label={tab.label} />
+                            <Tab key={i} icon={tab.icon} iconPosition="start" label={tab.label} disabled={!data[tab.key]?.length} />
                         ))}
                     </Tabs>
                 </Box>
@@ -56,15 +61,23 @@ export default function TabbedProductSection({ trending, newArrivals, bestSeller
                 <AnimatePresence mode="wait">
                     <motion.div
                         key={activeTab}
-                        initial={{ opacity: 0, y: 15 }}
+                        initial={reduceMotion ? false : { opacity: 0, y: 15 }}
                         animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -15 }}
-                        transition={{ duration: 0.3 }}
+                        exit={reduceMotion ? { opacity: 1 } : { opacity: 0, y: -15 }}
+                        transition={{ duration: reduceMotion ? 0 : 0.3 }}
                     >
                         <Grid container spacing={2}>
-                            {activeProducts.slice(0, 8).map(product => (
+                            {activeProducts.slice(0, 12).map((product, index) => (
                                 <Grid item xs={6} sm={4} md={3} key={product.id}>
-                                    <ProductCard product={product} />
+                                    <motion.div
+                                        initial={reduceMotion ? false : { opacity: 0, y: 16 }}
+                                        whileInView={{ opacity: 1, y: 0 }}
+                                        viewport={{ once: true, amount: 0.1 }}
+                                        transition={{ duration: 0.35, delay: reduceMotion ? 0 : (index % 4) * 0.06 }}
+                                        style={{ height: '100%' }}
+                                    >
+                                        <ProductCard product={product} />
+                                    </motion.div>
                                 </Grid>
                             ))}
                         </Grid>

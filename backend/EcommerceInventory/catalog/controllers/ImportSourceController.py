@@ -18,6 +18,7 @@ from rest_framework.views import APIView
 from rest_framework_simplejwt.authentication import JWTAuthentication
 
 from catalog.models import ImportRun, ImportSource, ImportSourceCategory
+from catalog.supplier_security import validate_supplier_url
 from core.helpers import CommonListAPIMixin, createParsedCreatedAtUpdatedAt, isPlatformStaff, renderResponse
 
 
@@ -48,6 +49,12 @@ class ImportSourceSerializer(serializers.ModelSerializer):
         if is_enabled and not adapter_key:
             raise serializers.ValidationError(
                 {'is_enabled': ['Cannot enable a source with no adapter_key -- add a working adapter first.']})
+        base_url = attrs.get('base_url', getattr(self.instance, 'base_url', ''))
+        if is_enabled:
+            try:
+                validate_supplier_url(base_url)
+            except ValueError as exc:
+                raise serializers.ValidationError({'base_url': str(exc)}) from exc
         return attrs
 
 

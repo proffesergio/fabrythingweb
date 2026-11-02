@@ -21,21 +21,22 @@ any per-product check, so there is no way for a blank source_url to slip
 through and get re-priced.
 """
 from django.utils import timezone
+from django.db import transaction
 
 from catalog.models import Products
-from catalog.pricing import apply_markup
+from catalog.pricing import apply_markup, quote_supplier_price
 from catalog.scrape_parsers import parse_opencart_product
+from catalog.supplier_security import supplier_get, validate_supplier_url
 
 
 def _default_fetcher(url):
-    import requests
-    r = requests.get(url, timeout=20,
-                     headers={"User-Agent": "Mozilla/5.0 (fabrything price sync)"})
-    r.raise_for_status()
-    return r.text
+    import time
+    time.sleep(1)
+    return supplier_get(url)
 
 
-def sync_source_prices(fetcher=None, dry_run=False):
+def sync_source_prices(fetcher=None, dry_run=False, source=None, limit=None, pricing_policy=None,
+                       after_id=0):
     """Re-fetch each source_url product's live partner page, treat its retail
     price as the new ``base_price``, and re-derive the selling price (and
     discount price, if any) through ``apply_markup``.
@@ -48,11 +49,27 @@ def sync_source_prices(fetcher=None, dry_run=False):
     """
     fetch = fetcher or _default_fetcher
     changes = []
-    for p in Products.objects.exclude(source_url="").iterator():
-        rec = {"slug": p.slug, "old_price": p.initial_selling_price,
+    queryset = Products.objects.exclude(source_url="").order_by('id')
+    if source is not None:
+        queryset = queryset.filter(source_url__startswith=source.base_url.rstrip('/') + '/')
+    if after_id:
+        later = queryset.filter(id__gt=after_id)
+        queryset = later if later.exists() else queryset
+    if limit is not None:
+        queryset = queryset[:limit]
+    for p in queryset.iterator():
+        rec = {"product_id": p.id, "slug": p.slug, "old_price": p.initial_selling_price,
                "new_price": None, "old_discount": p.discount_price,
                "new_discount": None, "updated": False}
+        policy_currency = (pricing_policy or {}).get('source_currency', 'BDT')
+        # A changed policy must not reinterpret a supplier's raw amount in a
+        # different currency: that can silently underprice checkout variants.
+        if p.source_currency != policy_currency:
+            changes.append(rec)
+            continue
         try:
+            if source is not None:
+                validate_supplier_url(p.source_url, source)
             parsed = parse_opencart_product(fetch(p.source_url))
         except Exception:  # noqa: BLE001 -- one dead page must not stop the run
             changes.append(rec)
@@ -61,28 +78,36 @@ def sync_source_prices(fetcher=None, dry_run=False):
         if not price:
             changes.append(rec)
             continue
-        new_base = price
-        new_selling = apply_markup(new_base)
+        try:
+            quote = quote_supplier_price(price, pricing_policy,
+                weight_grams=int(p.weight * 1000) if p.weight is not None else None)
+        except ValueError:
+            changes.append(rec)
+            continue
+        new_base = quote['base_price']
+        new_selling = quote['selling_price']
         disc = parsed.get("discount_price")
-        new_discount = apply_markup(disc) if disc else None
+        try:
+            new_discount = quote_supplier_price(disc, pricing_policy,
+                weight_grams=int(p.weight * 1000) if p.weight is not None else None)['selling_price'] if disc else None
+        except ValueError:
+            changes.append(rec)
+            continue
         rec["new_price"], rec["new_discount"] = new_selling, new_discount
         if not dry_run:
-            p.base_price = new_base
-            p.initial_selling_price = new_selling
-            p.discount_price = new_discount
-            p.source_price = price
-            p.price_synced_at = timezone.now()
-            p.save(update_fields=["base_price", "initial_selling_price", "discount_price",
-                                  "source_price", "price_synced_at", "updated_at"])
-            # Checkout charges the VARIANT, not Products (orders/services.py
-            # snapshots unit_price from ProductVariant.effective_price) -- so
-            # a product and its variants must never disagree on price. These
-            # variants were created by our own seeder mirroring the partner
-            # price, so mirroring the new price/discount forward onto them
-            # here is correct. Only active variants: an inactive/retired SKU
-            # is not sellable and re-pricing it is not observable anyway.
-            p.variants.filter(is_active=True).update(
-                price=new_selling, discount_price=new_discount)
+            with transaction.atomic():
+                p.base_price = new_base
+                p.initial_selling_price = new_selling
+                p.discount_price = new_discount
+                p.source_price = price
+                if pricing_policy:
+                    p.source_currency = quote['source_currency']
+                p.price_synced_at = timezone.now()
+                p.save(update_fields=["base_price", "initial_selling_price", "discount_price",
+                                      "source_price", "source_currency", "price_synced_at", "updated_at"])
+                # Checkout charges active variants; commit both prices together.
+                p.variants.filter(is_active=True).update(
+                    price=new_selling, discount_price=new_discount)
         rec["updated"] = True
         changes.append(rec)
     return changes

@@ -14,13 +14,15 @@ with ``--force-update``, matching its pre-extraction behaviour exactly.
 """
 import io
 import os
+from decimal import Decimal, InvalidOperation
 
 import requests
+from django.db import transaction
 from django.utils import timezone
 from django.utils.text import slugify
 
 from catalog.models import Products, ProductVariant
-from catalog.pricing import apply_markup
+from catalog.pricing import apply_markup, quote_supplier_price
 
 SKU_PREFIX = "FS"
 
@@ -36,11 +38,10 @@ def import_image(url, on_error=None):
     from PIL import Image
 
     from core.storage import save_file
+    from catalog.supplier_security import supplier_get_bytes
     try:
-        r = requests.get(url, timeout=20,
-                         headers={"User-Agent": "Mozilla/5.0 (fabrything import)"})
-        r.raise_for_status()
-        img = Image.open(io.BytesIO(r.content)).convert("RGB")
+        image_bytes = supplier_get_bytes(url, max_bytes=5_000_000)
+        img = Image.open(io.BytesIO(image_bytes)).convert("RGB")
         img.thumbnail((800, 800))
         buf = io.BytesIO()
         img.save(buf, "JPEG", quality=80, optimize=True)
@@ -67,7 +68,7 @@ def next_sku(n, prefix=SKU_PREFIX):
 
 def seed_product_entry(entry, category, domain_user, added_by_user=None, *,
                        force=False, import_image_fn=None,
-                       sku_hint=None, sku_prefix=SKU_PREFIX):
+                       sku_hint=None, sku_prefix=SKU_PREFIX, pricing_policy=None):
     """Create or update one ``Products`` row (+ its ``ProductVariant`` rows)
     from a plain-dict ``entry`` (same shape the scrape fixtures use: name,
     price, discount_price, description, specifications, brand, gender,
@@ -107,10 +108,11 @@ def seed_product_entry(entry, category, domain_user, added_by_user=None, *,
                 "product": None, "slug": "", "sku_n_used": None}
 
     try:
-        price = float(entry.get("price")) if entry.get("price") else None
-    except (TypeError, ValueError):
+        price_decimal = Decimal(str(entry.get('price')))
+        price = float(price_decimal) if price_decimal.is_finite() and price_decimal > 0 else None
+    except (TypeError, ValueError, InvalidOperation):
         price = None
-    if not price:
+    if price is None:
         return {"status": "skipped_invalid", "reason": "missing price",
                 "product": None, "slug": slugify(name)[:250], "sku_n_used": None}
 
@@ -120,12 +122,27 @@ def seed_product_entry(entry, category, domain_user, added_by_user=None, *,
         return {"status": "skipped_exists", "reason": "already in store",
                 "product": existing, "slug": slug, "sku_n_used": None}
 
-    images = [u for u in (image_fn(src) for src in entry.get("images", [])[:3]) if u]
-
     try:
-        disc = float(entry["discount_price"]) if entry.get("discount_price") else None
-    except (TypeError, ValueError):
+        discount_decimal = Decimal(str(entry['discount_price'])) if entry.get('discount_price') else None
+        disc = float(discount_decimal) if discount_decimal is not None and discount_decimal.is_finite() and 0 < discount_decimal < price_decimal else None
+    except (TypeError, ValueError, InvalidOperation):
         disc = None
+    weight = entry.get('weight_grams')
+    shipping = entry.get('shipping_fee')
+    try:
+        if weight is not None and (Decimal(str(weight)) < 0 or Decimal(str(weight)) > 100000 or not Decimal(str(weight)).is_finite()):
+            raise ValueError('Invalid weight')
+        if shipping is not None and (Decimal(str(shipping)) < 0 or Decimal(str(shipping)) > Decimal('999999.99') or not Decimal(str(shipping)).is_finite()):
+            raise ValueError('Invalid shipping fee')
+    except (TypeError, InvalidOperation, ValueError):
+        return {"status": "skipped_invalid", "reason": "invalid weight or shipping fee", "product": None, "slug": slug, "sku_n_used": None}
+    try:
+        quote = quote_supplier_price(price, pricing_policy, weight_grams=weight)
+        discount_quote = quote_supplier_price(disc, pricing_policy, weight_grams=weight) if disc else None
+    except ValueError as exc:
+        return {"status": "skipped_invalid", "reason": str(exc), "product": None, "slug": slug, "sku_n_used": None}
+
+    images = [u for u in (image_fn(src) for src in entry.get("images", [])[:3]) if u]
 
     # `price`/`disc` are the SOURCE's raw pre-markup numbers -- they become
     # base_price (recoverable forever) and the selling/discount prices are
@@ -143,10 +160,10 @@ def seed_product_entry(entry, category, domain_user, added_by_user=None, *,
         "available_sizes": entry.get("sizes") or [],
         "size_chart": entry.get("size_chart") or {},
         "image": images,
-        "initial_buying_price": round(price * 0.85),  # dealer-price placeholder
-        "base_price": price,
-        "initial_selling_price": apply_markup(price),
-        "discount_price": apply_markup(disc) if disc else None,
+        "initial_buying_price": round(quote['base_price'] * 0.85),  # dealer-price placeholder
+        "base_price": quote['base_price'],
+        "initial_selling_price": quote['selling_price'],
+        "discount_price": discount_quote['selling_price'] if discount_quote else None,
         # Medicines only. Products.requires_prescription is what the checkout
         # gate keys on while StoreConfiguration.rx_sales_enabled is False, so
         # dropping it here would put prescription-only items on open sale.
@@ -154,7 +171,8 @@ def seed_product_entry(entry, category, domain_user, added_by_user=None, *,
         # settle to False rather than raise.
         "requires_prescription": bool(entry.get("requires_prescription")),
         "source_url": entry.get("source_url") or "",
-        "source_price": price if entry.get("source_url") else None,
+        "source_price": price if entry.get("source_url") or pricing_policy else None,
+        "source_currency": quote['source_currency'] if pricing_policy else 'BDT',
         "price_synced_at": timezone.now() if entry.get("source_url") else None,
         "category_id": category,
         "status": "ACTIVE",
@@ -163,46 +181,43 @@ def seed_product_entry(entry, category, domain_user, added_by_user=None, *,
         "seo_title": f"{name} - Fabrything",
         "seo_description": (entry.get("description") or name)[:160],
     }
+    if shipping is not None:
+        defaults['shipping_fee'] = Decimal(str(shipping))
+    if weight is not None:
+        defaults['weight'] = float(Decimal(str(weight)) / Decimal('1000'))
 
-    sku_n_used = None
-    if existing is not None:
-        # --force-update: refresh the admin-visible fields, but never
-        # regenerate the SKU -- it's an identity assigned once at creation,
-        # not fixture data, and other records (POs, invoices) may reference
-        # it.
-        for field, value in defaults.items():
-            setattr(existing, field, value)
-        existing.save()
-        product = existing
-        status = "updated"
-    else:
-        start = sku_hint if sku_hint is not None else (
-            1000 + Products.objects.filter(sku__startswith=sku_prefix).count())
-        sku_n_used = next_sku(start, sku_prefix)
-        product = Products.objects.create(
-            slug=slug, sku=f"{sku_prefix}-{sku_n_used}", **defaults)
-        status = "created"
+    # Commit the product and checkout-facing variants as one price change.
+    with transaction.atomic():
+        sku_n_used = None
+        if existing is not None:
+            # --force-update keeps the assigned SKU even as prices change.
+            for field, value in defaults.items():
+                setattr(existing, field, value)
+            existing.save()
+            product = existing
+            status = "updated"
+        else:
+            start = sku_hint if sku_hint is not None else (
+                1000 + Products.objects.filter(sku__startswith=sku_prefix).count())
+            sku_n_used = next_sku(start, sku_prefix)
+            product = Products.objects.create(
+                slug=slug, sku=f"{sku_prefix}-{sku_n_used}", **defaults)
+            status = "created"
 
-    # Checkout charges ProductVariant.effective_price, not this Products row
-    # (orders/services.py), so the variant must carry the same marked-up
-    # number the product does. `disc or price` was the pre-markup "what the
-    # customer actually pays" value; mark that same value up so the two never
-    # disagree.
-    variant_price = apply_markup(disc if disc else price)
-    sizes = entry.get("sizes") or [""]
-    for size in sizes:
-        variant, variant_created = ProductVariant.objects.get_or_create(
-            product=product, size=size, color="",
-            defaults={"sku": f"{product.sku}-{size or 'DEF'}",
-                      "price": variant_price, "stock_quantity": 25})
-        # get_or_create only applies `defaults` on creation, so a forced
-        # re-seed never used to touch an existing variant's price -- checkout
-        # charges the variant (effective_price), so the storefront would show
-        # the new price while checkout kept charging the stale one. On
-        # force, refresh it explicitly.
-        if force and not variant_created:
-            variant.price = variant_price
-            variant.save(update_fields=["price", "updated_at"])
+        # Checkout snapshots ProductVariant.effective_price, so update it in
+        # the same transaction as the product shelf price.
+        variant_price = discount_quote['selling_price'] if discount_quote else quote['selling_price']
+        sizes = entry.get("sizes") or [""]
+        for size in sizes:
+            variant, variant_created = ProductVariant.objects.get_or_create(
+                product=product, size=size, color="",
+                defaults={"sku": f"{product.sku}-{size or 'DEF'}",
+                          "price": variant_price, "stock_quantity": 25,
+                          "weight_grams": int(Decimal(str(weight))) if weight is not None else 0})
+            if force and not variant_created:
+                variant.price = variant_price
+                variant.discount_price = None
+                variant.save(update_fields=["price", "discount_price", "updated_at"])
 
     return {"status": status, "reason": None, "product": product,
             "slug": slug, "sku_n_used": sku_n_used}

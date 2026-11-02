@@ -3,7 +3,7 @@ import { Card, CardMedia, CardContent, Typography, Box, Rating, Button, IconButt
 import { ShoppingCart, FavoriteBorder, Visibility } from '@mui/icons-material';
 import { pingClick } from './AffiliateProductCard';
 import { useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
+import { motion, useReducedMotion } from 'framer-motion';
 import { taka } from '../format';
 
 // `affiliate` is opt-in: pass { goUrl, targetUrl, label } to render an affiliate item
@@ -37,6 +37,7 @@ export function actionButtonSx(mode) {
 
 export default function ProductCard({ product, showFlashBadge, affiliate = null }) {
     const navigate = useNavigate();
+    const reduceMotion = useReducedMotion();
     const isAffiliate = !!affiliate;
 
     const price = product.discount_price || product.initial_selling_price;
@@ -76,7 +77,7 @@ export default function ProductCard({ product, showFlashBadge, affiliate = null 
 
     return (
         <motion.div
-            whileHover={{ y: -6 }}
+            whileHover={reduceMotion ? undefined : { y: -6 }}
             transition={{ duration: 0.25, ease: 'easeOut' }}
             style={{ height: '100%' }}
         >
@@ -106,6 +107,9 @@ export default function ProductCard({ product, showFlashBadge, affiliate = null 
                     '&:hover .quick-add': { opacity: 1, transform: 'translateY(0)' },
                     '&:hover .card-overlay': { opacity: 1 },
                     '&:hover .action-icons': { opacity: 1, transform: 'translateX(0)' },
+                    '@media (prefers-reduced-motion: reduce)': {
+                        '&, & *': { transition: 'none !important', transform: 'none !important' },
+                    },
                 }}
                 onClick={isAffiliate ? undefined : () => navigate(`/product/${product.slug}`)}
             >

@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { motion, useReducedMotion } from 'framer-motion';
 import useSeo from '../useSeo';
 import {
     Box, Container, Grid, Typography, Button, Rating, Chip, Divider,
@@ -32,11 +33,19 @@ export default function ProductDetail() {
     const [sizeChartUnit, setSizeChartUnit] = useState('inch');
     const { callApi, loading } = useApi();
     const dispatch = useDispatch();
+    const reduceMotion = useReducedMotion();
 
     useEffect(() => {
+        let cancelled = false;
+        setProduct(null);
+        setSelectedImage(0);
+        setSelectedSize('');
+        setQuantity(1);
+        setTab(0);
+        setSizeChartOpen(false);
         const fetchProduct = async () => {
             const res = await callApi({ url: `store/products/${slug}/` });
-            if (res?.data?.data) {
+            if (!cancelled && res?.data?.data) {
                 setProduct(res.data.data);
                 const p = res.data.data;
                 // GA4 view_item (also mirrors to Pixel ViewContent + backend).
@@ -56,6 +65,7 @@ export default function ProductDetail() {
         };
         fetchProduct();
         window.scrollTo(0, 0);
+        return () => { cancelled = true; };
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [slug]);
 
@@ -505,9 +515,17 @@ export default function ProductDetail() {
                 <Box sx={{ mt: 6 }}>
                     <Typography variant="h5" sx={{ mb: 3 }}>You May Also Like</Typography>
                     <Grid container spacing={2}>
-                        {product.related_products.slice(0, 4).map(p => (
+                        {product.related_products.filter(p => p.id !== product.id && p.slug !== product.slug).slice(0, 8).map((p, index) => (
                             <Grid item xs={6} sm={3} key={p.id}>
-                                <ProductCard product={p} />
+                                <motion.div
+                                    initial={reduceMotion ? false : { opacity: 0, y: 16 }}
+                                    whileInView={{ opacity: 1, y: 0 }}
+                                    viewport={{ once: true, amount: 0.1 }}
+                                    transition={{ duration: 0.35, delay: reduceMotion ? 0 : (index % 4) * 0.06 }}
+                                    style={{ height: '100%' }}
+                                >
+                                    <ProductCard product={p} />
+                                </motion.div>
                             </Grid>
                         ))}
                     </Grid>

@@ -26,6 +26,7 @@ from catalog.services_scrape_import import (
     browse_candidates,
     import_candidates,
 )
+from catalog.supplier_security import validate_supplier_url
 from core.helpers import isPlatformStaff, renderResponse
 
 
@@ -144,6 +145,13 @@ class AdminImportProductsView(APIView):
                     f'(reference sites are rate-limited to 1 request/second) -- '
                     f'select fewer and run again.']},
                 message='Validation error', status=400)
+        try:
+            for url in urls:
+                if not isinstance(url, str):
+                    raise ValueError('Each source URL must be a string.')
+                validate_supplier_url(url, source)
+        except ValueError as exc:
+            return renderResponse(data={'source_urls': [str(exc)]}, message='Validation error', status=400)
 
         category_ref = data.get('category_id') or data.get('category')
         if not category_ref:

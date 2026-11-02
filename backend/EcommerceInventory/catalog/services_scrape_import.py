@@ -52,7 +52,14 @@ from catalog.scrape_parsers import (
 )
 from catalog.pricing import apply_markup
 from catalog.services_import import import_image, seed_product_entry
-from tools.scrape.common import polite_get
+from catalog.supplier_security import supplier_get, validate_supplier_url
+import time
+
+
+def polite_get(url):
+    """One request per second through the bounded supplier transport."""
+    time.sleep(1)
+    return supplier_get(url)
 
 # Per-request caps. Etiquette is 1 request/second against these partner
 # sites, and each candidate/import costs at least one such request (browse
@@ -163,7 +170,7 @@ def _source_categories(source):
     ]
 
 
-def _fabrilife_search(cats=None, query=None, hits_per_page=BROWSE_LIMIT):
+def _fabrilife_search(cats=None, query=None, hits_per_page=BROWSE_LIMIT, page=1):
     """POST an Algolia `query` request against fabrilife.com's public
     products index -- same endpoint/key tools/scrape/scrape_fabrilife.py's
     polite_algolia_query uses for category browsing, extended here to also
@@ -182,7 +189,7 @@ def _fabrilife_search(cats=None, query=None, hits_per_page=BROWSE_LIMIT):
         "Content-Type": "application/json",
         **UA,
     }
-    body = {"hitsPerPage": hits_per_page}
+    body = {"hitsPerPage": hits_per_page, "page": page - 1}
     if cats:
         body["facetFilters"] = [[f"cats:{c}" for c in cats]]
     if query:
@@ -192,18 +199,20 @@ def _fabrilife_search(cats=None, query=None, hits_per_page=BROWSE_LIMIT):
     return r.text
 
 
-def _opencart_listing_url(source, category_path=None, query=None):
+def _opencart_listing_url(source, category_path=None, query=None, page=1):
     base = source.base_url
     if category_path:
-        return base + category_path.strip().lstrip("/")
+        relative = _as_relative_path(category_path, base)
+        return base + relative + (('&' if '?' in relative else '?') + f'page={page}' if page > 1 else '')
     # Best-effort classic OpenCart search route. The exact scheme cannot be
     # verified against the live theme from this environment; a wrong scheme
     # degrades to "0 candidates" (parse_opencart_listing finds no cards),
     # not a crash, and an admin can always fall back to a category path.
-    return base + f"index.php?route=product/search&search={query}&description=1"
+    return base + f"index.php?route=product/search&search={quote(query or '')}&description=1" + (
+        f'&page={page}' if page > 1 else '')
 
 
-def _arogga_listing_url(source, category_path=None, query=None):
+def _arogga_listing_url(source, category_path=None, query=None, page=1):
     """category_path is a full ``category/<group>/<id>/<slug>`` path (see the
     ImportSourceCategory rows seeded alongside the source).
 
@@ -212,10 +221,11 @@ def _arogga_listing_url(source, category_path=None, query=None):
     rejects a query before reaching here.
     """
     base = source.base_url
-    return base + _as_relative_path(category_path or "", base)
+    relative = _as_relative_path(category_path or "", base)
+    return base + relative + (('&' if '?' in relative else '?') + f'page={page}' if page > 1 else '')
 
 
-def _rokomari_listing_url(source, category_path=None, query=None):
+def _rokomari_listing_url(source, category_path=None, query=None, page=1):
     """category_path is a full ``product/category/<id>/<slug>`` path (see
     ImportSourceCategory rows / the 0009 data migration); search hits the
     real ``/search?term=&search_type=ALL`` route -- verified live 2026-07-30,
@@ -223,8 +233,10 @@ def _rokomari_listing_url(source, category_path=None, query=None):
     value the site's own search form actually submits) works."""
     base = source.base_url
     if category_path:
-        return base + _as_relative_path(category_path, base)
-    return base + f"search?term={quote(query)}&search_type=ALL"
+        relative = _as_relative_path(category_path, base)
+        return base + relative + (('&' if '?' in relative else '?') + f'page={page}' if page > 1 else '')
+    return base + f"search?term={quote(query)}&search_type=ALL" + (
+        f'&page={page}' if page > 1 else '')
 
 
 def _as_relative_path(category_path, base):
@@ -236,6 +248,8 @@ def _as_relative_path(category_path, base):
     absolute URL on this source's host and a bare path.
     """
     value = (category_path or "").strip()
+    if value.startswith('//') or '\\' in value or '..' in value or any(ord(c) < 32 for c in value):
+        raise ValueError('Invalid category path.')
     if value.startswith(("http://", "https://")):
         parsed = urlparse(value)
         base_host = urlparse(base).netloc
@@ -310,7 +324,7 @@ def _candidate_from_card(card):
 
 
 def browse_candidates(source_slug, *, category_path=None, query=None, limit=BROWSE_LIMIT, fetch=None,
-                       detail=True):
+                       detail=True, page=1):
     """Fetch a listing (or search) for the ImportSource identified by
     ``source_slug`` and return candidate products with enough detail to
     render a picker: name, price, discount_price, image URL(s), source URL,
@@ -364,18 +378,24 @@ def browse_candidates(source_slug, *, category_path=None, query=None, limit=BROW
 
     cap = BROWSE_LIMIT if detail else LISTING_ONLY_LIMIT
     limit = max(1, min(int(limit or cap), cap))
+    if category_path:
+        _as_relative_path(category_path, source.base_url)
+    if query and (len(query) > 120 or any(ord(c) < 32 for c in query)):
+        raise ValueError('Search term is invalid or too long.')
+    if not 1 <= page <= 1000:
+        raise ValueError('Page must be between 1 and 1000.')
     fetch = fetch or polite_get
 
     if source.adapter_key == "fabrilife":
         cats = _FABRILIFE_CATS_BY_PATH.get(category_path) if category_path else None
         try:
-            listing_json = _fabrilife_search(cats=cats, query=query, hits_per_page=limit)
+            listing_json = _fabrilife_search(cats=cats, query=query, hits_per_page=limit, page=page)
         except Exception as e:  # noqa: BLE001
             raise SourceFetchError(str(e)) from e
         product_urls = parse_fabrilife_listing(listing_json, source.base_url or FABRILIFE_BASE_URL)[:limit]
         parser = parse_fabrilife_product
     elif source.adapter_key == "arogga":
-        listing_url = _arogga_listing_url(source, category_path, query)
+        listing_url = _arogga_listing_url(source, category_path, query, page=page)
         try:
             listing_html = fetch(listing_url)
         except Exception as e:  # noqa: BLE001 -- one bad listing must surface, not crash
@@ -395,7 +415,7 @@ def browse_candidates(source_slug, *, category_path=None, query=None, limit=BROW
         product_urls = parse_arogga_listing(listing_html, listing_url)[:limit]
         parser = parse_arogga_product
     elif source.adapter_key == "rokomari":
-        listing_url = _rokomari_listing_url(source, category_path, query)
+        listing_url = _rokomari_listing_url(source, category_path, query, page=page)
         # A single request either way (detail or not) -- the timeout that
         # guards against a slow/hung source is `fetch` itself (polite_get's
         # requests.get(..., timeout=20)), and any exception it raises
@@ -417,7 +437,7 @@ def browse_candidates(source_slug, *, category_path=None, query=None, limit=BROW
         product_urls = parse_rokomari_listing(listing_html, listing_url)[:limit]
         parser = parse_rokomari_product
     else:
-        listing_url = _opencart_listing_url(source, category_path, query)
+        listing_url = _opencart_listing_url(source, category_path, query, page=page)
         try:
             listing_html = fetch(listing_url)
         except Exception as e:  # noqa: BLE001 -- one bad listing must surface, not crash the process
@@ -431,6 +451,7 @@ def browse_candidates(source_slug, *, category_path=None, query=None, limit=BROW
     fetch_failures = 0
     for url in product_urls:
         try:
+            validate_supplier_url(url, source)
             html = fetch(url)
             parsed = parser(html)
         except Exception:  # noqa: BLE001 -- one bad product page must not sink the whole browse
@@ -473,7 +494,8 @@ def _entry_from_parsed(source, url, parsed):
     return entry
 
 
-def import_candidates(source_slug, source_urls, category, domain_user, added_by_user=None, *, fetch=None):
+def import_candidates(source_slug, source_urls, category, domain_user, added_by_user=None, *, fetch=None,
+                      pricing_policy=None):
     """Fetch each of ``source_urls`` in turn, parse it, and create/skip a
     product+variant via ``catalog.services_import.seed_product_entry``.
 
@@ -499,6 +521,7 @@ def import_candidates(source_slug, source_urls, category, domain_user, added_by_
     results = []
     for url in source_urls[:IMPORT_LIMIT]:
         try:
+            validate_supplier_url(url, source)
             html = fetch(url)
             parsed = parser(html)
         except Exception as e:  # noqa: BLE001 -- one dead product page must not sink the batch
@@ -507,7 +530,8 @@ def import_candidates(source_slug, source_urls, category, domain_user, added_by_
             continue
 
         entry = _entry_from_parsed(source, url, parsed)
-        outcome = seed_product_entry(entry, category, domain_user, added_by_user)
+        outcome = seed_product_entry(entry, category, domain_user, added_by_user,
+                                     pricing_policy=pricing_policy)
 
         if outcome["status"] == "skipped_invalid":
             results.append({"source_url": url, "status": "failed", "reason": outcome["reason"],

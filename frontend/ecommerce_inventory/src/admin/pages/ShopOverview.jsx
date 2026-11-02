@@ -21,6 +21,7 @@ export default function ShopOverview() {
         <Box sx={{ flex: 1 }} />
         <Button size="small" component={Link} to="/admin/manage/salesorder" variant="outlined">Orders</Button>
         <Button size="small" component={Link} to="/admin/manage/product" variant="outlined">Products</Button>
+        <Button size="small" component={Link} to="/admin/shop/control-center" variant="contained">Control center</Button>
       </Box>
 
       {showState ? (

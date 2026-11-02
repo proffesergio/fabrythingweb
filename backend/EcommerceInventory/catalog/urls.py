@@ -9,8 +9,15 @@ from .controllers.ImportSourceController import (
     AdminImportRunListView,
 )
 from django.urls import path
+from .controllers.SyncJobController import (AdminSyncJobListView, AdminSyncJobDetailView,
+    AdminSyncJobActionView, AdminSyncRunListView, AdminInsightsView)
 
 urlpatterns = [
+    path('admin/sync-jobs/', AdminSyncJobListView.as_view()),
+    path('admin/sync-jobs/<int:pk>/', AdminSyncJobDetailView.as_view()),
+    path('admin/sync-jobs/<int:pk>/<str:action>/', AdminSyncJobActionView.as_view()),
+    path('admin/sync-runs/', AdminSyncRunListView.as_view()),
+    path('admin/insights/', AdminInsightsView.as_view()),
     path('categories/',CategoryListView.as_view(),name='category_list'),
     path('admin/sync-prices/',AdminSyncPricesView.as_view(),name='admin_sync_prices'),
     path('admin/shipping-fee/bulk/',AdminBulkShippingFeeView.as_view(),name='admin_bulk_shipping_fee'),

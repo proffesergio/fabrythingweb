@@ -143,6 +143,7 @@ class Products(models.Model):
     # Reseller source (partner stores we sync prices from)
     source_url=models.URLField(max_length=500,blank=True,default='')
     source_price=models.FloatField(blank=True,null=True)
+    source_currency=models.CharField(max_length=3, default='BDT')
     price_synced_at=models.DateTimeField(blank=True,null=True)
     addition_details=models.JSONField(default=dict,blank=True)
     category_id=models.ForeignKey(Categories,on_delete=models.CASCADE,blank=True,null=True,related_name='category_id_products')
@@ -401,3 +402,70 @@ class ImportRun(models.Model):
             'imported_count', 'skipped_count', 'failed_count', 'status',
             'error_summary', 'finished_at', 'updated_at',
         ])
+
+
+class SyncJob(models.Model):
+    """Persistent schedule; a single pending run is claimed by a worker."""
+    MODE_IMPORT = 'IMPORT'
+    MODE_PRICE = 'PRICE'
+    MODE_MERCHANT = 'MERCHANT'
+    MODE_ANALYTICS = 'ANALYTICS'
+    MODE_SEARCH_CONSOLE = 'SEARCH_CONSOLE'
+    source = models.ForeignKey(ImportSource, on_delete=models.CASCADE, related_name='sync_jobs', blank=True, null=True)
+    mode = models.CharField(max_length=16, choices=[(MODE_IMPORT, 'Import'), (MODE_PRICE, 'Price'),
+                                                    (MODE_MERCHANT, 'Merchant'), (MODE_ANALYTICS, 'Analytics'),
+                                                    (MODE_SEARCH_CONSOLE, 'Search Console')])
+    category_path = models.CharField(max_length=255, blank=True, default='')
+    target_category = models.ForeignKey(Categories, on_delete=models.PROTECT, blank=True, null=True)
+    interval_minutes = models.PositiveIntegerField(default=1440)
+    batch_limit = models.PositiveSmallIntegerField(default=12)
+    pricing_policy = models.JSONField(default=dict, blank=True)
+    cursor = models.PositiveIntegerField(default=0)
+    is_paused = models.BooleanField(default=True)
+    next_run_at = models.DateTimeField(blank=True, null=True)
+    created_by = models.ForeignKey(Users, on_delete=models.SET_NULL, blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        indexes = [models.Index(fields=['is_paused', 'next_run_at'])]
+
+
+class SyncRun(models.Model):
+    STATUS_QUEUED = 'QUEUED'
+    STATUS_RUNNING = 'RUNNING'
+    STATUS_COMPLETED = 'COMPLETED'
+    STATUS_PARTIAL = 'PARTIAL'
+    STATUS_FAILED = 'FAILED'
+    job = models.ForeignKey(SyncJob, on_delete=models.CASCADE, related_name='runs')
+    status = models.CharField(max_length=12, default=STATUS_QUEUED)
+    attempt = models.PositiveSmallIntegerField(default=0)
+    scheduled_at = models.DateTimeField()
+    available_at = models.DateTimeField()
+    lease_until = models.DateTimeField(blank=True, null=True)
+    lease_token = models.UUIDField(blank=True, null=True)
+    started_at = models.DateTimeField(blank=True, null=True)
+    finished_at = models.DateTimeField(blank=True, null=True)
+    found_count = models.PositiveIntegerField(default=0)
+    updated_count = models.PositiveIntegerField(default=0)
+    skipped_count = models.PositiveIntegerField(default=0)
+    failed_count = models.PositiveIntegerField(default=0)
+    error_summary = models.TextField(blank=True, default='')
+    result = models.JSONField(default=dict, blank=True)
+    triggered_by = models.ForeignKey(Users, on_delete=models.SET_NULL, blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        constraints = [models.UniqueConstraint(fields=['job', 'scheduled_at'], name='uq_sync_job_slot')]
+        indexes = [models.Index(fields=['status', 'available_at'])]
+
+
+class ProductExternalIdentity(models.Model):
+    product = models.ForeignKey(Products, on_delete=models.CASCADE, related_name='external_identities')
+    provider = models.CharField(max_length=24)
+    external_name = models.CharField(max_length=500)
+    submitted_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=['product', 'provider'], name='uq_product_provider_identity')]

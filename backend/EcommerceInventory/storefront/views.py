@@ -2,8 +2,9 @@ from datetime import timedelta
 
 from django.contrib.auth import get_user_model
 from django.db import transaction
-from django.db.models import Avg, Count, ExpressionWrapper, F, FloatField, IntegerField, OuterRef, Q, Subquery, Sum
+from django.db.models import Avg, Case, Count, ExpressionWrapper, F, FloatField, IntegerField, OuterRef, Q, Subquery, Sum, Value, When, Window
 from django.db.models.functions import Coalesce
+from django.db.models.functions.window import RowNumber
 from django.utils import timezone
 from rest_framework import generics
 from rest_framework import serializers
@@ -184,14 +185,21 @@ class PublicProductDetailView(APIView):
             return renderResponse(data='Product not found', message='Product not found', status=404)
 
         data = StorefrontProductDetailSerializer(product, context={'request': request}).data
-        if product.category_id:
-            related = annotate_product_cards(Products.objects.filter(
-                category_id=product.category_id, status='ACTIVE'
-            )).exclude(id=product.id)[:8]
-            data['related_products'] = StorefrontProductListSerializer(
-                related, many=True, context={'request': request}).data
-        else:
-            data['related_products'] = []
+        candidates = Products.objects.filter(status='ACTIVE').exclude(id=product.id)
+        # The sales switch also controls which products we promote.
+        if not StoreConfiguration.get_solo().rx_sales_enabled:
+            candidates = candidates.filter(requires_prescription=False)
+        category_match = Q(category_id=product.category_id) if product.category_id else Q(pk__in=[])
+        brand_match = Q(brand__iexact=product.brand) if product.brand.strip() else Q(pk__in=[])
+        related = annotate_product_cards(candidates.annotate(
+            relevance=Case(
+                When(category_match, then=Value(0)),
+                When(brand_match, then=Value(1)),
+                default=Value(2), output_field=IntegerField(),
+            ),
+        )).order_by('relevance', '-created_at', '-id')[:8]
+        data['related_products'] = StorefrontProductListSerializer(
+            related, many=True, context={'request': request}).data
         return renderResponse(data=data, message='Product retrieved successfully')
 
 
@@ -229,11 +237,53 @@ class PublicHomepageView(APIView):
 
     def get(self, request):
         categories = Categories.objects.filter(parent_id__isnull=True).order_by('display_order')[:8]
-        new_arrivals = annotate_product_cards(
-            Products.objects.filter(status='ACTIVE')
-        ).order_by('-created_at')[:8]
+        eligible_products = Products.objects.filter(status='ACTIVE')
+        if not StoreConfiguration.get_solo().rx_sales_enabled:
+            eligible_products = eligible_products.filter(requires_prescription=False)
+        new_arrivals = list(annotate_product_cards(
+            eligible_products
+        ).order_by('-created_at', '-id')[:12])
+        arrival_ids = [product.id for product in new_arrivals]
+
+        # Take two recent items per category, then interleave categories. The
+        # window query fetches at most 32 IDs; only selected cards are loaded
+        # and serialized. Recent remaining products fill sparse categories.
+        discovery_rows = list(
+            eligible_products.filter(category_id__isnull=False)
+            .exclude(id__in=arrival_ids)
+            .annotate(category_rank=Window(
+                expression=RowNumber(), partition_by=[F('category_id')],
+                order_by=[F('created_at').desc(), F('id').desc()],
+            ))
+            .filter(category_rank__lte=2)
+            .order_by('category_id', 'category_rank')
+            .values_list('id', 'category_id', 'category_rank')[:32]
+        )
+        discovery_ids = [
+            product_id
+            for rank in (1, 2)
+            for product_id, _, category_rank in discovery_rows
+            if category_rank == rank
+        ][:16]
+        if len(discovery_ids) < 16:
+            discovery_ids.extend(
+                eligible_products
+                .exclude(id__in=arrival_ids + discovery_ids)
+                .order_by('-created_at', '-id')
+                .values_list('id', flat=True)[:16 - len(discovery_ids)]
+            )
+        discovery_cards = {
+            product.id: product for product in annotate_product_cards(
+                eligible_products.filter(id__in=discovery_ids)
+            )
+        }
+        discover_products = [
+            discovery_cards[product_id]
+            for product_id in discovery_ids
+            if product_id in discovery_cards
+        ]
         on_sale = annotate_product_cards(
-            Products.objects.filter(status='ACTIVE', discount_price__isnull=False)
+            eligible_products.filter(discount_price__isnull=False)
         ).order_by('-created_at')[:8]
 
         best_rated_ids = list(
@@ -241,7 +291,7 @@ class PublicHomepageView(APIView):
             .values('product_id').annotate(avg_rating=Avg('rating'))
             .order_by('-avg_rating')[:8].values_list('product_id', flat=True)
         )
-        best_rated_qs = annotate_product_cards(Products.objects.filter(status='ACTIVE'))
+        best_rated_qs = annotate_product_cards(eligible_products)
         best_rated = (
             best_rated_qs.filter(id__in=best_rated_ids)
             if best_rated_ids else best_rated_qs[:8]
@@ -253,8 +303,8 @@ class PublicHomepageView(APIView):
         # (against a cold free-tier DB), only to keep 8 rows. Now Postgres
         # orders by the ratio and returns just the top 8.
         flash_sale = list(annotate_product_cards(
-            Products.objects.filter(
-                status='ACTIVE', discount_price__isnull=False,
+            eligible_products.filter(
+                discount_price__isnull=False,
                 initial_selling_price__gt=0,
             ).annotate(discount_ratio=ExpressionWrapper(
                 (F('initial_selling_price') - F('discount_price'))
@@ -275,7 +325,7 @@ class PublicHomepageView(APIView):
             .values('variant__product_id').annotate(c=Count('id')).order_by('-c')[:8]
             .values_list('variant__product_id', flat=True)
         )
-        trending_qs = annotate_product_cards(Products.objects.filter(status='ACTIVE'))
+        trending_qs = annotate_product_cards(eligible_products)
         trending = (
             trending_qs.filter(id__in=trending_ids)
             if trending_ids else trending_qs[:8]
@@ -286,7 +336,7 @@ class PublicHomepageView(APIView):
             .values('variant__product_id').annotate(total=Sum('quantity')).order_by('-total')[:8]
             .values_list('variant__product_id', flat=True)
         )
-        best_sellers_qs = annotate_product_cards(Products.objects.filter(status='ACTIVE'))
+        best_sellers_qs = annotate_product_cards(eligible_products)
         best_sellers = (
             best_sellers_qs.filter(id__in=best_seller_ids)
             if best_seller_ids else best_sellers_qs[:8]
@@ -296,6 +346,7 @@ class PublicHomepageView(APIView):
         data = {
             'categories': StorefrontCategorySerializer(categories, many=True, context=ctx).data,
             'new_arrivals': StorefrontProductListSerializer(new_arrivals, many=True, context=ctx).data,
+            'discover_products': StorefrontProductListSerializer(discover_products, many=True, context=ctx).data,
             'on_sale': StorefrontProductListSerializer(on_sale, many=True, context=ctx).data,
             'best_rated': StorefrontProductListSerializer(best_rated, many=True, context=ctx).data,
             'flash_sale': StorefrontProductListSerializer(flash_sale, many=True, context=ctx).data,
