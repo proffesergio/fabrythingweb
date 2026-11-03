@@ -10,8 +10,10 @@ from types import SimpleNamespace
 
 from django.test import TestCase
 from django.utils import timezone
-from rest_framework.test import APIRequestFactory, force_authenticate
+from rest_framework.test import APIClient, APIRequestFactory, force_authenticate
+from rest_framework_simplejwt.tokens import RefreshToken
 
+from accounts.models import Users
 from analytics.views_overview import (FoodOverviewView, NotificationsView,
                                       ShopOverviewView)
 from catalog.models import Products, ProductVariant
@@ -153,3 +155,24 @@ class ModuleTagSeedTests(TestCase):
         assert by_name["All Products"] == "shop"
         # news desk deep-link children resolve to desk tabs
         assert by_name["Breaking News"] == "news"
+
+
+class OverviewSwitchHttpTests(TestCase):
+    """The admin shell can fetch each overview through real JWT HTTP routing."""
+
+    def test_shop_food_shop_sequence(self):
+        user = Users.objects.create_user(
+            username="switch-admin", email="switch-admin@example.com",
+            password="test-password", role="Super Admin")
+        client = APIClient()
+        token = RefreshToken.for_user(user).access_token
+        client.credentials(HTTP_AUTHORIZATION=f"Bearer {token}")
+
+        for module in ("shop", "food", "shop", "print"):
+            response = client.get(f"/api/store/analytics/admin/{module}-overview/")
+            self.assertEqual(response.status_code, 200, response.content)
+            self.assertIn("kpis", response.json()["data"])
+
+        for path in ("notifications/", "overview/", "events/", "providers/"):
+            response = client.get(f"/api/store/analytics/admin/{path}")
+            self.assertEqual(response.status_code, 200, response.content)

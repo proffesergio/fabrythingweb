@@ -40,8 +40,8 @@ export const MODULES = {
   },
   print: {
     id: 'print',
-    label: 'Printing Press',
-    short: 'Print',
+    label: 'Custom Printing',
+    short: 'Custom Printing',
     icon: 'Print',
     color: '#6A1B9A',
     home: '/admin/print',

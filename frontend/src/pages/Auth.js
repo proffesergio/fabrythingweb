@@ -13,8 +13,10 @@ import { toast } from 'react-toastify';
 import { useDispatch } from 'react-redux';
 import { login } from '../redux/reducer/IsLoggedInReducer';
 import { devLog } from '../utils/devLog';
+import useSeo from '../storefront/useSeo';
 
 const Auth = () => {
+  useSeo({ title: 'Admin sign in — Fabrything', description: 'Sign in to Fabrything administration.', path: '/admin/auth', noindex: true });
   const [themeMode, setThemeMode] = useState('basic');
   const navigate=useNavigate();
   const {callApi,error,loading}=useApi();

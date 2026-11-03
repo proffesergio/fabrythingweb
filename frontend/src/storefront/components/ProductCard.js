@@ -2,7 +2,7 @@ import React from 'react';
 import { Card, CardMedia, CardContent, Typography, Box, Rating, Button, IconButton } from '@mui/material';
 import { ShoppingCart, FavoriteBorder, Visibility } from '@mui/icons-material';
 import { pingClick } from './AffiliateProductCard';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { motion, useReducedMotion } from 'framer-motion';
 import { taka } from '../format';
 
@@ -231,11 +231,16 @@ export default function ProductCard({ product, showFlashBadge, affiliate = null 
                     {/* Clamped to 2 lines — catalog names (e.g. full laptop model strings)
                         run 60-115+ characters and would otherwise wrap to 4+ lines and
                         stretch the card, breaking the mobile grid's row heights. */}
-                    <Typography variant="subtitle2" sx={{
+                    <Typography component={isAffiliate ? 'span' : Link}
+                        to={isAffiliate ? undefined : `/product/${product.slug}`}
+                        onClick={isAffiliate ? undefined : (e) => e.stopPropagation()}
+                        variant="subtitle2" sx={{
                         fontWeight: 600, lineHeight: 1.25,
                         fontSize: { xs: '0.78rem', md: '0.875rem' },
                         overflow: 'hidden', textOverflow: 'ellipsis',
                         display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical',
+                        color: 'inherit', textDecoration: 'none',
+                        '&:focus-visible': { outline: '2px solid', outlineColor: 'secondary.main' },
                     }}>
                         {product.name}
                     </Typography>

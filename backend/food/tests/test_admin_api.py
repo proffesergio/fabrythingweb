@@ -76,3 +76,28 @@ class AdminApiSecurityTests(TestCase):
         }
         res = self.client.post("/api/food/admin/zones/", payload, format="json")
         self.assertEqual(res.status_code, 403)
+
+    def test_domain_sub_admin_cannot_approve_platform_restaurant(self):
+        owner = User.objects.create(
+            username="owner", email="owner@example.com", role="Super Admin")
+        sub_admin = User.objects.create(
+            username="subadmin", email="subadmin@example.com", role="Admin",
+            domain_user_id=owner)
+        auth(self.client, sub_admin)
+
+        res = self.client.post(f"/api/food/admin/restaurants/{self.r.id}/approve/")
+
+        self.assertEqual(res.status_code, 403)
+        self.r.refresh_from_db()
+        self.assertEqual(self.r.status, Restaurant.Status.PENDING)
+
+    def test_platform_root_admin_can_approve_restaurant(self):
+        admin = User.objects.create(
+            username="rootadmin", email="rootadmin@example.com", role="Admin")
+        auth(self.client, admin)
+
+        res = self.client.post(f"/api/food/admin/restaurants/{self.r.id}/approve/")
+
+        self.assertEqual(res.status_code, 200)
+        self.r.refresh_from_db()
+        self.assertEqual(self.r.status, Restaurant.Status.ACTIVE)

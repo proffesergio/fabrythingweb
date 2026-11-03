@@ -15,7 +15,7 @@
 
 export const SUPPORT = {
   email: "support@fabrything.com",
-  whatsapp: "+8801842168117",
+  whatsapp: "+8801353529899",
   messenger: "https://m.me/fabrything",
   entity: "Fabrything Limited",
   licence: "34823432",

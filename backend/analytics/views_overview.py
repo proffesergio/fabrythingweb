@@ -16,6 +16,7 @@ from django.db.models.functions import TruncDate
 from django.utils import timezone
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from rest_framework_simplejwt.authentication import JWTAuthentication
 
 from catalog.models import ProductVariant
 from food.models import FoodOrder, Restaurant, Rider
@@ -125,6 +126,7 @@ def shop_numbers(days=14):
 
 
 class ShopOverviewView(APIView):
+    authentication_classes = [JWTAuthentication]
     permission_classes = [IsAnalyticsStaff]
 
     def get(self, request):
@@ -178,6 +180,7 @@ def food_numbers(days=14):
 
 
 class FoodOverviewView(APIView):
+    authentication_classes = [JWTAuthentication]
     permission_classes = [IsAnalyticsStaff]
 
     def get(self, request):
@@ -237,6 +240,7 @@ def print_numbers(days=14):
 
 
 class PrintOverviewView(APIView):
+    authentication_classes = [JWTAuthentication]
     permission_classes = [IsAnalyticsStaff]
 
     def get(self, request):
@@ -245,6 +249,7 @@ class PrintOverviewView(APIView):
 
 # ── Notifications rollup (topbar bell) ────────────────────────────────────
 class NotificationsView(APIView):
+    authentication_classes = [JWTAuthentication]
     permission_classes = [IsAnalyticsStaff]
 
     def get(self, request):

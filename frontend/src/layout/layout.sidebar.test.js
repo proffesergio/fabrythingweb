@@ -61,7 +61,8 @@ const menuLabels = () => screen.queryAllByText('Product Import').length;
 test('renders the menu that is in the store', () => {
   const { store } = makeStore(MENU);
   renderLayout(store);
-  expect(screen.queryAllByText('Dashboard').length).toBeGreaterThan(0);
+  expect(screen.queryAllByText('Control Center').length).toBeGreaterThan(0);
+  expect(screen.queryByText('Dashboard')).not.toBeInTheDocument();
   expect(menuLabels()).toBeGreaterThan(0);
 });
 
@@ -74,7 +75,8 @@ test('picks up menus that arrive AFTER the first render', () => {
 
   act(() => { store.dispatch(setItems(MENU)); });
   expect(menuLabels()).toBeGreaterThan(0);
-  expect(screen.queryAllByText('Dashboard').length).toBeGreaterThan(0);
+  expect(screen.queryAllByText('Control Center').length).toBeGreaterThan(0);
+  expect(screen.queryByText('Dashboard')).not.toBeInTheDocument();
 });
 
 test('an empty menu renders a sidebar rather than crashing', () => {

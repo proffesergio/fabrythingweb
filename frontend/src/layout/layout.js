@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { CssBaseline, ThemeProvider, createTheme, AppBar, Toolbar, IconButton, Typography, Drawer, List, ListItem, ListItemText, Collapse, Divider, Card, CardContent, Fab, Box, Hidden, InputBase, Avatar, Menu, MenuItem, ListItemIcon, BottomNavigation, BottomNavigationAction, Link } from '@mui/material';
+import { CssBaseline, ThemeProvider, createTheme, useTheme, AppBar, Toolbar, IconButton, Typography, Drawer, List, ListItem, ListItemText, Collapse, Divider, Card, CardContent, Fab, Box, Hidden, InputBase, Avatar, Menu, MenuItem, ListItemIcon, BottomNavigation, BottomNavigationAction, Link } from '@mui/material';
 import { LightMode, DarkMode, Menu as MenuIcon, ExpandLess, ExpandMore, Search as SearchIcon, AccountCircle, Settings as SettingsIcon, Notifications as NotificationsIcon, Logout, Home, Code as CodeIcon, Public as PublicIcon, Business as BusinessIcon, AlternateEmail as AlternateEmailIcon, AutoAwesomeTwoTone, Circle, AddCircleOutlineOutlined, DashboardOutlined, ShoppingCartOutlined, StorefrontOutlined, GroupOutlined, InventoryOutlined, CategoryOutlined, Category, ShoppingBasketOutlined, ShoppingBasketRounded, ReceiptOutlined, WarehouseOutlined, Map as MapIcon, ReceiptLong, Restaurant as RestaurantIcon, TwoWheeler, HowToReg, Payments, CloudDownloadOutlined } from '@mui/icons-material';
 import { ThemeProvider as Emotion10ThemeProvider } from '@emotion/react';
 import './style.scss';
@@ -14,6 +14,9 @@ import { ModuleProvider, useModule } from '../admin/modules/ModuleContext';
 import ModuleSwitcher from '../admin/modules/ModuleSwitcher';
 import ModuleSidebar from '../admin/modules/ModuleSidebar';
 import ModuleBell from '../admin/modules/ModuleBell';
+import { clearAuth } from '../utils/authToken';
+import { controlCenterTheme } from '../admin/theme';
+import useSeo from '../storefront/useSeo';
 
 // Drawer brand follows the active business: Fabrything mark for shop, food
 // lockup for food, NobleSeek badge for news — the operator always sees which
@@ -21,8 +24,7 @@ import ModuleBell from '../admin/modules/ModuleBell';
 // identity is stable and local state like the menu filter survives renders.
 const DrawerBody = ({ onNavigate }) => {
   const { active, meta } = useModule();
-  let dark = false;
-  try { dark = (localStorage.getItem('theme') || '').toLowerCase().includes('dark'); } catch { /* private mode */ }
+  const dark = useTheme().palette.mode === 'dark';
   return (
     <>
       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '8px', py: 2 }}>
@@ -54,7 +56,7 @@ const DrawerBody = ({ onNavigate }) => {
 const Layout = ({pageTitle,childPage}) => {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [desktopOpen, setDesktopOpen] = useState(true); // State for desktop sidebar
-  const [themeMode, setThemeMode] = useState('light');
+  const [themeMode, setThemeMode] = useState('control center');
   const [openChildMenu, setOpenChildMenu] = useState(false);
   const [anchorEl, setAnchorEl] = useState(null);
   const [themeMenu, setThemeMenu] = useState(null);
@@ -72,19 +74,22 @@ const Layout = ({pageTitle,childPage}) => {
   const navigate=useNavigate();
   const dispatch=useDispatch();
   const location=useLocation();
+  useSeo({ title: 'Control Center — Fabrything', description: 'Fabrything administration.', path: location.pathname, noindex: true });
 
   useEffect(()=>{
     dispatch(triggerPageChange(location))
   },[location])
 
   useEffect(() => {
-    const savedTheme = localStorage.getItem('theme') || 'basic';
+    const savedTheme = localStorage.getItem('admin_theme') || 'control center';
     setThemeMode(savedTheme);
   }, []);
 
   let theme = useMemo(
     () => {
         switch(themeMode){
+            case 'control center':
+                return controlCenterTheme;
             case 'basic':
                 return createTheme(basicTheme);
             case 'dark':
@@ -117,7 +122,7 @@ const Layout = ({pageTitle,childPage}) => {
   );
 
   const handleDrawerToggle = () => {
-    if (window.innerWidth >= 960) {
+    if (window.innerWidth >= 600) {
       setDesktopOpen(!desktopOpen); // Toggle desktop sidebar only when in desktop view
     }
     else{
@@ -130,12 +135,12 @@ const Layout = ({pageTitle,childPage}) => {
   const toggleTheme = () => {
     const newTheme = themeMode === 'light' ? 'dark' : 'light';
     setThemeMode(newTheme);
-    localStorage.setItem('theme', newTheme);
+    localStorage.setItem('admin_theme', newTheme);
   };
 
   const saveTheme=(themeI)=>{
     setThemeMode(themeI.name.toLowerCase());
-    localStorage.setItem('theme', themeI.name.toLowerCase());
+    localStorage.setItem('admin_theme', themeI.name.toLowerCase());
   }
 
   const handleChildMenuToggle = () => {
@@ -158,9 +163,9 @@ const Layout = ({pageTitle,childPage}) => {
   };
 
   const handleLogout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('refresh_token');
-    navigate('/admin/auth');
+    clearAuth();
+    window.location.replace('/admin/auth');
+    return;
   };
 
   const drawerWidth = 280;
@@ -200,23 +205,9 @@ const Layout = ({pageTitle,childPage}) => {
       transformOrigin={{ horizontal: 'right', vertical: 'top' }}
       anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
     >
-      <MenuItem>
-        <ListItemIcon>
-          <AccountCircle fontSize="small" />
-        </ListItemIcon>
-        <Typography variant="inherit">Profile</Typography>
-      </MenuItem>
-      <MenuItem>
-        <ListItemIcon>
-          <SettingsIcon fontSize="small" />
-        </ListItemIcon>
-        <Typography variant="inherit">Settings</Typography>
-      </MenuItem>
-      <MenuItem>
-        <ListItemIcon>
-          <NotificationsIcon fontSize="small" />
-        </ListItemIcon>
-        <Typography variant="inherit">Notifications</Typography>
+      <MenuItem onClick={() => navigate('/')}>
+        <ListItemIcon><PublicIcon fontSize="small" /></ListItemIcon>
+        <Typography variant="inherit">Open storefront</Typography>
       </MenuItem>
       <Divider />
       <MenuItem onClick={handleLogout}>
@@ -229,6 +220,7 @@ const Layout = ({pageTitle,childPage}) => {
   );
 
   const themeMenuItems=[
+    { name: 'Control Center', color: '#58D6E7', theme: controlCenterTheme },
     {
         'name':'Basic',
         'color':'rgba(159, 84, 252, 1)',
@@ -339,7 +331,7 @@ const Layout = ({pageTitle,childPage}) => {
           <Box
             component="nav"
             sx={{ width: { sm: desktopOpen ? drawerWidth : 0 }, flexShrink: { sm: 0 } }}
-            aria-label="mailbox folders"
+            aria-label="Administration"
           >
             <Drawer
               variant="temporary"
@@ -379,7 +371,7 @@ const Layout = ({pageTitle,childPage}) => {
           >
             <AppBar position="sticky" sx={{ backgroundColor: theme.palette.background.default, backgroundImage: 'none', borderBottomWidth: '1px', borderBottomStyle: 'solid', borderBottomColor: theme.palette.background.paper }} className='appbar'>
               <Toolbar>
-                <Hidden mdUp>
+                <Hidden smUp>
                   <IconButton
                     color="inherit"
                     aria-label="open drawer"
@@ -399,7 +391,7 @@ const Layout = ({pageTitle,childPage}) => {
                   </IconButton>
                 </Hidden>
                 <Typography variant='h6' sx={{ flexGrow: 1 }}>
-                    {pageTitle || 'Dashboard'}
+                    {pageTitle || 'Control Center'}
                 </Typography>
                 <Box sx={{ flexGrow: 1 }} />
                   <ModuleBell />
@@ -426,7 +418,7 @@ const Layout = ({pageTitle,childPage}) => {
             </AppBar>
             {profileMenu}
             {themeMenuUI}
-            <section className='main-content' style={{ padding: '20px' }}>
+            <section className='main-content' style={{ padding: '20px', minWidth: 0 }}>
               {childPage?childPage:<Outlet/>}
             </section>
             <Box

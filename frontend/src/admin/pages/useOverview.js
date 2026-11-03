@@ -2,53 +2,49 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import useApi from '../../hooks/APIHandler';
 import { readSnap, writeSnap } from '../snap';
 
-// Shared loader for module overview dashboards: cached snapshot first (so a
-// sleeping backend never means a dead dashboard), 25s fail-fast, explicit
-// failed flag with retry. callApi identity changes every render, so it is
-// routed through a ref — never into dependency arrays.
 export default function useOverview(apiUrl, cacheKey) {
   const { callApi } = useApi();
-  const ref = useRef(callApi);
-  ref.current = callApi;
-  const daysRef = useRef(14);
-  const [days, setDaysState] = useState(14);
-  const [data, setData] = useState(() => readSnap(cacheKey));
-  const [loading, setLoading] = useState(false);
+  const callRef = useRef(callApi);
+  callRef.current = callApi;
+  const [days, setDays] = useState(14);
+  const [revision, setRevision] = useState(0);
+  const [data, setData] = useState(() => readSnap(`${cacheKey}:14`));
+  const [loading, setLoading] = useState(true);
   const [failed, setFailed] = useState(false);
-  const inflight = useRef(false);
+  const [errorMessage, setErrorMessage] = useState(null);
+  const [lastUpdatedAt, setLastUpdatedAt] = useState(null);
 
-  const load = useCallback(async () => {
-    if (inflight.current) return;
-    inflight.current = true;
+  useEffect(() => {
+    let current = true;
+    const snapshotKey = `${cacheKey}:${days}`;
+    setData(readSnap(snapshotKey));
     setLoading(true);
     setFailed(false);
-    try {
-      const r = await ref.current({
-        url: `${apiUrl}?days=${daysRef.current}`,
-        silent: true, timeout: 25000,
-      });
-      const payload = r?.status === 200 ? (r.data?.data ?? r.data) : null;
-      if (payload) {
-        setData(payload);
-        writeSnap(cacheKey, payload);
-      } else {
-        setFailed(true);
+    setErrorMessage(null);
+    setLastUpdatedAt(null);
+    const load = async () => {
+      try {
+        const response = await callRef.current({ url: `${apiUrl}?days=${days}`, silent: true, rawError: true, timeout: 25000 });
+        if (!current) return;
+        const payload = response?.status === 200 ? (response.data?.data ?? response.data) : null;
+        if (payload) {
+          setData(payload);
+          writeSnap(snapshotKey, payload);
+          setLastUpdatedAt(new Date());
+        } else {
+          setFailed(true);
+          setErrorMessage(response?.status === 401 ? 'Your session expired. Sign in again to load this report.' : response?.status === 403 ? 'This account does not have access to this report.' : 'The report could not be loaded. Please retry.');
+        }
+      } catch {
+        if (current) setFailed(true);
+      } finally {
+        if (current) setLoading(false);
       }
-    } catch {
-      setFailed(true);
-    } finally {
-      inflight.current = false;
-      setLoading(false);
-    }
-  }, [apiUrl, cacheKey]);
-
-  useEffect(() => { load(); }, [load]);
-
-  const setDays = useCallback((d) => {
-    daysRef.current = d;
-    setDaysState(d);
+    };
     load();
-  }, [load]);
+    return () => { current = false; };
+  }, [apiUrl, cacheKey, days, revision]);
 
-  return { data, loading, failed, retry: load, days, setDays };
+  const retry = useCallback(() => setRevision((value) => value + 1), []);
+  return { data, loading, failed, retry, days, setDays, lastUpdatedAt, errorMessage };
 }

@@ -7,15 +7,15 @@ import { AlertRow, fmtBDT, fmtNum, KpiCard, RecentTable, TopItems, TrendPanel, W
 
 const META = MODULES.print;
 
-export default function PrintOverview() {
-  const { data, loading, failed, retry, days, setDays } = useOverview(META.overviewApi, 'ov_print');
+export default function PrintOverview({ embedded = false }) {
+  const { data, loading, failed, errorMessage, retry, days, setDays } = useOverview(META.overviewApi, 'ov_print');
   const k = data?.kpis || {};
   const alerts = data?.alerts || {};
   const showState = !data && (loading || failed);
 
   return (
-    <Container maxWidth="xl" sx={{ py: 2 }}>
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2, flexWrap: 'wrap' }}>
+    <Container maxWidth="xl" sx={{ py: embedded ? 0 : 2, px: embedded ? "0 !important" : undefined }}>
+      {!embedded && <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2, flexWrap: 'wrap' }}>
         <Typography variant="h5" fontWeight={900}>Printing Press Overview</Typography>
         <Chip size="small" label={META.label} sx={{ bgcolor: `${META.color}1e`, color: META.color, fontWeight: 800 }} />
         <Box sx={{ flex: 1 }} />
@@ -23,15 +23,15 @@ export default function PrintOverview() {
         <Button size="small" component={Link} to="/admin/manage/print/catalog" variant="outlined">Catalog</Button>
         <Button size="small" component={Link} to="/admin/manage/print/showcase" variant="outlined">Showcase</Button>
         <Button size="small" component={Link} to="/admin/manage/print/corporate" variant="outlined">Corporate</Button>
-      </Box>
+      </Box>}
 
       {showState ? (
-        <WidgetState loading={loading} error={failed} onRetry={retry} height={320} />
+        <WidgetState loading={loading} error={errorMessage || failed} onRetry={retry} height={320} />
       ) : (
         <>
           {failed && (
             <Alert severity="warning" sx={{ mb: 2 }} action={<Button size="small" onClick={retry}>Retry</Button>}>
-              Showing last saved snapshot — the server may be waking up.
+              Showing a saved snapshot. The latest report could not be loaded.
             </Alert>
           )}
           <Grid container spacing={2} sx={{ mb: 2 }}>

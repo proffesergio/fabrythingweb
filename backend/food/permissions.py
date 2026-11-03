@@ -1,5 +1,7 @@
 from rest_framework.permissions import BasePermission
 
+from core.helpers import isPlatformScope
+
 
 class IsRestaurantOwner(BasePermission):
     message = "Restaurant account required."
@@ -27,11 +29,17 @@ class IsPlatformAdmin(BasePermission):
     alone would let ANY authenticated user (Customer, Rider, Restaurant vendor)
     approve/suspend restaurants or edit delivery zones. This permission is the
     only gate standing between those endpoints and any logged-in user, so it
-    must be applied on every admin viewset alongside IsAuthenticated.
+    must be applied on every admin viewset alongside IsAuthenticated. A
+    domain sub-account with an Admin role must also be excluded because food
+    admin operations manage restaurants and orders across the whole platform.
     """
 
     message = "Platform admin account required."
 
     def has_permission(self, request, view):
         u = request.user
-        return bool(u and u.is_authenticated and u.role in ("Admin", "Super Admin"))
+        return bool(
+            u and u.is_authenticated
+            and u.role in ("Admin", "Super Admin")
+            and isPlatformScope(u)
+        )

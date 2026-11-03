@@ -116,22 +116,23 @@ function LanguageSwitcher() {
 function StorefrontLayoutInner({ toggleDarkMode, darkMode }) {
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
     const [categories, setCategories]         = useState([]);
+    const [whatsappNumber, setWhatsappNumber] = useState('');
     const cartItemCount = useSelector(selectCartItemCount);
     const navigate      = useNavigate();
     const location      = useLocation();
-    const routeTitle = {
-        '/': 'Fabrything — Shop Online in Bangladesh',
-        '/shop': 'Shop Products — Fabrything',
-        '/deals': 'Product Deals — Fabrything',
-        '/about': 'About Fabrything',
-        '/custom-printing': 'Custom Printing — Fabrything',
-        '/privacy': 'Privacy Policy — Fabrything',
-        '/terms': 'Terms of Use — Fabrything',
-        '/shipping': 'Delivery & Shipping Conditions — Fabrything',
-    }[location.pathname] || 'Fabrything';
+    const routeSeo = {
+        '/': ['Fabrything — Shop Online in Bangladesh', 'Shop fashion, electronics and everyday essentials online in Bangladesh. Explore Fabrything products and order with Cash on Delivery.'],
+        '/shop': ['Shop Products — Fabrything', 'Browse fashion, electronics and everyday essentials at Fabrything. Compare products and shop online in Bangladesh.'],
+        '/deals': ['Product Deals — Fabrything', 'Explore current product deals and partner offers at Fabrything.'],
+        '/about': ['About Fabrything', 'Learn about Fabrything, an online marketplace for everyday shopping in Bangladesh.'],
+        '/custom-printing': ['Custom Printing — Fabrything', 'Explore custom printing services and request a quote from Fabrything.'],
+        '/privacy': ['Privacy Policy — Fabrything', 'Read how Fabrything collects, uses and protects your information.'],
+        '/terms': ['Terms of Use — Fabrything', 'Read the terms that apply when you use Fabrything.'],
+        '/shipping': ['Delivery & Shipping Conditions — Fabrything', 'Find Fabrything delivery areas, shipping fees and order conditions.'],
+    }[location.pathname] || ['Fabrything', 'Shop fashion, electronics and everyday essentials online in Bangladesh at Fabrything.'];
     useSeo({
-        title: location.pathname.startsWith('/product/') ? null : routeTitle,
-        description: 'Browse fashion, electronics and everyday products at Fabrything. Explore categories, compare products and order online in Bangladesh.',
+        title: location.pathname.startsWith('/product/') ? null : routeSeo[0],
+        description: routeSeo[1],
         path: location.pathname,
         noindex: /^\/(cart|checkout|account|auth|admin)(\/|$)/.test(location.pathname),
     });
@@ -148,6 +149,10 @@ function StorefrontLayoutInner({ toggleDarkMode, darkMode }) {
     useEffect(() => {
         callApi({ url: 'store/categories/' }).then(res => {
             if (res?.data?.data) setCategories(res.data.data);
+        });
+        callApi({ url: 'store/config/' }).then(res => {
+            const number = res?.data?.data?.whatsapp_chat_number;
+            if (number) setWhatsappNumber(String(number).replace(/\D/g, ''));
         });
     }, []);
 
@@ -298,11 +303,11 @@ function StorefrontLayoutInner({ toggleDarkMode, darkMode }) {
                             {/* Left: hamburger + logo */}
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexShrink: 0 }}>
                                 {isMobile && (
-                                    <IconButton onClick={() => setMobileMenuOpen(true)} color="inherit" size="small">
+                                    <IconButton onClick={() => setMobileMenuOpen(true)} color="inherit" size="small" aria-label="Open menu">
                                         <MenuIcon />
                                     </IconButton>
                                 )}
-                                <Box component={Link} to="/" sx={{ display: 'flex', alignItems: 'center' }}>
+                                <Box component={Link} to="/" aria-label="Fabrything home" sx={{ display: 'flex', alignItems: 'center' }}>
                                     <BrandLogo
                                         brand="fabrything"
                                         variant="horizontal"
@@ -325,18 +330,20 @@ function StorefrontLayoutInner({ toggleDarkMode, darkMode }) {
 
                                 {/* Dark mode toggle */}
                                 <Tooltip title={darkMode ? 'Switch to light mode' : 'Switch to dark mode'}>
-                                    <IconButton color="inherit" size="small" onClick={toggleDarkMode}>
+                                    <IconButton color="inherit" size="small" onClick={toggleDarkMode}
+                                        aria-label={darkMode ? 'Switch to light mode' : 'Switch to dark mode'}>
                                         {darkMode ? <LightMode fontSize="small" /> : <DarkMode fontSize="small" />}
                                     </IconButton>
                                 </Tooltip>
 
                                 <IconButton
                                     color="inherit" size="small"
+                                    aria-label={isLoggedIn ? 'My account' : 'Log in'}
                                     onClick={() => navigate(isLoggedIn ? '/account' : '/auth/login')}
                                 >
                                     <Person />
                                 </IconButton>
-                                <IconButton color="inherit" size="small" onClick={() => navigate('/cart')}>
+                                <IconButton color="inherit" size="small" aria-label="View cart" onClick={() => navigate('/cart')}>
                                     <Badge badgeContent={cartItemCount} color="secondary">
                                         <ShoppingCart />
                                     </Badge>
@@ -423,7 +430,8 @@ function StorefrontLayoutInner({ toggleDarkMode, darkMode }) {
                                     height={24}
                                 />
                                 <LanguageSwitcher />
-                                <IconButton size="small" onClick={toggleDarkMode}>
+                                <IconButton size="small" onClick={toggleDarkMode}
+                                    aria-label={darkMode ? 'Switch to light mode' : 'Switch to dark mode'}>
                                     {darkMode ? <LightMode fontSize="small" /> : <DarkMode fontSize="small" />}
                                 </IconButton>
                             </Box>
@@ -484,7 +492,7 @@ function StorefrontLayoutInner({ toggleDarkMode, darkMode }) {
                     </Drawer>
 
                     {/* ── Main Content ── */}
-                    <Box sx={{ flex: 1 }}>
+                    <Box component="main" id="main-content" sx={{ flex: 1 }}>
                         <Outlet />
                     </Box>
 
@@ -600,10 +608,15 @@ function StorefrontLayoutInner({ toggleDarkMode, darkMode }) {
                                             {item.label}
                                         </Typography>
                                     ))}
-                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 1.5, mb: 1 }}>
-                                        <Phone fontSize="small" sx={{ color: 'rgba(255,255,255,0.6)' }} />
-                                        <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.6)' }}>+880 1842-168117</Typography>
-                                    </Box>
+                                    {whatsappNumber && (
+                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 1.5, mb: 1 }}>
+                                            <Phone fontSize="small" sx={{ color: 'rgba(255,255,255,0.6)' }} />
+                                            <Typography component="a" href={`tel:+${whatsappNumber}`}
+                                                variant="body2" sx={{ color: 'rgba(255,255,255,0.6)', textDecoration: 'none' }}>
+                                                +{whatsappNumber}
+                                            </Typography>
+                                        </Box>
+                                    )}
                                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                                         <Email fontSize="small" sx={{ color: 'rgba(255,255,255,0.6)' }} />
                                         <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.6)' }}>support@fabrything.com</Typography>
@@ -718,6 +731,7 @@ function StorefrontLayoutInner({ toggleDarkMode, darkMode }) {
                         right column, one FAB-height + gap higher) so neither covers the
                         other; both already clear the mobile BottomNavigation. */}
                     <WhatsAppButton
+                        configuredNumber={whatsappNumber}
                         bottom={{
                             xs: 'calc(56px + 16px + 56px + 12px)',
                             md: 'calc(24px + 56px + 12px)',

@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Box, Collapse, List, ListItem, ListItemIcon, ListItemText, ListSubheader, TextField } from '@mui/material';
-import { ExpandLess, ExpandMore, Dashboard as DashboardIcon, QueryStats as ControlCenterIcon } from '@mui/icons-material';
+import { Box, Collapse, List, ListItem, ListItemButton, ListItemIcon, ListItemText, ListSubheader, TextField } from '@mui/material';
+import { ExpandLess, ExpandMore, QueryStats as ControlCenterIcon } from '@mui/icons-material';
 import { useDispatch, useSelector } from 'react-redux';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { getModuleIcon } from '../../layout/moduleIcons';
@@ -8,12 +8,14 @@ import { expandItem, activateItem } from '../../redux/reducer/sidebardata';
 import { isExpandable, resolveMenuTarget, toAdminPath } from '../../layout/sidebarNav';
 import { filterMenuItems, splitItems } from './registry';
 import { useModule } from './ModuleContext';
+const EMPTY_ITEMS = [];
 
-// Module-filtered drawer body: Overview entry + this business's menus +
+
+// Module-filtered drawer body: Control Center entry + this business's menus +
 // a Shared group. Untagged (legacy) backends render everything unfiltered,
 // and children render as granted (the backend already permission-filters).
 export default function ModuleSidebar({ onNavigate }) {
-  const items = useSelector((state) => state.sidebardata?.items) || [];
+  const items = useSelector((state) => state.sidebardata?.items) || EMPTY_ITEMS;
   const { active, meta } = useModule();
   const location = useLocation();
   const navigate = useNavigate();
@@ -22,7 +24,7 @@ export default function ModuleSidebar({ onNavigate }) {
 
   const { mine, shared } = useMemo(() => splitItems(items, active), [items, active]);
   const shownMine = useMemo(() => filterMenuItems(mine, q), [mine, q]);
-  const shownShared = useMemo(() => filterMenuItems(shared, q), [shared, q]);
+  const shownShared = useMemo(() => filterMenuItems(shared, q).filter((it) => toAdminPath(it.module_url) !== '/admin/home'), [shared, q]);
 
   // Keep the active business's group open (e.g. NobleSeek News with its desk
   // deep-links) across refreshes and module switches. Guarded so a manual
@@ -51,13 +53,13 @@ export default function ModuleSidebar({ onNavigate }) {
 
   const renderItem = (sidebarItem, depth = 0) => (
     <React.Fragment key={sidebarItem.id || sidebarItem.module_name}>
-      <ListItem
+      <ListItemButton
         onClick={() => go(sidebarItem)}
         className={(sidebarItem?.active && (sidebarItem.submenus || []).length === 0) ? 'active-sidebar' : ''}
         sx={{
           pl: 2 + depth * 2,
           '&.Mui-selected': { backgroundColor: 'action.selected' },
-          '&:hover': { backgroundColor: 'primary.light', borderRadius: '10px' },
+          '&:hover': { backgroundColor: 'action.hover', borderRadius: '10px' },
         }}
       >
         <ListItemIcon>{getModuleIcon(sidebarItem.module_icon)}</ListItemIcon>
@@ -65,13 +67,12 @@ export default function ModuleSidebar({ onNavigate }) {
         {(sidebarItem.submenus || []).length > 0 && (
           (sidebarItem?.expanded || sidebarItem?.active) ? <ExpandLess /> : <ExpandMore />
         )}
-      </ListItem>
+      </ListItemButton>
       {(sidebarItem.submenus || []).length > 0 && (
         <Collapse in={!!(sidebarItem?.expanded || sidebarItem?.active)} timeout="auto" unmountOnExit>
           <List component="div" disablePadding>
             {sidebarItem.submenus.map((child) => (
-              <ListItem
-                button
+              <ListItemButton
                 sx={{ pl: 4 + depth * 2 }}
                 key={child.id || child.module_name}
                 onClick={() => go(child)}
@@ -79,7 +80,7 @@ export default function ModuleSidebar({ onNavigate }) {
               >
                 <ListItemIcon>{getModuleIcon(child.module_icon)}</ListItemIcon>
                 <ListItemText primary={child.module_name} />
-              </ListItem>
+              </ListItemButton>
             ))}
           </List>
         </Collapse>
@@ -91,7 +92,7 @@ export default function ModuleSidebar({ onNavigate }) {
     <>
       <Box sx={{ px: 1, pb: 1 }}>
         <TextField
-          fullWidth size="small" placeholder="Filter menu…"
+          fullWidth size="small" placeholder="Filter menu…" inputProps={{ 'aria-label': 'Filter management menu' }}
           value={q} onChange={(e) => setQ(e.target.value)}
         />
       </Box>
@@ -102,21 +103,10 @@ export default function ModuleSidebar({ onNavigate }) {
           className={location.pathname === meta.home ? 'active-sidebar' : ''}
           sx={{ borderLeft: `3px solid ${meta.color}`, mb: 0.5 }}
         >
-          <ListItemIcon sx={{ color: meta.color }}><DashboardIcon /></ListItemIcon>
-          <ListItemText primary={`${meta.short} Overview`} />
+          <ListItemIcon sx={{ color: meta.color }}><ControlCenterIcon /></ListItemIcon>
+          <ListItemText primary="Control Center" />
         </ListItem>
-        {active === 'shop' && (
-          <ListItem
-            component={Link} to="/admin/shop/control-center"
-            onClick={onNavigate}
-            className={location.pathname === '/admin/shop/control-center' ? 'active-sidebar' : ''}
-            sx={{ borderLeft: '3px solid transparent', mb: 0.5 }}
-          >
-            <ListItemIcon><ControlCenterIcon /></ListItemIcon>
-            <ListItemText primary="Control Center" />
-          </ListItem>
-        )}
-        {shownMine.map((it) => renderItem(it))}
+        {shownMine.filter((it) => toAdminPath(it.module_url) !== '/admin/home').map((it) => renderItem(it))}
         {shownShared.length > 0 && (
           <>
             <ListSubheader sx={{ bgcolor: 'transparent', lineHeight: '32px' }}>

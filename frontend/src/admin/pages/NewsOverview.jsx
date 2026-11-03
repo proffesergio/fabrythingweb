@@ -11,23 +11,23 @@ const bn = (n) => toBn(Number(n || 0).toLocaleString('en-US'));
 
 // Bangla-first desk overview inside the English admin shell: labels in
 // Bangla, drill links into the NobleSeek desk tabs.
-export default function NewsOverview() {
-  const { data, loading, failed, retry, days, setDays } = useOverview(META.overviewApi, 'ov_news');
+export default function NewsOverview({ embedded = false }) {
+  const { data, loading, failed, errorMessage, retry, days, setDays } = useOverview(META.overviewApi, 'ov_news');
   const k = data?.kpis || {};
   const alerts = data?.alerts || {};
   const showState = !data && (loading || failed);
 
   return (
-    <Container maxWidth="xl" sx={{ py: 2 }}>
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2, flexWrap: 'wrap' }}>
+    <Container maxWidth="xl" sx={{ py: embedded ? 0 : 2, px: embedded ? "0 !important" : undefined }}>
+      {!embedded && <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2, flexWrap: 'wrap' }}>
         <Typography variant="h5" fontWeight={900}>নোবেলসিক ওভারভিউ</Typography>
         <Chip size="small" label={META.label} sx={{ bgcolor: `${META.color}1e`, color: META.color, fontWeight: 800 }} />
         <Box sx={{ flex: 1 }} />
         <Button size="small" component={Link} to="/admin/manage/nobleseek" variant="contained">ডেস্ক খুলুন</Button>
-      </Box>
+      </Box>}
 
       {showState ? (
-        <WidgetState loading={loading} error={failed} onRetry={retry} height={320} />
+        <WidgetState loading={loading} error={errorMessage || failed} onRetry={retry} height={320} />
       ) : (
         <>
           {failed && (

@@ -1,5 +1,20 @@
 # Fabrything release checkpoint — 2026-11-03
 
+## Local admin/performance/SEO work — pending release
+
+- User chose one Control Center per module and preservation of every current
+  feature. Operations, granted management tools, Shop automation and legacy
+  business reports are consolidated in the existing dark/cyan style.
+- Frontend route shells are lazy-loaded; first build main gzip is 37% smaller.
+  Route metadata, crawlable product links and image priority are improved.
+- Permission middleware now checks before executing views; Food platform scope
+  excludes tenant admins. User-scoped caches and stale-report response handling
+  prevent cross-session and date-range confusion.
+- Backend 1,112 tests pass; frontend 530 tests covered by passing runs; production
+  build passes. See ../ADMIN_PERFORMANCE_SEO_2026-11-03.md for scope and limitations.
+- Supplied PageSpeed PDF is malformed and contains no usable audit metrics.
+  This work has not changed the production deployments listed below.
+
 The storefront discovery release is deployed and verified. Source and recovery
 memory are versioned together on `main`, targeting
 `https://github.com/proffesergio/fabrythingweb`.

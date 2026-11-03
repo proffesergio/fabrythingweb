@@ -56,6 +56,17 @@ test('renders the banners the owner configured', async () => {
   expect(screen.queryByText(FALLBACK_HEADLINE)).not.toBeInTheDocument();
 });
 
+test('prioritizes the first banner image and defers later slides', () => {
+  mockUseCachedApi.mockReturnValue({ data: LIVE_BANNERS, loading: false, error: null });
+  renderHero();
+
+  const first = document.querySelector(`img[src="${LIVE_BANNERS[0].image}"]`);
+  const second = document.querySelector(`img[src="${LIVE_BANNERS[1].image}"]`);
+  expect(first).toHaveAttribute('loading', 'eager');
+  expect(first).toHaveAttribute('fetchpriority', 'high');
+  expect(second).toHaveAttribute('loading', 'lazy');
+});
+
 test('falls back only when the fetch SUCCEEDED and returned nothing', async () => {
   mockUseCachedApi.mockReturnValue({ data: [], loading: false, error: null });
   renderHero();

@@ -116,7 +116,7 @@ function LiveLoading() {
   </div>;
 }
 
-export default function ShopControlCenter() {
+export default function ShopControlCenter({ embedded = false }) {
   const [demoMode, setDemoMode] = useState(false);
   const [jobDialogOpen, setJobDialogOpen] = useState(false);
   const [draft, setDraft] = useState({ mode: 'ANALYTICS', source: '', category_path: '', target_category: '', interval_minutes: 1440, batch_limit: 12 });
@@ -176,20 +176,19 @@ export default function ShopControlCenter() {
     if (await saveJob(payload)) { setJobDialogOpen(false); setDraftError(''); }
   };
 
-  if (loading && !demoMode && !liveInsights) return <div className="cc-root"><LiveLoading /></div>;
+  if (loading && !demoMode && !liveInsights) return <div className={embedded ? 'cc-embedded' : 'cc-root'}><LiveLoading /></div>;
 
-  return <div className={`cc-root ${demoMode ? 'cc-demo' : ''}`}>
+  return <div className={`${embedded ? 'cc-embedded' : 'cc-root'} ${demoMode ? 'cc-demo' : ''}`}>
     {demoMode && <div className="cc-demo-banner"><Bolt fontSize="small" /> DEMO PREVIEW <span>Deterministic sample data · task controls disabled · never sent to live services</span></div>}
 
     <header className="cc-header">
-      <div className="cc-heading">
+      {!embedded && <div className="cc-heading">
         <div className="cc-breadcrumb">FABRYTHING / SHOP / <b>CONTROL CENTER</b></div>
         <div className="cc-title-line"><div><Typography component="h1" className="cc-title">Shop Control Center</Typography><p className="cc-subtitle">Live commerce telemetry &amp; sync operations</p></div><Chip className="cc-live-pill" icon={<span className="cc-live-dot" />} label={demoMode ? 'DEMO MODE' : error ? 'CONNECTION ISSUE' : 'LIVE MONITORING'} /></div>
-      </div>
+      </div>}
       <div className="cc-toolbar">
         <div className="cc-demo-control"><span>Demo data</span><Switch size="small" checked={demoMode} onChange={(event) => setDemoMode(event.target.checked)} inputProps={{ role: 'switch', 'aria-label': 'Show demo data' }} /></div>
         <Button className="cc-refresh" disabled={demoMode || refreshing} startIcon={refreshing ? <CircularProgress size={14} /> : <Refresh />} onClick={() => refresh()}>{refreshing ? 'Updating' : 'Refresh'}</Button>
-        <Button className="cc-overview-link" component={Link} to="/admin/shop" endIcon={<ArrowOutward />}>Overview</Button>
       </div>
     </header>
 

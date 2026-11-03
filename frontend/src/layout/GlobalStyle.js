@@ -103,13 +103,13 @@ export const GlobalStyles = () => {
           margin-right:10px;
         }
         .active-sidebar{
-          background-color:${theme.palette.primary.dark}!important;
-          color:${theme.palette.background.light}!important;
-          border-radius:12px!important;
-          box-shadow:0 0 10px 0 ${theme.palette.primary.main}!important;
+          background-color:${theme.palette.action.selected}!important;
+          color:${theme.palette.primary.main}!important;
+          border-radius:8px!important;
+          box-shadow:none!important;
         }
         .active-sidebar svg{
-          color:${theme.palette.background.light}!important;
+          color:${theme.palette.primary.main}!important;
         }
         .shimmer{
           width:100%;

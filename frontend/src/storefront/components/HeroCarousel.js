@@ -54,7 +54,7 @@ function CtaButton({ label, link, ...props }) {
 // headline. `objectFit: contain` rather than `cover` — a supplied banner is
 // composed to be seen whole, and cropping it cuts off the very wording it
 // exists to show. The background colour fills whatever letterboxing remains.
-function FullBleedSlide({ banner }) {
+function FullBleedSlide({ banner, isFirst }) {
     const hasText = !!(banner.title || banner.subtitle || banner.eyebrow || banner.cta);
     const body = (
         <Box
@@ -62,7 +62,9 @@ function FullBleedSlide({ banner }) {
                 position: 'relative',
                 width: '100%',
                 background: banner.background_color || banner.background || '#1a1a2e',
-                minHeight: { xs: 200, sm: 300, md: 440 },
+                // Match the loading band so a late banner response cannot pull
+                // the rest of the homepage upward after first paint.
+                minHeight: { xs: 320, md: 440 },
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 overflow: 'hidden',
             }}
@@ -71,7 +73,9 @@ function FullBleedSlide({ banner }) {
                 component="img"
                 src={banner.image}
                 alt={banner.title || 'Promotional banner'}
-                loading="eager"
+                loading={isFirst ? 'eager' : 'lazy'}
+                fetchpriority={isFirst ? 'high' : undefined}
+                decoding="async"
                 sx={{ width: '100%', height: '100%', maxHeight: { xs: 240, sm: 340, md: 480 }, objectFit: 'contain', display: 'block' }}
             />
             {hasText && (
@@ -120,7 +124,7 @@ function FullBleedSlide({ banner }) {
         : body;
 }
 
-function BannerSlide({ banner }) {
+function BannerSlide({ banner, isFirst }) {
     return (
         <Box
             sx={{
@@ -183,6 +187,9 @@ function BannerSlide({ banner }) {
                             src={banner.image}
                             alt=""
                             aria-hidden="true"
+                            loading={isFirst ? 'eager' : 'lazy'}
+                            fetchpriority={isFirst ? 'high' : undefined}
+                            decoding="async"
                             className={`banner-product-img ${ANIMATION_CLASS[banner.animationStyle] || ''}`}
                             sx={{
                                 width: { xs: '60%', sm: '45%', md: 320 },
@@ -209,7 +216,7 @@ function FallbackSlide({ slide }) {
                 py: { xs: 8, md: 14 },
                 textAlign: 'center',
                 overflow: 'hidden',
-                minHeight: { xs: 280, md: 420 },
+                minHeight: { xs: 320, md: 440 },
                 display: 'flex',
                 alignItems: 'center',
                 '&::after': {
@@ -355,8 +362,8 @@ export default function HeroCarousel() {
                     <SwiperSlide key={usingBanners ? slide.id : i}>
                         {usingBanners
                             ? (slide.layout === 'FULL_BLEED'
-                                ? <FullBleedSlide banner={slide} />
-                                : <BannerSlide banner={slide} />)
+                                ? <FullBleedSlide banner={slide} isFirst={i === 0} />
+                                : <BannerSlide banner={slide} isFirst={i === 0} />)
                             : <FallbackSlide slide={slide} />}
                     </SwiperSlide>
                 ))}

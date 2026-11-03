@@ -12,7 +12,7 @@ export default function ModuleSwitcher({ compact = false }) {
   const navigate = useNavigate();
   if (visible.length <= 1) return null;
   const go = (id) => {
-    if (id === active) return;
+    if (id === active) { navigate(MODULES[id].home); return; }
     select(id);
     navigate(MODULES[id].home);
   };
@@ -27,9 +27,10 @@ export default function ModuleSwitcher({ compact = false }) {
         return (
           <Box
             key={id}
+            component="button" type="button" aria-current={on ? 'page' : undefined}
             onClick={() => go(id)}
             sx={{
-              display: 'flex', alignItems: 'center', gap: 1,
+              display: 'flex', alignItems: 'center', gap: 1, background: 'transparent', border: 0, font: 'inherit',
               px: compact ? 1.25 : 2, py: 1, cursor: 'pointer', whiteSpace: 'nowrap',
               borderBottom: on ? `3px solid ${m.color}` : '3px solid transparent',
               color: on ? 'text.primary' : 'text.secondary',

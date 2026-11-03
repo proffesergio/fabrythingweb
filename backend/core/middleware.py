@@ -74,8 +74,8 @@ class PermissionMiddleware:
         except:
             return JsonResponse({"message": "Unauthorized"}, status=401)
 
-        response = self.get_response(request)
-
+        # Decide access before invoking the view: a denied write must never
+        # execute and then merely have its response replaced with a 403.
         # Skip Permission Logic for Super Admin and Top Domain Level User.
         # `domain_user_id` is nullable and was NULL on every account created before
         # accounts migration 0003 backfilled it — dereferencing `.id` on that turned
@@ -83,7 +83,7 @@ class PermissionMiddleware:
         # NULL simply means "not a top-level account" and falls through to the normal
         # module-permission check below.
         if user.role == "Super Admin" or user.domain_user_id_id == user.id:
-            return response
+            return self.get_response(request)
 
         module = find_matching_module(current_url)
 
@@ -96,11 +96,14 @@ class PermissionMiddleware:
         if not permission or permission.is_permission == False:
             return JsonResponse({"message": "Permission Denied"}, status=403)
 
-        return response
+        return self.get_response(request)
 
 
 def urlToSkip():
-    return list(ModuleUrls.objects.values_list("url", flat=True))
+    # Only an explicitly unassigned URL is marked "Skip Permission" in the
+    # admin URL editor. URLs assigned to a module must reach the permission
+    # lookup below; skipping all ModuleUrls rows bypasses that lookup entirely.
+    return list(ModuleUrls.objects.filter(module__isnull=True).values_list("url", flat=True))
 
 
 def find_matching_module(url):

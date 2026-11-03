@@ -74,7 +74,11 @@ class ModuleUrlsListAPIView(APIView):
                 else:
                     moduleUrls=ModuleUrls(url=item['url'])
                     
-                if item['module']!=0 and item['module']!=None:
-                    moduleUrls.module=Modules.objects.get(id=item['module'])
+                # The editor's module=0 choice means "Skip Permission". Clear
+                # an old assignment too, so this choice works on existing URLs.
+                moduleUrls.module = (
+                    Modules.objects.get(id=item['module'])
+                    if item['module'] not in (0, None) else None
+                )
                 moduleUrls.save()
         return renderResponse(data={},message='Module Urls Updated',status=200)

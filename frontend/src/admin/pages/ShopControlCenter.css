@@ -21,6 +21,17 @@
 }
 
 .cc-root * { box-sizing: border-box; }
+.cc-root .MuiInputBase-input { box-sizing: content-box; }
+.cc-module-center .cc-tool-section { margin: 0 0 28px; }
+.cc-tool-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(240px, 100%), 1fr)); gap: 12px; margin-top: 14px; }
+.cc-root .cc-tool-link { justify-content: space-between; padding: 16px; text-align: left; border: 1px solid var(--cc-border); border-radius: 8px; background: var(--cc-panel); color: var(--cc-text); }
+.cc-tool-link span { min-width: 0; }
+.cc-tool-link small { display: block; margin-bottom: 5px; color: var(--cc-muted); font-size: 11px; }
+.cc-tool-link strong { display: block; overflow-wrap: anywhere; }
+.cc-embedded .cc-header { justify-content: flex-end; }
+.cc-module-center .MuiContainer-root { min-width: 0; }
+.cc-module-center .MuiTypography-h5 { font-size: clamp(18px, 3vw, 24px); }
+.cc-module-center .MuiCardContent-root { min-width: 0; }
 .cc-root .MuiTypography-root { color: inherit; }
 .cc-root button:focus-visible,
 .cc-root a:focus-visible,
@@ -39,7 +50,7 @@
 .cc-breadcrumb { margin-bottom: 8px; color: #74879b; font: 600 9px/1.2 'Roboto Mono', monospace; letter-spacing: .13em; }
 .cc-breadcrumb b { color: var(--cc-cyan); font-weight: 600; }
 .cc-title-line { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
-.cc-title-line .cc-title { margin: 0; color: var(--cc-text); font-size: clamp(22px, 2vw, 28px); font-weight: 750; letter-spacing: -.035em; line-height: 1.08; }
+.cc-heading .cc-title { margin: 0; color: var(--cc-text); font-size: clamp(22px, 2vw, 28px); font-weight: 750; letter-spacing: -.035em; line-height: 1.08; }
 .cc-subtitle { margin: 5px 0 0; color: var(--cc-muted); font-size: 12px; }
 .cc-live-pill.MuiChip-root { height: 23px; border: 1px solid rgba(88,214,231,.28); border-radius: 5px; background: rgba(88,214,231,.08); color: var(--cc-cyan); font: 700 9px 'Roboto Mono', monospace; letter-spacing: .06em; }
 .cc-live-pill .MuiChip-label { padding-left: 4px; padding-right: 8px; }
@@ -213,10 +224,10 @@
   .cc-activity-list { grid-template-columns: 1fr; }
 }
 @media (max-width: 600px) {
-  .cc-root { margin: -14px; padding: 14px 11px 12px; }
+  .cc-root { margin: -20px; padding: 14px 14px 12px; }
   .cc-header { flex-direction: column; align-items: stretch; gap: 12px; }
   .cc-title-line { gap: 8px; }
-  .cc-title-line .cc-title { font-size: 22px; }
+  .cc-heading .cc-title { font-size: 22px; }
   .cc-toolbar { max-width: none; justify-content: flex-start; }
   .cc-demo-control { margin-right: auto; }
   .cc-freshness { flex-wrap: wrap; font-size: 8px; }

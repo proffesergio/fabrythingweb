@@ -20,6 +20,11 @@ test('shows "Free delivery" when effective_shipping_fee is 0', () => {
   expect(screen.getByText('Free delivery')).toBeInTheDocument();
 });
 
+test('exposes a crawlable product link with the product name', () => {
+  renderCard(baseProduct);
+  expect(screen.getByRole('link', { name: 'Cotton Shirt' })).toHaveAttribute('href', '/product/cotton-shirt');
+});
+
 test('shows the delivery fee when the product carries its own override', () => {
   renderCard({ ...baseProduct, effective_shipping_fee: 250 });
   expect(screen.getByText('+৳250 delivery')).toBeInTheDocument();

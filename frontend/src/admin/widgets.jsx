@@ -52,7 +52,7 @@ export function WidgetState({ loading, error, empty, onRetry, height = 180 }) {
     return (
       <Box sx={{ p: 2 }}>
         <Alert severity="warning" action={<Button size="small" onClick={onRetry}>Retry</Button>}>
-          Couldn't load this panel — the server may be waking up.
+          {typeof error === 'string' ? error : 'The report could not be loaded. Please retry.'}
         </Alert>
       </Box>
     );

@@ -2,6 +2,8 @@ import React, { createContext, useCallback, useContext, useEffect, useMemo, useS
 import { useSelector } from 'react-redux';
 import { useLocation } from 'react-router-dom';
 import { MODULES, moduleForPath, visibleModules } from './registry';
+const EMPTY_ITEMS = [];
+
 
 const ModuleContext = createContext({
   active: 'shop', select: () => {}, visible: ['shop', 'food', 'news'],
@@ -14,7 +16,7 @@ const ModuleContext = createContext({
 // redux (backend getMenus), so permission filtering keeps working untouched.
 export function ModuleProvider({ children }) {
   const location = useLocation();
-  const items = useSelector((state) => state.sidebardata?.items) || [];
+  const items = useSelector((state) => state.sidebardata?.items) || EMPTY_ITEMS;
   const [manual, setManual] = useState(() => {
     try { return localStorage.getItem('admin_module'); } catch { return null; }
   });

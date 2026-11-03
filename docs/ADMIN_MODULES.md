@@ -1,22 +1,26 @@
-# Modular Admin — Shop / Food / News
+# Modular Admin — Shop / Food / News / Custom Printing
 
-One admin shell, three businesses. A top switcher (Shop / Food / News)
-swaps the sidebar menu, landing dashboard, brand mark, and analytics.
-Shared items (Dashboard, Settings, Live Chat, Traffic & Analytics) appear
-in every module under a Shared group.
+One admin shell, four businesses. The top switcher selects the business's
+Control Center, permission-filtered sidebar, brand mark and analytics.
+The dark Control Center theme is the default; other theme choices remain available.
+Shared management tools appear in every module under a Shared group.
 
 ## Routes (all existing paths preserved)
 
 - `/admin` → redirects to the last-used module home
-- `/admin/shop`, `/admin/food`, `/admin/news` → per-module overview dashboards
-- `/admin/home` → legacy generic dashboard (still linked from Shared)
+- `/admin/shop`, `/admin/food`, `/admin/news`, `/admin/print` → Control Centers
+- Each center has Operations and searchable Management tools tabs. Shop also has
+  Automation & insights and Business report tabs, preserving the prior dashboards.
+- `/admin/shop/control-center` → `/admin/shop?tab=automation` (legacy link)
+- `/admin/home` → last-used permitted module; the legacy generic dashboard is
+  preserved in Shop's Business report tab.
 - Every `/admin/manage/*` page keeps its exact path; the switcher follows
   the route (food/* → Food, nobleseek → News, other manage/* → Shop) and
   shared pages (users, analytics, chat, home) keep the current module.
 
 ## Menus — backend-driven
 
-`accounts.Modules.module` tags each menu (`shop`/`food`/`news`/`shared`,
+`accounts.Modules.module` tags each menu (`shop`/`food`/`news`/`print`/`shared`,
 children inherit the parent; migration `0005`). `seed_admin_modules`
 writes the tags on every deploy via `MODULE_OF`. `getMenus/` already
 permission-filters, so a user only ever sees modules they are granted.
@@ -61,3 +65,15 @@ Functions scale on demand; no warm-up pings are needed.
   `src/admin/snap.js`
 - Backend: `analytics/views_overview.py`, `nobleseek` overview view,
   `Modules.module` + seeder tags
+
+## Access and cached reports
+
+The admin shell requires an authenticated administrative role. API permissions
+remain authoritative: middleware rejects unauthorized requests before executing
+views, and platform-wide Food actions exclude tenant administrators. Explicit
+"Skip Permission" URLs remain supported by the module URL editor.
+
+Menu/report caches are scoped to the signed-in user. Report snapshots expire
+after 15 minutes and use separate date-range keys. Date changes ignore outdated
+responses; failed requests expose retry controls. Logout reloads the application
+to clear the previous user's in-memory state.

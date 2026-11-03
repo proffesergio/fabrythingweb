@@ -19,20 +19,24 @@ import useApi from '../hooks/APIHandler';
 // (storefront: mobile BottomNavigation + MessengerButton; food: the phone tab
 // bar + the sticky "view bag" bar) that this button must clear rather than
 // cover, so neither layout can share one hardcoded offset.
-export default function WhatsAppButton({ bottom, prefilledMessage }) {
-    const [number, setNumber] = useState('');
+export default function WhatsAppButton({ bottom, prefilledMessage, configuredNumber }) {
+    const [fetchedNumber, setFetchedNumber] = useState('');
     const { callApi } = useApi();
 
     useEffect(() => {
+        // A layout that already fetched public store config can share its
+        // number with the footer and avoid a second request for this button.
+        if (configuredNumber !== undefined) return undefined;
         let mounted = true;
         callApi({ url: 'store/config/' }).then(res => {
             const n = res?.data?.data?.whatsapp_chat_number;
-            if (mounted && n) setNumber(n);
+            if (mounted && n) setFetchedNumber(n);
         });
         return () => { mounted = false; };
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
+    const number = configuredNumber !== undefined ? configuredNumber : fetchedNumber;
     if (!number) return null;
 
     const href = `https://wa.me/${number}${prefilledMessage ? `?text=${encodeURIComponent(prefilledMessage)}` : ''}`;

@@ -5,7 +5,13 @@ import { MemoryRouter } from 'react-router-dom';
 import cartReducer from '../../redux/reducer/cartSlice';
 import StorefrontLayout from './StorefrontLayout';
 
-jest.mock('../../hooks/APIHandler', () => () => ({ callApi: jest.fn().mockResolvedValue({ data: {} }), loading: false }));
+const mockCallApi = jest.fn();
+jest.mock('../../hooks/APIHandler', () => () => ({ callApi: mockCallApi, loading: false }));
+
+beforeEach(() => {
+  mockCallApi.mockReset();
+  mockCallApi.mockResolvedValue({ data: {} });
+});
 
 // Minimal store — avoids importing the full app store (see FoodLayout.test.js
 // for the same rationale: keeps axios ESM / thunk wiring out of this render).
@@ -32,6 +38,18 @@ test('renders Messenger link to the fabrything messenger', async () => {
   const messenger = await screen.findByRole('link', { name: /messenger/i });
   expect(messenger).toHaveAttribute('href', 'https://m.me/fabrything');
   expect(messenger).toHaveAttribute('target', '_blank');
+});
+
+test('footer phone and WhatsApp button use the same configured contact', async () => {
+  mockCallApi.mockImplementation(({ url }) => Promise.resolve({
+    data: { data: url === 'store/config/' ? { whatsapp_chat_number: '8801353529899' } : [] },
+  }));
+  renderLayout();
+
+  expect(await screen.findByRole('link', { name: '+8801353529899' }))
+    .toHaveAttribute('href', 'tel:+8801353529899');
+  expect(await screen.findByRole('link', { name: /chat with us on whatsapp/i }))
+    .toHaveAttribute('href', 'https://wa.me/8801353529899');
 });
 
 test.each([

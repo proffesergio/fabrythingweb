@@ -210,6 +210,9 @@ export default function ProductDetail() {
                                 <img
                                     src={images[selectedImage]}
                                     alt={product.name}
+                                    loading="eager"
+                                    fetchpriority="high"
+                                    decoding="async"
                                     style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block' }}
                                     onError={(e) => { e.target.src = 'https://via.placeholder.com/500x600?text=No+Image'; }}
                                 />

@@ -2,14 +2,21 @@ import {createSlice,createAsyncThunk} from '@reduxjs/toolkit';
 import axios from 'axios';
 import config from '../../utils/config';
 import { cacheKey, readCache, writeCache } from '../../hooks/apiCache';
+import { jwtDecode } from 'jwt-decode';
 import { getToken } from '../../utils/authToken';
 
-const MENU_CACHE_KEY = cacheKey('getMenus/');
+const menuCacheKey = () => {
+  try {
+    const token = getToken();
+    const user = token && jwtDecode(token);
+    return user?.user_id ? cacheKey(`getMenus/${user.user_id}/`) : null;
+  } catch { return null; }
+};
 
 // Seed the sidebar from the last cached menus so the admin nav paints instantly
 // on reload instead of waiting for the (possibly sleeping) backend. Only trust the
 // cache when a token is present — menus are per-authenticated-user.
-const cachedMenus = () => (getToken() ? (readCache(MENU_CACHE_KEY)?.data || []) : []);
+const cachedMenus = () => (menuCacheKey() ? (readCache(menuCacheKey())?.data || []) : []);
 
 export const fetchSidebar=createAsyncThunk('data/fetchSidebar',async()=>{
     // The sidebar is admin-only, but this thunk runs at app start for *every*
@@ -19,7 +26,8 @@ export const fetchSidebar=createAsyncThunk('data/fetchSidebar',async()=>{
     if(!token) return [];
     const response=await axios.get(`${config.API_URL}getMenus/`,{headers:{Authorization:`Bearer ${token}`}});
     const sidebarData=response.data.data;
-    writeCache(MENU_CACHE_KEY, sidebarData);
+    const key = menuCacheKey();
+    if (key) writeCache(key, sidebarData);
     const setActiveAndExpanded=(item)=>{
         if(item.module_url && window.location.pathname.indexOf(item.module_url)!==-1){
             item.active=true;

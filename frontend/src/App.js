@@ -1,9 +1,8 @@
 import './App.css';
-import Home from './pages/Home';
-import Layout from './layout/layout';
 import {RouterProvider, createBrowserRouter, Navigate, useLocation} from 'react-router-dom'
 import ProtectedRoute from './utils/ProtectedRoute';
 import VendorRoute from './utils/VendorRoute';
+import AdminRoute from './utils/AdminRoute';
 import {ToastContainer} from 'react-toastify';
 import { useSelector } from 'react-redux';
 import { fetchSidebar } from './redux/reducer/sidebardata';
@@ -25,12 +24,8 @@ import Box from '@mui/material/Box';
 import { trackPageview } from './utils/analytics';
 
 // Vendor (Restaurant-role) dashboard imports
-import VendorLayout from './vendor/VendorLayout';
 
 // Food delivery app (separate themed experience mounted at /food)
-import { FoodThemeProvider } from './food/context/FoodThemeContext';
-import { FoodLocationProvider } from './food/context/FoodLocationContext';
-import FoodLayout from './food/layout/FoodLayout';
 
 // ── Code-split routes ────────────────────────────────────────────────
 // Every page below loads as its own chunk. Before this, App.js imported all
@@ -39,6 +34,9 @@ import FoodLayout from './food/layout/FoodLayout';
 // data grid, the charting library and the map before first paint.
 // Declared after the imports because `import/first` is an error in this
 // build, not a warning.
+const FoodApp = lazy(() => import('./food/FoodApp'));
+const Layout = lazy(() => import('./layout/layout'));
+const VendorLayout = lazy(() => import('./vendor/VendorLayout'));
 const Auth = lazy(() => import('./pages/Auth'));
 const DynamicForm = lazy(() => import('./pages/DynamicForm'));
 const ManageCategories = lazy(() => import('./pages/category/ManageCategories'));
@@ -74,11 +72,7 @@ const PressCatalogSetup = lazy(() => import('./pages/printing/PressCatalogSetup'
 const ManageCorporate = lazy(() => import('./pages/printing/ManageCorporate'));
 const ManageShowcase = lazy(() => import('./pages/printing/ManageShowcase'));
 // ── Modular admin: per-business overview dashboards + index redirect ──
-const ShopOverview = lazy(() => import('./admin/pages/ShopOverview'));
-const ShopControlCenter = lazy(() => import('./admin/pages/ShopControlCenter'));
-const FoodOverview = lazy(() => import('./admin/pages/FoodOverview'));
-const NewsOverview = lazy(() => import('./admin/pages/NewsOverview'));
-const PrintOverview = lazy(() => import('./admin/pages/PrintOverview'));
+const ModuleControlCenter = lazy(() => import('./admin/pages/ModuleControlCenter'));
 const AdminIndex = lazy(() => import('./admin/modules/AdminIndex'));
 const RiderDashboard = lazy(() => import('./rider/RiderDashboard'));
 const RiderLogin = lazy(() => import('./rider/RiderLogin'));
@@ -137,15 +131,6 @@ function StorefrontWrapper() {
 
 // Food delivery app shell: its own dark theme + location provider + layout,
 // mounted OUTSIDE the storefront wrapper so selecting "Food" switches the whole UI.
-function FoodApp() {
-  // FoodThemeProvider owns the MUI ThemeProvider so the light/dark toggle in the
-  // header can re-create the theme; it persists the choice in localStorage.
-  return (
-    <FoodThemeProvider>
-      <FoodLocationProvider><FoodLayout /></FoodLocationProvider>
-    </FoodThemeProvider>
-  );
-}
 function StorefrontAuthTheme({ children }) {
   const theme = useMemo(
     () => getStorefrontTheme(localStorage.getItem('sf_dark') === 'true' ? 'dark' : 'light'),
@@ -301,16 +286,16 @@ function App() {
       {path:"/admin/auth",element:<Auth/>},
       {
         path:"/admin",
-        element:<Layout/>,
-        errorElement:<Layout childPage={<Error404Page/>}/>,
+        element:<AdminRoute element={<Layout/>}/>,
+        errorElement:<AdminRoute element={<Layout childPage={<Error404Page/>}/>}/>,
         children:[
           {index:true,element:<ProtectedRoute element={<AdminIndex/>}/>},
-          {path:"shop",element:<ProtectedRoute element={<ShopOverview/>}/>},
-          {path:"shop/control-center",element:<ProtectedRoute element={<ShopControlCenter/>}/>},
-          {path:"food",element:<ProtectedRoute element={<FoodOverview/>}/>},
-          {path:"print",element:<ProtectedRoute element={<PrintOverview/>}/>},
-          {path:"news",element:<ProtectedRoute element={<NewsOverview/>}/>},
-          {path:"home",element:<ProtectedRoute element={<Home/>}/>},
+          {path:"shop",element:<ProtectedRoute element={<ModuleControlCenter module="shop"/>}/>},
+          {path:"shop/control-center",element:<ProtectedRoute element={<Navigate to="/admin/shop?tab=automation" replace/>}/>},
+          {path:"food",element:<ProtectedRoute element={<ModuleControlCenter module="food"/>}/>},
+          {path:"print",element:<ProtectedRoute element={<ModuleControlCenter module="print"/>}/>},
+          {path:"news",element:<ProtectedRoute element={<ModuleControlCenter module="news"/>}/>},
+          {path:"home",element:<ProtectedRoute element={<AdminIndex/>}/>},
           {path:"form/:formName",element:<ProtectedRoute element={<DynamicForm/>}/>},
           {path:"form/:formName/:id",element:<ProtectedRoute element={<DynamicForm/>}/>},
           {path:"manage/category",element:<ProtectedRoute element={<ManageCategories/>}/>},

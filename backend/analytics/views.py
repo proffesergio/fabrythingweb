@@ -18,6 +18,7 @@ from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.views import APIView
+from rest_framework_simplejwt.authentication import JWTAuthentication
 
 from .models import AnalyticsProvider, TrackedEvent
 from .permissions import IsAnalyticsStaff
@@ -57,6 +58,7 @@ class IngestView(APIView):
 
 
 class OverviewView(APIView):
+    authentication_classes = [JWTAuthentication]
     permission_classes = [IsAnalyticsStaff]
 
     def get(self, request):
@@ -104,6 +106,7 @@ class EventPagination(PageNumberPagination):
 
 
 class EventsView(APIView):
+    authentication_classes = [JWTAuthentication]
     permission_classes = [IsAnalyticsStaff]
 
     def get(self, request):
@@ -122,6 +125,7 @@ class EventsView(APIView):
 
 
 class ProvidersView(APIView):
+    authentication_classes = [JWTAuthentication]
     permission_classes = [IsAnalyticsStaff]
 
     def get(self, request):
