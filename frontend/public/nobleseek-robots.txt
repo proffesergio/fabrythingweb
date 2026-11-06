@@ -1,0 +1,8 @@
+User-agent: *
+Allow: /nobleseek
+Disallow: /admin
+Disallow: /account
+Disallow: /auth
+Disallow: /api/
+
+Sitemap: https://nobleseek.fabrything.com/sitemap.xml

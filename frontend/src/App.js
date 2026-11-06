@@ -105,6 +105,8 @@ const NobleSeekListPage = lazy(() => import('./nobleseek/pages/NobleSeekListPage
 const NobleSeekDetailPage = lazy(() => import('./nobleseek/pages/NobleSeekDetailPage'));
 const NobleSeekInfoPage = lazy(() => import('./nobleseek/pages/NobleSeekInfoPage'));
 const ManageNobleSeek = lazy(() => import('./pages/nobleseek/ManageNobleSeek'));
+const BlogIndex = lazy(() => import('./storefront/pages/BlogPages').then(module => ({ default: module.BlogIndex })));
+const BlogArticle = lazy(() => import('./storefront/pages/BlogPages').then(module => ({ default: module.BlogArticle })));
 
 // Wraps the storefront with a dark-mode-aware theme.
 // Lives inside the router so it re-renders cleanly on toggle.
@@ -186,6 +188,8 @@ function App() {
         children:[
           {index:true,element:<HomePage/>},
           {path:"shop",element:<ProductCatalog/>},
+          {path:"blog",element:<BlogIndex/>},
+          {path:"blog/:slug",element:<BlogArticle/>},
           {path:"product/:slug",element:<ProductDetail/>},
           {path:"cart",element:<CartPage/>},
           {path:"checkout",element:<CheckoutPage/>},
@@ -358,7 +362,7 @@ function App() {
         <Suspense fallback={<RouteFallback/>}>
           <RouterProvider router={router}/>
         </Suspense>
-        <InstallPrompt/>
+        <InstallPrompt router={router}/>
         <ToastContainer position="bottom-right" theme='colored' autoclose={3000} hideProgressBar={false} style={{marginBottom:'30px'}}/>
     </>
   );

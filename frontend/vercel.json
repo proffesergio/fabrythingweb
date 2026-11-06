@@ -2,7 +2,66 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "buildCommand": "CI=false react-scripts build",
   "outputDirectory": "build",
+  "redirects": [
+    {
+      "source": "/",
+      "has": [
+        {
+          "type": "host",
+          "value": "nobleseek.fabrything.com"
+        }
+      ],
+      "destination": "/nobleseek",
+      "permanent": false
+    },
+    {
+      "source": "/nobleseek/:path*",
+      "has": [
+        {
+          "type": "host",
+          "value": "www.fabrything.com"
+        }
+      ],
+      "destination": "https://nobleseek.fabrything.com/nobleseek/:path*",
+      "permanent": true
+    },
+    {
+      "source": "/blog/:path*",
+      "has": [
+        {
+          "type": "host",
+          "value": "nobleseek.fabrything.com"
+        }
+      ],
+      "destination": "https://www.fabrything.com/blog/:path*",
+      "permanent": true
+    }
+  ],
   "rewrites": [
+    {
+      "source": "/robots.txt",
+      "has": [
+        {
+          "type": "host",
+          "value": "nobleseek.fabrything.com"
+        }
+      ],
+      "destination": "/nobleseek-robots.txt"
+    },
+    {
+      "source": "/robots.txt",
+      "destination": "/storefront-robots.txt"
+    },
+    {
+      "source": "/sitemap.xml",
+      "has": [
+        {
+          "type": "host",
+          "value": "nobleseek.fabrything.com"
+        }
+      ],
+      "destination": "https://fabrythingapi.vercel.app/api/store/nobleseek/sitemap.xml"
+    },
     {
       "source": "/sitemap.xml",
       "destination": "https://fabrythingapi.vercel.app/api/store/sitemap.xml"

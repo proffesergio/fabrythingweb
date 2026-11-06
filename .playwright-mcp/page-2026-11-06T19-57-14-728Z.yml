@@ -1,0 +1,966 @@
+- generic [active] [ref=f6e1]:
+  - link "Skip to main content" [ref=f6e2] [cursor=pointer]:
+    - /url: "#main-content"
+  - generic [ref=f6e3]:
+    - iframe [ref=f6e10]:
+      - iframe [ref=f12e5]:
+        - generic [ref=f14e18] [cursor=pointer]
+    - banner [ref=f6e11]:
+      - generic [ref=f6e14]:
+        - link [ref=f6e19] [cursor=pointer]:
+          - /url: /
+          - img "Home" [ref=f6e20]
+        - generic [ref=f6e21]:
+          - link [ref=f6e22] [cursor=pointer]:
+            - /url: "#"
+          - link [ref=f6e25] [cursor=pointer]:
+            - /url: "#"
+    - main [ref=f6e27]:
+      - article [ref=f6e31]:
+        - generic [ref=f6e33]:
+          - generic [ref=f6e39]:
+            - generic [ref=f6e40]:
+              - generic [ref=f6e41]:
+                - generic [ref=f6e42]:
+                  - 'link "সিপাহি-জনতার বিপ্লব বাংলাদেশের পথ নির্ধারণ করেছিল: প্রধানমন্ত্রী" [ref=f6e45] [cursor=pointer]':
+                    - /url: /news/bangladesh/news-3978351
+                    - img "প্রধানমন্ত্রী তারেক রহমান" [ref=f6e47]
+                  - generic [ref=f6e48]:
+                    - heading [level=2] [ref=f6e49]:
+                      - 'link "সিপাহি-জনতার বিপ্লব বাংলাদেশের পথ নির্ধারণ করেছিল: প্রধানমন্ত্রী" [ref=f6e50] [cursor=pointer]':
+                        - /url: /news/bangladesh/news-3978351
+                    - generic [ref=f6e51]: প্রধানমন্ত্রী বলেন, ‘৭ নভেম্বর সিপাহি-জনতা ঐক্যবদ্ধভাবে বাংলাদেশের স্বাধীনতা ও সার্বভৌমত্বের বিরুদ্ধে সব চক্রান্ত রুখে দিয়েছিল।
+                - generic [ref=f6e53]:
+                  - heading [level=3] [ref=f6e54]:
+                    - link "ইরান নয়, যেন ইসরায়েলেই ‘হামলা’ চালালেন ট্রাম্প!" [ref=f6e55] [cursor=pointer]:
+                      - /url: /international/news-3978261
+                  - generic [ref=f6e56]: ইসরায়েলের সাম্প্রতিক নেসেট নির্বাচনের পর নেতানিয়াহু ‘জনসম্মুখে’ আসেননি। তার কাছ থেকে ট্রাম্পের টাকা বন্ধ করে দেওয়ার বিষয়ে আনুষ্ঠানিকভাবে কিছু জানা যায়নি।
+              - generic [ref=f6e57]:
+                - generic [ref=f6e58]:
+                  - link "নারী ক্রিকেটারদের জন্য বেতনসহ মাতৃত্বকালীন ছুটি চালুর উদ্যোগ বিসিবির" [ref=f6e61] [cursor=pointer]:
+                    - /url: /sports/cricket/news-3978356
+                    - img "Bcb" [ref=f6e63]
+                  - generic [ref=f6e64]:
+                    - heading [level=5] [ref=f6e65]:
+                      - link "নারী ক্রিকেটারদের জন্য বেতনসহ মাতৃত্বকালীন ছুটি চালুর উদ্যোগ বিসিবির" [ref=f6e66] [cursor=pointer]:
+                        - /url: /sports/cricket/news-3978356
+                    - generic [ref=f6e67]: গত ২৬ অক্টোবর দ্য ডেইলি স্টারের প্রিন্ট সংস্করণে ‘Here motherhood costs cricket career’ শিরোনামে একটি প্রতিবেদন প্রকাশিত হয়। বাংলাদেশ ক্রিকেটে মাতৃত্বকালীন ছুটির নীতিমালা না থাকায় বেশ কয়েকজন নারী ক্রিকেটার খেলা ছেড়ে দেওয়ার কথা ভাবছেন— সেখানে উঠে আসে এমন কঠিন বাস্তবতা।
+                - generic [ref=f6e68]:
+                  - link "এক্সপ্লেইনার / হরমুজে ইরান কেন ভারত, চীন, কাতার ও ইরাকের জাহাজ চলাচলে ছাড় দিচ্ছে?" [ref=f6e71] [cursor=pointer]:
+                    - /url: /explainer/news-3978326
+                    - 'img "ওমানের মুসান্দাম থেকে হরমুজ প্রণালির দৃশ্য। ছবি: রয়টার্স" [ref=f6e73]'
+                  - generic [ref=f6e74]:
+                    - heading [level=5] [ref=f6e75]:
+                      - link "এক্সপ্লেইনার / হরমুজে ইরান কেন ভারত, চীন, কাতার ও ইরাকের জাহাজ চলাচলে ছাড় দিচ্ছে?" [ref=f6e76] [cursor=pointer]:
+                        - /url: /explainer/news-3978326
+                    - generic [ref=f6e77]: ভারত ও চীনের জাহাজ থেকে ট্রানজিট ফি আদায় করবে তেহরান। তবে কাতারের জাহাজ বিনা ফিতে চলাচল করতে পারবে। ইরাকি জাহাজকে মাশুল দিতে হবে কি না, তা তিনি জানাননি।
+                - generic [ref=f6e78]:
+                  - link "কুড়ানো শাক-পাতাতেই জীবনের চাকা ঘুরছে ষাটোর্ধ্ব শাহাবুদ্দিন-আয়েশা দম্পতির" [ref=f6e81] [cursor=pointer]:
+                    - /url: /news/bangladesh/news-3978331
+                    - 'img "ছবি: স্টার" [ref=f6e83]'
+                  - generic [ref=f6e84]:
+                    - heading [level=5] [ref=f6e85]:
+                      - link "কুড়ানো শাক-পাতাতেই জীবনের চাকা ঘুরছে ষাটোর্ধ্ব শাহাবুদ্দিন-আয়েশা দম্পতির" [ref=f6e86] [cursor=pointer]:
+                        - /url: /news/bangladesh/news-3978331
+                    - generic [ref=f6e87]: ‘জীবন থেকে আমার আর কিছু চাওয়ার নেই।’
+                - generic [ref=f6e88]:
+                  - link "সংসদের বাইরে বিকল্প উদ্যোগ, ‘সংবিধান সংস্কার বাস্তবায়ন পরিষদ’ গড়ছে জামায়াত জোট" [ref=f6e91] [cursor=pointer]:
+                    - /url: /news/bangladesh/politics/news-3978201
+                    - img "Jamayat Jote" [ref=f6e93]
+                  - generic [ref=f6e94]:
+                    - heading [level=5] [ref=f6e95]:
+                      - link "সংসদের বাইরে বিকল্প উদ্যোগ, ‘সংবিধান সংস্কার বাস্তবায়ন পরিষদ’ গড়ছে জামায়াত জোট" [ref=f6e96] [cursor=pointer]:
+                        - /url: /news/bangladesh/politics/news-3978201
+                    - generic [ref=f6e97]: সংসদের সংবিধান সংশোধনসংক্রান্ত বিশেষ কমিটিতে অংশ না নেওয়া এবং সরকারের প্রস্তাবিত প্রক্রিয়া নিয়ে আপত্তির মধ্যে এ উদ্যোগকে সংবিধান সংস্কারের প্রশ্নে নিজেদের বিকল্প অবস্থান ও কর্মপরিকল্পনা সামনে আনার প্রচেষ্টা হিসেবে দেখছেন সংশ্লিষ্ট নেতারা।
+                - generic [ref=f6e98]:
+                  - link "কক্সবাজারে প্রকাশ্যে ব্যবসায়ীকে গুলি" [ref=f6e101] [cursor=pointer]:
+                    - /url: /news/bangladesh/crime-justice/news-3978271
+                    - img "বন্দুকযুদ্ধ" [ref=f6e103]
+                  - generic [ref=f6e104]:
+                    - heading [level=5] [ref=f6e105]:
+                      - link "কক্সবাজারে প্রকাশ্যে ব্যবসায়ীকে গুলি" [ref=f6e106] [cursor=pointer]:
+                        - /url: /news/bangladesh/crime-justice/news-3978271
+                    - generic [ref=f6e107]: ‘একজন কাছ থেকে আমার মাথায় গুলি করার চেষ্টা করেছিল।’
+              - generic [ref=f6e108]:
+                - iframe [ref=f6e112]:
+                  - iframe [ref=f11e5]
+                - iframe [ref=f6e116]:
+                  - link [ref=f10e2] [cursor=pointer]:
+                    - /url: https://googleads.g.doubleclick.net/pcs/click?xai=AKAOjssga-jbHqErcO3v8i-AD3qRmzIIzhBkKSdzxsVXxr27PZ4HLs6yV37d-zscfU3UaLho28IHxH-FibZvFrPiqlFmAry6O_R0pbPRNTwD0EIiXqOHNl2iM7M44WGej-Ng8F6KXZj0pd9VyckfZmoBRPmJW8075Qu4I-vS_9YF9Ob1EMSt_mRmUTLGdnuIhqKOCJJcKGckxns2IDeOH28ZATguY7vxh8qyGqZAQIFUX1pEJ8BiPw1FEEuNC9IAvPmZ1rDPnSWmjLjLc_6ck1dKtbzRqwTKssI4ej6nc5TlFkXGvgwbNAgRHuqkztMy5KgUS0siG5Ih8EQ3twST12Y-f7hjjcPJKkxWx9O8XHWTrezFcCNusdeJVvpLissCeXzDC9yWZ7yr2et5eBNi6jcL94B_I5ElNQ&sai=AMfl-YTITWeyPu0l2-4JCFnE5YqfcQmjPYT5VpRZXEiQzhYkQtZ4U47As8VA5MVveE681xK1bvPJZxb_RsNACiPbqGojhfamoLNnUW5bItqucQUDdhgYQie6kEmIcU-c1WPzIlDxTv0R-LDKgahQgWhOkNtoQkZDQqCNqEqQIXoWo9OObAhUvKuHSalmo6y_YG0RGvGm1apE1unDaxhPqPZ59vGQnLHM6a8qRxoQdRTFIzx7fBor8oI84SrpGNzeP-BcHAkZ045-fbMQHQb2Cg78BMoYvQ9yzRhNlw3TfJ7W56JCdvZnIOmmf2XDjF3MoOH2gTHnfp32AF9hNow0zl68D5DLHtPshG_v4yKmbA5RmVhDkU_qe4FIRcFNqMugGMtcLODZtJdz-kVulOh6&sig=Cg0ArKJSzAI3ESuJMtlP&fbs_aeid=%5Bgw_fbsaeid%5D&adurl=https://aspireworld.thedailystar.net/
+            - generic [ref=f6e119]:
+              - generic [ref=f6e120]:
+                - link "সাদমানকে নিয়ে দুঃসংবাদ পেল বাংলাদেশ" [ref=f6e123] [cursor=pointer]:
+                  - /url: /sports/cricket/news-3978286
+                  - img "shadman" [ref=f6e125]
+                - generic [ref=f6e126]:
+                  - heading [level=5] [ref=f6e127]:
+                    - link "সাদমানকে নিয়ে দুঃসংবাদ পেল বাংলাদেশ" [ref=f6e128] [cursor=pointer]:
+                      - /url: /sports/cricket/news-3978286
+                  - generic [ref=f6e129]: মাটিতে লুটিয়ে পড়ার পর তাকে তাৎক্ষণিকভাবে প্রাথমিক শুশ্রূষা দিলেও কাজ হয়নি। শেষমেশ স্ট্রেচারে করে মাঠ ছাড়েন তিনি, আর ফেরেননি।
+              - generic [ref=f6e130]:
+                - link "চলছে গাড়ি জ্বলছে ল্যাম্পপোস্ট, তবু সন্ধ্যা হলেই কেন রাস্তার পাশের গাছে চড়ুইয়ের ভিড়" [ref=f6e133] [cursor=pointer]:
+                  - /url: /environment/news-3978251
+                  - 'img "ছবি: সংগৃহীত" [ref=f6e135]'
+                - generic [ref=f6e136]:
+                  - heading [level=5] [ref=f6e137]:
+                    - link "চলছে গাড়ি জ্বলছে ল্যাম্পপোস্ট, তবু সন্ধ্যা হলেই কেন রাস্তার পাশের গাছে চড়ুইয়ের ভিড়" [ref=f6e138] [cursor=pointer]:
+                      - /url: /environment/news-3978251
+                  - generic [ref=f6e139]: সাধারণত মানুষের উপস্থিতি টের পেলে অনেক পাখিই দূরে সরে যায়, আড়ালে চলে যায়। কিন্তু চড়ুই যেন এ ক্ষেত্রে ব্যতিক্রম। মানুষের বসতি, দোকানপাট, ব্যস্ত সড়ক, সবকিছুর কাছাকাছি থেকেও তারা দিব্যি নিজেদের মতো জীবন কাটায়। শহরের শব্দ আর আলো উপেক্ষা করে নির্দিষ্ট কিছু গাছে রাত কাটায় দল বেঁধে।
+              - generic [ref=f6e140]:
+                - link "অনেকে ‍৪ ঘণ্টা ঘুমিয়েও স্বাভাবিক থাকেন কীভাবে? যে কারণ জানা গেল গবেষণায়" [ref=f6e143] [cursor=pointer]:
+                  - /url: /life-living/news-3978301
+                  - img "অনেকে ‍৪ ঘণ্টা ঘুমিয়েও স্বাভাবিক থাকেন কীভাবে" [ref=f6e145]
+                - generic [ref=f6e146]:
+                  - heading [level=5] [ref=f6e147]:
+                    - link "অনেকে ‍৪ ঘণ্টা ঘুমিয়েও স্বাভাবিক থাকেন কীভাবে? যে কারণ জানা গেল গবেষণায়" [ref=f6e148] [cursor=pointer]:
+                      - /url: /life-living/news-3978301
+                  - generic [ref=f6e149]: বিজ্ঞানীরা আশা করছেন, এসব জিনের কার্যপদ্ধতি বুঝতে পারলে ভবিষ্যতে ঘুমের সমস্যার চিকিৎসায় নতুন ওষুধ তৈরি করা সম্ভব হবে।
+              - generic [ref=f6e150]:
+                - link "নিউইয়র্কে কেমন আছেন মোনালিসা" [ref=f6e153] [cursor=pointer]:
+                  - /url: /entertainment/news-3978316
+                  - img "Monalisa" [ref=f6e155]
+                - generic [ref=f6e156]:
+                  - heading [level=5] [ref=f6e157]:
+                    - link "নিউইয়র্কে কেমন আছেন মোনালিসা" [ref=f6e158] [cursor=pointer]:
+                      - /url: /entertainment/news-3978316
+                  - generic [ref=f6e159]: ‘অভিনয় ও মডেলিং থেকে দূরে থাকলেও দর্শকদের ভালোবাসার শেষ নেই।’
+              - generic [ref=f6e160]:
+                - link "এক পথ, কত স্বাদ! ২৫০ টাকায় তাঁতিবাজার ঘুরে খাওয়া-দাওয়া" [ref=f6e163] [cursor=pointer]:
+                  - /url: /life-living/food-recipe/news-3978241
+                  - 'img "ছবি: স্টার।" [ref=f6e165]'
+                - generic [ref=f6e166]:
+                  - heading [level=5] [ref=f6e167]:
+                    - link "এক পথ, কত স্বাদ! ২৫০ টাকায় তাঁতিবাজার ঘুরে খাওয়া-দাওয়া" [ref=f6e168] [cursor=pointer]:
+                      - /url: /life-living/food-recipe/news-3978241
+                  - generic [ref=f6e169]: কারা বাস করছেন এই মহল্লায়, দোকানপাট কেমন, মিষ্টি কতটা মিষ্টি আর এখানকার রসমালাইয়ের স্বাদই বা কেমন। পোলাও-বিরিয়ানি-তেহারির জন্য নামকরা পুরান ঢাকায় নিরামিষ খাবার কোথায় পাওয়া যায়, দামই বা কত?
+          - generic [ref=f6e170]:
+            - generic [ref=f6e176]:
+              - generic [ref=f6e177]:
+                - heading [level=2] [ref=f6e179]:
+                  - link "খেলা" [ref=f6e180] [cursor=pointer]:
+                    - /url: /sports
+                - generic [ref=f6e181]:
+                  - link "রোনালদোর অবসরের পর পর্তুগালের প্রথম দল ঘোষণা, পরিবর্তনের ছড়াছড়ি" [ref=f6e184] [cursor=pointer]:
+                    - /url: /sports/football/news-3978336
+                    - img "Cr7" [ref=f6e186]
+                  - heading [level=5] [ref=f6e188]:
+                    - link "রোনালদোর অবসরের পর পর্তুগালের প্রথম দল ঘোষণা, পরিবর্তনের ছড়াছড়ি" [ref=f6e189] [cursor=pointer]:
+                      - /url: /sports/football/news-3978336
+                - generic [ref=f6e190]:
+                  - 'link "রোনালদোর সিদ্ধান্ত আমাকে মেনে নিতে হবে: জেসুস" [ref=f6e193] [cursor=pointer]':
+                    - /url: /sports/football/news-3978276
+                    - img "Ronaldo" [ref=f6e195]
+                  - heading [level=6] [ref=f6e197]:
+                    - 'link "রোনালদোর সিদ্ধান্ত আমাকে মেনে নিতে হবে: জেসুস" [ref=f6e198] [cursor=pointer]':
+                      - /url: /sports/football/news-3978276
+                - generic [ref=f6e199]:
+                  - link "হাসান ইতিহাস গড়ার পর বাংলাদেশের ৩ উইকেট হারানোর অস্বস্তি" [ref=f6e202] [cursor=pointer]:
+                    - /url: /sports/cricket/news-3978246
+                    - img "mushfiq and hridoy" [ref=f6e204]
+                  - heading [level=6] [ref=f6e206]:
+                    - link "হাসান ইতিহাস গড়ার পর বাংলাদেশের ৩ উইকেট হারানোর অস্বস্তি" [ref=f6e207] [cursor=pointer]:
+                      - /url: /sports/cricket/news-3978246
+                - generic [ref=f6e208]:
+                  - link "রিয়ালের পরবর্তী সভাপতি কি নাদাল, যা বলছে ক্লাবের নিয়ম" [ref=f6e211] [cursor=pointer]:
+                    - /url: /sports/football/news-3978216
+                    - img "nadal" [ref=f6e213]
+                  - heading [level=6] [ref=f6e215]:
+                    - link "রিয়ালের পরবর্তী সভাপতি কি নাদাল, যা বলছে ক্লাবের নিয়ম" [ref=f6e216] [cursor=pointer]:
+                      - /url: /sports/football/news-3978216
+                - generic [ref=f6e217]:
+                  - link "পাঁচটি ভিন্ন দেশে ৫ উইকেট নিয়ে হাসানের বিশ্বরেকর্ড" [ref=f6e220] [cursor=pointer]:
+                    - /url: /sports/cricket/news-3978191
+                    - img "hasan" [ref=f6e222]
+                  - heading [level=6] [ref=f6e224]:
+                    - link "পাঁচটি ভিন্ন দেশে ৫ উইকেট নিয়ে হাসানের বিশ্বরেকর্ড" [ref=f6e225] [cursor=pointer]:
+                      - /url: /sports/cricket/news-3978191
+              - generic [ref=f6e226]:
+                - heading [level=2] [ref=f6e228]:
+                  - link "বাণিজ্য" [ref=f6e229] [cursor=pointer]:
+                    - /url: /business
+                - generic [ref=f6e230]:
+                  - link "বেতন থেকে অল্প অল্প করে কীভাবে টাকা জমাবেন, কোথায় বিনিয়োগ করবেন?" [ref=f6e233] [cursor=pointer]:
+                    - /url: /economy/industry/investment/news-3978156
+                    - img "savings-loan-illustration" [ref=f6e235]
+                  - heading [level=5] [ref=f6e237]:
+                    - link "বেতন থেকে অল্প অল্প করে কীভাবে টাকা জমাবেন, কোথায় বিনিয়োগ করবেন?" [ref=f6e238] [cursor=pointer]:
+                      - /url: /economy/industry/investment/news-3978156
+                - generic [ref=f6e239]:
+                  - link "মূল্যস্ফীতির চাপে ক্লান্ত ক্রেতা, ৫০ শতাংশ ছাড়েও জমছে না ব্র্যান্ডের পোশাকের বাজার" [ref=f6e242] [cursor=pointer]:
+                    - /url: /economy/news-3978101
+                    - img "DISCOUNT" [ref=f6e244]
+                  - heading [level=6] [ref=f6e246]:
+                    - link "মূল্যস্ফীতির চাপে ক্লান্ত ক্রেতা, ৫০ শতাংশ ছাড়েও জমছে না ব্র্যান্ডের পোশাকের বাজার" [ref=f6e247] [cursor=pointer]:
+                      - /url: /economy/news-3978101
+                - generic [ref=f6e248]:
+                  - link "মিরপুরে কাজে ফিরেছেন শ্রমিকেরা, দাবি—‘হয়রানি যেন না করা হয়’" [ref=f6e251] [cursor=pointer]:
+                    - /url: /economy/industry/news-3978086
+                    - img "মিরপুর" [ref=f6e253]
+                  - heading [level=6] [ref=f6e255]:
+                    - link "মিরপুরে কাজে ফিরেছেন শ্রমিকেরা, দাবি—‘হয়রানি যেন না করা হয়’" [ref=f6e256] [cursor=pointer]:
+                      - /url: /economy/industry/news-3978086
+                - generic [ref=f6e257]:
+                  - link "আকু বিল পরিশোধের পর রিজার্ভ কমে ৩৪.৮৫ বিলিয়ন ডলার" [ref=f6e260] [cursor=pointer]:
+                    - /url: /economy/news-3978051
+                    - img "স্টার অনলাইন গ্রাফিক্স" [ref=f6e262]
+                  - heading [level=6] [ref=f6e264]:
+                    - link "আকু বিল পরিশোধের পর রিজার্ভ কমে ৩৪.৮৫ বিলিয়ন ডলার" [ref=f6e265] [cursor=pointer]:
+                      - /url: /economy/news-3978051
+                - generic [ref=f6e266]:
+                  - link "২০ ব্যাংকের মুনাফার চেয়ে ৭ ব্যাংকের লোকসান বেশি" [ref=f6e269] [cursor=pointer]:
+                    - /url: /economy/bank/news-3978021
+                    - img "২০ ব্যাংক যে মুনাফা করেছে ৭ ব্যাংকের লোকসান তারচেয়েও বেশি" [ref=f6e271]
+                  - heading [level=6] [ref=f6e273]:
+                    - link "২০ ব্যাংকের মুনাফার চেয়ে ৭ ব্যাংকের লোকসান বেশি" [ref=f6e274] [cursor=pointer]:
+                      - /url: /economy/bank/news-3978021
+              - generic [ref=f6e275]:
+                - heading [level=2] [ref=f6e277]:
+                  - link "বিনোদন" [ref=f6e278] [cursor=pointer]:
+                    - /url: /entertainment
+                - generic [ref=f6e279]:
+                  - link "‘আলী যাকেরের শূন্যতা প্রতি মুহূর্তে অনুভব করি’" [ref=f6e282] [cursor=pointer]:
+                    - /url: /entertainment/news-3978296
+                    - img "Aly Zaker-1.jpg" [ref=f6e284]
+                  - heading [level=5] [ref=f6e286]:
+                    - link "‘আলী যাকেরের শূন্যতা প্রতি মুহূর্তে অনুভব করি’" [ref=f6e287] [cursor=pointer]:
+                      - /url: /entertainment/news-3978296
+                - generic [ref=f6e288]:
+                  - link "‘নকিং অন ভ্যাটিকানস ডোর’" [ref=f6e291] [cursor=pointer]:
+                    - /url: /entertainment/music/news-3978011
+                    - img "pope bob" [ref=f6e293]
+                  - heading [level=6] [ref=f6e295]:
+                    - link "‘নকিং অন ভ্যাটিকানস ডোর’" [ref=f6e296] [cursor=pointer]:
+                      - /url: /entertainment/music/news-3978011
+                - generic [ref=f6e297]:
+                  - link "৭৫ বছরেও বক্স অফিসে রজনীকান্তের রাজত্ব" [ref=f6e300] [cursor=pointer]:
+                    - /url: /entertainment/tv-movies/bollywood/news-3977951
+                    - img "rajnikant" [ref=f6e302]
+                  - heading [level=6] [ref=f6e304]:
+                    - link "৭৫ বছরেও বক্স অফিসে রজনীকান্তের রাজত্ব" [ref=f6e305] [cursor=pointer]:
+                      - /url: /entertainment/tv-movies/bollywood/news-3977951
+                - generic [ref=f6e306]:
+                  - link "‘সারা দুনিয়ায় থিয়েটার বেঁচে আছে রাষ্ট্রীয় পৃষ্ঠপোষকতায়’" [ref=f6e309] [cursor=pointer]:
+                    - /url: /entertainment/news-3977851
+                    - img "Tropa Majumdar" [ref=f6e311]
+                  - heading [level=6] [ref=f6e313]:
+                    - link "‘সারা দুনিয়ায় থিয়েটার বেঁচে আছে রাষ্ট্রীয় পৃষ্ঠপোষকতায়’" [ref=f6e314] [cursor=pointer]:
+                      - /url: /entertainment/news-3977851
+                - generic [ref=f6e315]:
+                  - link "৭ নভেম্বর ৭ ব্যান্ড মাতাবে মানিক মিয়া অ্যাভিনিউ" [ref=f6e318] [cursor=pointer]:
+                    - /url: /entertainment/news-3977906
+                    - img "concert" [ref=f6e320]
+                  - heading [level=6] [ref=f6e322]:
+                    - link "৭ নভেম্বর ৭ ব্যান্ড মাতাবে মানিক মিয়া অ্যাভিনিউ" [ref=f6e323] [cursor=pointer]:
+                      - /url: /entertainment/news-3977906
+              - generic [ref=f6e324]:
+                - heading [level=2] [ref=f6e326]:
+                  - link "জীবনযাপন" [ref=f6e327] [cursor=pointer]:
+                    - /url: /life-living
+                - generic [ref=f6e328]:
+                  - link "ছবি আসল, নাকি এআই দিয়ে তৈরি? বুঝবেন যেভাবে" [ref=f6e331] [cursor=pointer]:
+                    - /url: /tech-startup/science-tech-gadgets/technology/news-3978206
+                    - img "Rickshaw Comparison_ Human Choice vs AI" [ref=f6e333]
+                  - heading [level=5] [ref=f6e335]:
+                    - link "ছবি আসল, নাকি এআই দিয়ে তৈরি? বুঝবেন যেভাবে" [ref=f6e336] [cursor=pointer]:
+                      - /url: /tech-startup/science-tech-gadgets/technology/news-3978206
+                - generic [ref=f6e337]:
+                  - link "অন্যের আচরণ ‘ব্যক্তিগতভাবে’ না নেওয়ার ৮ উপায়, যা বলছে মনোবিজ্ঞান" [ref=f6e340] [cursor=pointer]:
+                    - /url: /life-living/relation-family/news-3978026
+                    - img "অন্যের আচরণ ‘ব্যক্তিগতভাবে’ না নেওয়ার ৮ উপায়, যা বলছে মনোবিজ্ঞান" [ref=f6e342]
+                  - heading [level=6] [ref=f6e344]:
+                    - link "অন্যের আচরণ ‘ব্যক্তিগতভাবে’ না নেওয়ার ৮ উপায়, যা বলছে মনোবিজ্ঞান" [ref=f6e345] [cursor=pointer]:
+                      - /url: /life-living/relation-family/news-3978026
+                - generic [ref=f6e346]:
+                  - link "ঘুরতে যেতে পারেন ভুতুড়ে এই ৮ জায়গায়" [ref=f6e349] [cursor=pointer]:
+                    - /url: /life-living/travel/news-3977846
+                    - img "most haunted places in the world to visit" [ref=f6e351]
+                  - heading [level=6] [ref=f6e353]:
+                    - link "ঘুরতে যেতে পারেন ভুতুড়ে এই ৮ জায়গায়" [ref=f6e354] [cursor=pointer]:
+                      - /url: /life-living/travel/news-3977846
+                - generic [ref=f6e355]:
+                  - link "হাঁটার গতিই বলে দেবে আপনি কত দিন বাঁচবেন, যা বলছে গবেষণা" [ref=f6e358] [cursor=pointer]:
+                    - /url: /life-living/news-3977731
+                    - img "exterior-portrait-black-man.jpg" [ref=f6e360]
+                  - heading [level=6] [ref=f6e362]:
+                    - link "হাঁটার গতিই বলে দেবে আপনি কত দিন বাঁচবেন, যা বলছে গবেষণা" [ref=f6e363] [cursor=pointer]:
+                      - /url: /life-living/news-3977731
+                - generic [ref=f6e364]:
+                  - link "ঘন ঘন চাকরি বদলানো কি ভালো?" [ref=f6e367] [cursor=pointer]:
+                    - /url: /life-living/study-career/news-3977701
+                    - img "Job" [ref=f6e369]
+                  - heading [level=6] [ref=f6e371]:
+                    - link "ঘন ঘন চাকরি বদলানো কি ভালো?" [ref=f6e372] [cursor=pointer]:
+                      - /url: /life-living/study-career/news-3977701
+            - generic [ref=f6e377]:
+              - generic [ref=f6e378]:
+                - list [ref=f6e379]:
+                  - listitem [ref=f6e380]:
+                    - link "বিশ্ব" [ref=f6e381] [cursor=pointer]:
+                      - /url: "#panel-popular"
+                  - listitem [ref=f6e382]
+                  - listitem [ref=f6e383]:
+                    - link "বিশ্লেষণ" [ref=f6e384] [cursor=pointer]:
+                      - /url: "#panel-editors-pick"
+                  - listitem
+                - list [ref=f6e387]:
+                  - listitem [ref=f6e388]:
+                    - heading [level=4] [ref=f6e389]:
+                      - link "জার্মান বিমানবন্দরে যাত্রীর লাগেজে ৯০টি গিরগিটি ও বিষধর সাপ" [ref=f6e390] [cursor=pointer]:
+                        - /url: /international/news-3971081
+                  - listitem [ref=f6e391]:
+                    - heading [level=4] [ref=f6e392]:
+                      - link "গান্ধি বনাম গডসে! বিজেপির গলায় জ্ঞানেশ-কাঁটা। ভারতে গণতন্ত্রের ‘গঙ্গাযাত্রা’?" [ref=f6e393] [cursor=pointer]:
+                        - /url: /international/news-3969036
+                  - listitem [ref=f6e394]:
+                    - heading [level=4] [ref=f6e395]:
+                      - link "প্রধানমন্ত্রীর আশ্বাস সত্ত্বেও ফ্রান্সে শিক্ষার্থীদের আন্দোলন অব্যাহত" [ref=f6e396] [cursor=pointer]:
+                        - /url: /international/news-3968881
+                  - listitem [ref=f6e397]:
+                    - heading [level=4] [ref=f6e398]:
+                      - link "ভারতে সুড়ঙ্গ দুর্ঘটনায় ৭ শ্রমিকের প্রাণহানি" [ref=f6e399] [cursor=pointer]:
+                        - /url: /international/news-3952111
+                  - listitem [ref=f6e400]:
+                    - heading [level=4] [ref=f6e401]:
+                      - link "ভারী বৃষ্টি-বন্যায় আসামে ৮৫ ও কেরালায় ১৫ জনের মৃত্যু" [ref=f6e402] [cursor=pointer]:
+                        - /url: /international/news-3948756
+              - generic [ref=f6e404]:
+                - heading [level=3] [ref=f6e406]:
+                  - link "মতামত" [ref=f6e407] [cursor=pointer]:
+                    - /url: /opinion/views
+                - link:
+                  - /url: /opinion/views
+                - generic [ref=f6e408]:
+                  - generic [ref=f6e410]:
+                    - link "১৯৭৫ সালের ৭ নভেম্বর বাংলাদেশি জাতীয়তাবাদের ভিত্তি রচিত হয়" [ref=f6e413] [cursor=pointer]:
+                      - /url: /opinion/views/news-3978361
+                      - img "সিপাহী-জনতার বিপ্লব" [ref=f6e415]
+                    - generic [ref=f6e416]:
+                      - heading [level=5] [ref=f6e417]:
+                        - link "১৯৭৫ সালের ৭ নভেম্বর বাংলাদেশি জাতীয়তাবাদের ভিত্তি রচিত হয়" [ref=f6e418] [cursor=pointer]:
+                          - /url: /opinion/views/news-3978361
+                      - generic [ref=f6e419]: আজকে যখন দেশের ভেতরে ও বাইরে থেকে বাংলাদেশকে অস্থির করতে, বাংলাদেশের অগ্রযাত্রা থামিয়ে দিতে দেশি-বিদেশি ষড়যন্ত্রকারীরা নানামুখী চক্রান্তে লিপ্ত, তখন ৭ নভেম্বরের বিপ্লব ও সংহতি দিবসের চেতনা...
+                  - generic [ref=f6e421]:
+                    - link "ঢাকার স্বাস্থ্য অবকাঠামো কতটা ‘সুস্থ’?" [ref=f6e424] [cursor=pointer]:
+                      - /url: /opinion/views/news-3977321
+                      - 'img "ছবি: স্টার।" [ref=f6e426]'
+                    - generic [ref=f6e427]:
+                      - heading [level=5] [ref=f6e428]:
+                        - link "ঢাকার স্বাস্থ্য অবকাঠামো কতটা ‘সুস্থ’?" [ref=f6e429] [cursor=pointer]:
+                          - /url: /opinion/views/news-3977321
+                      - generic [ref=f6e430]: কোথায় নতুন হাসপাতাল প্রয়োজন, কোথায় বিদ্যমান সেবার সম্প্রসারণ প্রয়োজন এবং কোন এলাকাগুলো এখনো সেবাবঞ্চিত, সে বিষয়ে তথ্যভিত্তিক সিদ্ধান্ত নিতে হবে।
+            - generic [ref=f6e432]:
+              - generic [ref=f6e436]:
+                - heading [level=2] [ref=f6e438]:
+                  - link "সংবাদ" [ref=f6e439] [cursor=pointer]:
+                    - /url: /news
+                - generic [ref=f6e440]:
+                  - generic [ref=f6e442]:
+                    - link "ডেঙ্গু আক্রান্ত হয়ে সাংবাদিক নাদিম হোসেনের মৃত্যু" [ref=f6e445] [cursor=pointer]:
+                      - /url: /news/bangladesh/news-3978346
+                      - img "নাদিম হোসেন" [ref=f6e447]
+                    - generic:
+                      - heading "ডেঙ্গু আক্রান্ত হয়ে সাংবাদিক নাদিম হোসেনের মৃত্যু" [level=3]:
+                        - link "ডেঙ্গু আক্রান্ত হয়ে সাংবাদিক নাদিম হোসেনের মৃত্যু":
+                          - /url: /news/bangladesh/news-3978346
+                      - generic:
+                        - generic:
+                          - time: ২ ঘণ্টা আগে
+                        - generic: বাংলাদেশ
+                  - generic [ref=f6e449]:
+                    - generic [ref=f6e450]:
+                      - link "পিৎজায় আনারস নিয়ে ইতালীয়দের এত আপত্তি কেন" [ref=f6e453] [cursor=pointer]:
+                        - /url: /news/diverse/news-3978311
+                        - img "পিৎজায় আনারস নিয়ে ইতালীয়দের এত আপত্তি কেন" [ref=f6e455]
+                      - generic [ref=f6e456]:
+                        - heading [level=5] [ref=f6e457]:
+                          - link "পিৎজায় আনারস নিয়ে ইতালীয়দের এত আপত্তি কেন" [ref=f6e458] [cursor=pointer]:
+                            - /url: /news/diverse/news-3978311
+                        - generic [ref=f6e459]:
+                          - time [ref=f6e461]: ৪ ঘণ্টা আগে
+                          - generic [ref=f6e462]: বিচিত্র
+                    - generic [ref=f6e463]:
+                      - link "৪ মাসের পিঠা বিক্রির আয়েই চলে বেলি-আয়বেলীর সংসার" [ref=f6e466] [cursor=pointer]:
+                        - /url: /news/bangladesh/news-3978291
+                        - 'img "পিঠা তৈরি করছেন বেলি-আয়বেলী দম্পতি। ছবি: স্টার" [ref=f6e468]'
+                      - generic [ref=f6e469]:
+                        - heading [level=5] [ref=f6e470]:
+                          - link "৪ মাসের পিঠা বিক্রির আয়েই চলে বেলি-আয়বেলীর সংসার" [ref=f6e471] [cursor=pointer]:
+                            - /url: /news/bangladesh/news-3978291
+                        - link "শহিদুল ইসলাম নিরব" [ref=f6e475] [cursor=pointer]:
+                          - /url: /author/%E0%A6%B6%E0%A6%B9%E0%A6%BF%E0%A6%A6%E0%A7%81%E0%A6%B2%20%E0%A6%87%E0%A6%B8%E0%A6%B2%E0%A6%BE%E0%A6%AE%20%E0%A6%A8%E0%A6%BF%E0%A6%B0%E0%A6%AC
+                        - generic [ref=f6e476]:
+                          - time [ref=f6e478]: ৫ ঘণ্টা আগে
+                          - generic [ref=f6e479]: বাংলাদেশ
+                - generic [ref=f6e480]:
+                  - generic [ref=f6e481]:
+                    - link "মিরপুরে চলছে ২ দিনব্যাপী আদিবাসী খাদ্য ও শস্য মেলা" [ref=f6e484] [cursor=pointer]:
+                      - /url: /news/bangladesh/news-3978321
+                      - img "mirpur indigenous fair" [ref=f6e486]
+                    - generic [ref=f6e487]:
+                      - heading [level=5] [ref=f6e488]:
+                        - link "মিরপুরে চলছে ২ দিনব্যাপী আদিবাসী খাদ্য ও শস্য মেলা" [ref=f6e489] [cursor=pointer]:
+                          - /url: /news/bangladesh/news-3978321
+                      - generic [ref=f6e490]:
+                        - time [ref=f6e492]: ৪ ঘণ্টা আগে
+                        - generic [ref=f6e493]: বাংলাদেশ
+                  - generic [ref=f6e494]:
+                    - link "এজেআর কুরিয়ার সার্ভিসের গাড়িতে আবারো হামলা" [ref=f6e497] [cursor=pointer]:
+                      - /url: /news/bangladesh/news-3978281
+                      - 'img "ছবি: স্টার" [ref=f6e499]'
+                    - generic [ref=f6e500]:
+                      - heading [level=5] [ref=f6e501]:
+                        - link "এজেআর কুরিয়ার সার্ভিসের গাড়িতে আবারো হামলা" [ref=f6e502] [cursor=pointer]:
+                          - /url: /news/bangladesh/news-3978281
+                      - generic [ref=f6e503]:
+                        - time [ref=f6e505]: ৬ ঘণ্টা আগে
+                        - generic [ref=f6e506]: বাংলাদেশ
+                  - generic [ref=f6e507]:
+                    - link "ডেঙ্গুতে আরও ৩ জনের মৃত্যু, হাসপাতালে ১৫৩৫" [ref=f6e510] [cursor=pointer]:
+                      - /url: /health/disease/news-3978266
+                      - img "dengue" [ref=f6e512]
+                    - generic [ref=f6e513]:
+                      - heading [level=5] [ref=f6e514]:
+                        - link "ডেঙ্গুতে আরও ৩ জনের মৃত্যু, হাসপাতালে ১৫৩৫" [ref=f6e515] [cursor=pointer]:
+                          - /url: /health/disease/news-3978266
+                      - generic [ref=f6e516]:
+                        - time [ref=f6e518]: ৭ ঘণ্টা আগে
+                        - generic [ref=f6e519]: রোগ
+                  - generic [ref=f6e520]:
+                    - link "‘বাবার মুখটা শেষবার দেখতে চাই’" [ref=f6e523] [cursor=pointer]:
+                      - /url: /news/bangladesh/news-3978256
+                      - img "আনিসুর রহমান" [ref=f6e525]
+                    - generic [ref=f6e526]:
+                      - heading [level=5] [ref=f6e527]:
+                        - link "‘বাবার মুখটা শেষবার দেখতে চাই’" [ref=f6e528] [cursor=pointer]:
+                          - /url: /news/bangladesh/news-3978256
+                      - generic [ref=f6e529]:
+                        - time [ref=f6e531]: ৮ ঘণ্টা আগে
+                        - generic [ref=f6e532]: বাংলাদেশ
+                  - generic [ref=f6e533]:
+                    - link "হাম উপসর্গে আরও ৪ শিশুর মৃত্যু, মোট ১২৭৬" [ref=f6e536] [cursor=pointer]:
+                      - /url: /news/bangladesh/news-3978231
+                      - img "স্টার অনলাইন গ্রাফিক্স" [ref=f6e538]
+                    - generic [ref=f6e539]:
+                      - heading [level=5] [ref=f6e540]:
+                        - link "হাম উপসর্গে আরও ৪ শিশুর মৃত্যু, মোট ১২৭৬" [ref=f6e541] [cursor=pointer]:
+                          - /url: /news/bangladesh/news-3978231
+                      - generic [ref=f6e542]:
+                        - time [ref=f6e544]: ৯ ঘণ্টা আগে
+                        - generic [ref=f6e545]: বাংলাদেশ
+              - generic [ref=f6e549]:
+                - heading [level=2] [ref=f6e551]:
+                  - link "সংস্কৃতি" [ref=f6e552] [cursor=pointer]:
+                    - /url: /literature/culture
+                - generic [ref=f6e553]:
+                  - generic [ref=f6e554]:
+                    - generic [ref=f6e555]:
+                      - link "সৈয়দ আবুল মকসুদের ইতিহাস অনুসন্ধান" [ref=f6e558] [cursor=pointer]:
+                        - /url: /news/tribute/news-3973606
+                        - img "Sayed Abul Moksud Final.jpg" [ref=f6e560]
+                      - generic:
+                        - heading "সৈয়দ আবুল মকসুদের ইতিহাস অনুসন্ধান" [level=3]:
+                          - link "সৈয়দ আবুল মকসুদের ইতিহাস অনুসন্ধান":
+                            - /url: /news/tribute/news-3973606
+                        - generic: শ্রদ্ধাঞ্জলি
+                    - generic [ref=f6e561]:
+                      - link "অবহেলা-অনাদরে সুনীলের স্মৃতিভিটা" [ref=f6e564] [cursor=pointer]:
+                        - /url: /literature/culture/news-3972011
+                        - img "সুনীল গঙ্গোপাধ্যায়" [ref=f6e566]
+                      - generic:
+                        - heading "অবহেলা-অনাদরে সুনীলের স্মৃতিভিটা" [level=3]:
+                          - link "অবহেলা-অনাদরে সুনীলের স্মৃতিভিটা":
+                            - /url: /literature/culture/news-3972011
+                        - generic: সংস্কৃতি
+                    - generic [ref=f6e567]:
+                      - link "থম্পসন লাইব্রেরি / যেভাবে শহরের অংশ হয়ে ওঠে একটি লাইব্রেরি" [ref=f6e570] [cursor=pointer]:
+                        - /url: /literature/culture/news-3956571
+                        - img "manitoba" [ref=f6e572]
+                      - generic:
+                        - heading "থম্পসন লাইব্রেরি / যেভাবে শহরের অংশ হয়ে ওঠে একটি লাইব্রেরি" [level=3]:
+                          - link "থম্পসন লাইব্রেরি / যেভাবে শহরের অংশ হয়ে ওঠে একটি লাইব্রেরি":
+                            - /url: /literature/culture/news-3956571
+                        - generic: সংস্কৃতি
+                    - generic [ref=f6e573]:
+                      - link "লেখক তৃতীয় শ্রেণির, কারণ তার লেখা একঘেয়ে" [ref=f6e576] [cursor=pointer]:
+                        - /url: /literature/books/news-3952836
+                        - img "লেখক তৃতীয় শ্রেণীর, কারণ তার লেখা একঘেয়ে" [ref=f6e578]
+                      - generic:
+                        - heading "লেখক তৃতীয় শ্রেণির, কারণ তার লেখা একঘেয়ে" [level=3]:
+                          - link "লেখক তৃতীয় শ্রেণির, কারণ তার লেখা একঘেয়ে":
+                            - /url: /literature/books/news-3952836
+                        - generic: বই
+                  - generic [ref=f6e579]:
+                    - generic [ref=f6e582]:
+                      - heading [level=5] [ref=f6e583]:
+                        - 'link "জুনজুড়ে সেমিনারের হিড়িক: স্মরণ নাকি শুধু বাজেট পোড়ানোর আয়োজন?" [ref=f6e584] [cursor=pointer]':
+                          - /url: /literature/culture/news-3935846
+                      - generic [ref=f6e585]: সংস্কৃতি
+                    - generic [ref=f6e589]:
+                      - heading [level=5] [ref=f6e590]:
+                        - link "কেন সংস্কৃতির বাজেট অন্তত ২ শতাংশ জরুরি" [ref=f6e591] [cursor=pointer]:
+                          - /url: /literature/culture/news-3932331
+                      - generic [ref=f6e592]: সংস্কৃতি
+                    - generic [ref=f6e596]:
+                      - heading [level=5] [ref=f6e597]:
+                        - link "শিল্পকলায় ৪ দিনব্যাপী রবীন্দ্র জন্মজয়ন্তী উৎসব শুরু হচ্ছে কাল" [ref=f6e598] [cursor=pointer]:
+                          - /url: /news/tribute/news-3922551
+                      - generic [ref=f6e599]: শ্রদ্ধাঞ্জলি
+                    - generic [ref=f6e603]:
+                      - heading [level=5] [ref=f6e604]:
+                        - link "পহেলা বৈশাখে কেন এত লাল-সাদার ছড়াছড়ি?" [ref=f6e605] [cursor=pointer]:
+                          - /url: /literature/culture/news-3916256
+                      - generic [ref=f6e606]: সংস্কৃতি
+                    - generic [ref=f6e610]:
+                      - heading [level=5] [ref=f6e611]:
+                        - 'link "এমন সমাজ চাই, যেখানে নির্ভয়ে গান গাওয়া যায়: ছায়ানট সভাপতি" [ref=f6e612] [cursor=pointer]':
+                          - /url: /literature/culture/news-3916206
+                      - generic [ref=f6e613]: সংস্কৃতি
+                    - generic [ref=f6e617]:
+                      - heading [level=5] [ref=f6e618]:
+                        - link "ভয়শূন্য চিত্তে ছায়ানটের বর্ষবরণ" [ref=f6e619] [cursor=pointer]:
+                          - /url: /news/bangladesh/news-3916166
+                      - generic [ref=f6e620]: বাংলাদেশ
+                    - generic [ref=f6e624]:
+                      - heading [level=5] [ref=f6e625]:
+                        - link "পহেলা বৈশাখ যেভাবে বাঙালি সংস্কৃতির অংশ হয়ে উঠল" [ref=f6e626] [cursor=pointer]:
+                          - /url: /literature/culture/news-3916046
+                      - generic [ref=f6e627]: সংস্কৃতি
+                    - generic [ref=f6e631]:
+                      - heading [level=5] [ref=f6e632]:
+                        - link "চৈত্র সংক্রান্তি আজ" [ref=f6e633] [cursor=pointer]:
+                          - /url: /news/bangladesh/news-3915966
+                      - generic [ref=f6e634]: বাংলাদেশ
+              - generic [ref=f6e639]:
+                - heading [level=2] [ref=f6e641]:
+                  - link "প্রযুক্তি ও স্টার্টআপ" [ref=f6e642] [cursor=pointer]:
+                    - /url: /tech-startup
+                - generic [ref=f6e643]:
+                  - generic [ref=f6e644]:
+                    - link "পুরোনো ফোন বিক্রির আগে যে ৭ কাজ করা উচিত" [ref=f6e647] [cursor=pointer]:
+                      - /url: /tech-startup/science-tech-gadgets/technology/news-3978041
+                      - img "পুরোনো ফোন বিক্রির আগে যে ৭ কাজ করা উচিত" [ref=f6e649]
+                    - generic [ref=f6e650]:
+                      - heading [level=3] [ref=f6e651]:
+                        - link "পুরোনো ফোন বিক্রির আগে যে ৭ কাজ করা উচিত" [ref=f6e652] [cursor=pointer]:
+                          - /url: /tech-startup/science-tech-gadgets/technology/news-3978041
+                      - generic [ref=f6e653]:
+                        - time [ref=f6e655]: ৫ নভেম্বর ২০২৬, ০৯:৫৮ অপরাহ্ন
+                        - generic [ref=f6e656]: প্রযুক্তি
+                  - generic [ref=f6e657]:
+                    - link "দৌড়ঝাঁপ-নাচে দক্ষ চীনের রোবট, এখন শুধু ‘বুদ্ধিমান’ হওয়া বাকি" [ref=f6e660] [cursor=pointer]:
+                      - /url: /tech-startup/news-3977621
+                      - img "চীনা রোবট" [ref=f6e662]
+                    - generic [ref=f6e663]:
+                      - heading [level=3] [ref=f6e664]:
+                        - link "দৌড়ঝাঁপ-নাচে দক্ষ চীনের রোবট, এখন শুধু ‘বুদ্ধিমান’ হওয়া বাকি" [ref=f6e665] [cursor=pointer]:
+                          - /url: /tech-startup/news-3977621
+                      - generic [ref=f6e666]:
+                        - time [ref=f6e668]: ৪ নভেম্বর ২০২৬, ০৬:৪৮ অপরাহ্ন
+                        - generic [ref=f6e669]: প্রযুক্তি ও স্টার্টআপ
+                - generic [ref=f6e670]:
+                  - generic [ref=f6e671]:
+                    - link "যেভাবে এড়িয়ে চলবেন ডিপফেকের ফাঁদ" [ref=f6e674] [cursor=pointer]:
+                      - /url: /tech-startup/science-tech-gadgets/technology/news-3977166
+                      - img "deepfake" [ref=f6e676]
+                    - generic [ref=f6e677]:
+                      - heading [level=5] [ref=f6e678]:
+                        - link "যেভাবে এড়িয়ে চলবেন ডিপফেকের ফাঁদ" [ref=f6e679] [cursor=pointer]:
+                          - /url: /tech-startup/science-tech-gadgets/technology/news-3977166
+                      - generic [ref=f6e680]:
+                        - time [ref=f6e682]: ৩ নভেম্বর ২০২৬, ০৫:১৮ অপরাহ্ন
+                        - generic [ref=f6e683]: প্রযুক্তি
+                  - generic [ref=f6e684]:
+                    - link "১৩ নভেম্বর পৃথিবী ধ্বংস হবে? ৬৬ বছর আগের সেই ভবিষ্যদ্বাণী কতটা সত্য?" [ref=f6e687] [cursor=pointer]:
+                      - /url: /tech-startup/science-tech-gadgets/news-3977071
+                      - img "world" [ref=f6e689]
+                    - generic [ref=f6e690]:
+                      - heading [level=5] [ref=f6e691]:
+                        - link "১৩ নভেম্বর পৃথিবী ধ্বংস হবে? ৬৬ বছর আগের সেই ভবিষ্যদ্বাণী কতটা সত্য?" [ref=f6e692] [cursor=pointer]:
+                          - /url: /tech-startup/science-tech-gadgets/news-3977071
+                      - generic [ref=f6e693]:
+                        - time [ref=f6e695]: ৩ নভেম্বর ২০২৬, ০১:১০ অপরাহ্ন
+                        - generic [ref=f6e696]: বিজ্ঞান, প্রযুক্তি, গেজেটস
+                  - generic [ref=f6e697]:
+                    - link "ক্লডের সঙ্গে দুর্ব্যবহার না করার অনুরোধ অ্যানথ্রপিকের" [ref=f6e700] [cursor=pointer]:
+                      - /url: /tech-startup/news-3976906
+                      - img "claude" [ref=f6e702]
+                    - generic [ref=f6e703]:
+                      - heading [level=5] [ref=f6e704]:
+                        - link "ক্লডের সঙ্গে দুর্ব্যবহার না করার অনুরোধ অ্যানথ্রপিকের" [ref=f6e705] [cursor=pointer]:
+                          - /url: /tech-startup/news-3976906
+                      - generic [ref=f6e706]:
+                        - time [ref=f6e708]: ২ নভেম্বর ২০২৬, ১০:১১ অপরাহ্ন
+                        - generic [ref=f6e709]: প্রযুক্তি ও স্টার্টআপ
+                  - generic [ref=f6e710]:
+                    - link "৩ মাসে বাংলাদেশ থেকে আপলোড করা দেড় কোটি ভিডিও ডিলিট করেছে টিকটক" [ref=f6e713] [cursor=pointer]:
+                      - /url: /tech-startup/news-3976541
+                      - img "tiktok" [ref=f6e715]
+                    - generic [ref=f6e716]:
+                      - heading [level=5] [ref=f6e717]:
+                        - link "৩ মাসে বাংলাদেশ থেকে আপলোড করা দেড় কোটি ভিডিও ডিলিট করেছে টিকটক" [ref=f6e718] [cursor=pointer]:
+                          - /url: /tech-startup/news-3976541
+                      - generic [ref=f6e719]:
+                        - time [ref=f6e721]: ১ নভেম্বর ২০২৬, ১০:২৫ অপরাহ্ন
+                        - generic [ref=f6e722]: প্রযুক্তি ও স্টার্টআপ
+                  - generic [ref=f6e723]:
+                    - link "নিজের এআই সার্চেই কমল গুগলের বিজ্ঞাপনী আয়, ৫০০ বিলিয়ন ডলারের ধাক্কা" [ref=f6e726] [cursor=pointer]:
+                      - /url: /international/news-3975816
+                      - 'img "গুগলের প্রধান নির্বাহী কর্মকর্তা সুন্দর পিচাই। ফাইল ছবি: রয়টার্স" [ref=f6e728]'
+                    - generic [ref=f6e729]:
+                      - heading [level=5] [ref=f6e730]:
+                        - link "নিজের এআই সার্চেই কমল গুগলের বিজ্ঞাপনী আয়, ৫০০ বিলিয়ন ডলারের ধাক্কা" [ref=f6e731] [cursor=pointer]:
+                          - /url: /international/news-3975816
+                      - generic [ref=f6e732]:
+                        - time [ref=f6e734]: ৩০ অক্টোবর ২০২৬, ০৯:৪৬ অপরাহ্ন
+                        - generic [ref=f6e735]: প্রযুক্তি
+            - generic [ref=f6e737]:
+              - generic [ref=f6e741]:
+                - heading [level=2] [ref=f6e743]:
+                  - link "শিক্ষা" [ref=f6e744] [cursor=pointer]:
+                    - /url: /youth/education
+                - generic [ref=f6e745]:
+                  - generic [ref=f6e746]:
+                    - link "যশোরে ভুল প্রশ্নে আইসিটি পরীক্ষা নেওয়ায় এইচএসসিতে ফেল ৩৮ শিক্ষার্থী, ‘দায় নেবে না’ বোর্ড" [ref=f6e749] [cursor=pointer]:
+                      - /url: /youth/education/news-3978151
+                      - img "jashore education board" [ref=f6e751]
+                    - generic [ref=f6e752]:
+                      - heading [level=5] [ref=f6e753]:
+                        - link "যশোরে ভুল প্রশ্নে আইসিটি পরীক্ষা নেওয়ায় এইচএসসিতে ফেল ৩৮ শিক্ষার্থী, ‘দায় নেবে না’ বোর্ড" [ref=f6e754] [cursor=pointer]:
+                          - /url: /youth/education/news-3978151
+                      - generic [ref=f6e755]:
+                        - time [ref=f6e757]: ৬ নভেম্বর ২০২৬, ১২:৩২ অপরাহ্ন
+                        - generic [ref=f6e758]: শিক্ষা
+                  - generic [ref=f6e759]:
+                    - link "অ্যাপ্লাইড হিউম্যান সায়েন্স কলেজ অধ্যক্ষের পদত্যাগ দাবিতে মধ্যরাতে সড়কে শিক্ষার্থীরা" [ref=f6e762] [cursor=pointer]:
+                      - /url: /youth/education/campus/news-3978091
+                      - img "হোম অ্যাপ্লাইড কলেজ" [ref=f6e764]
+                    - generic [ref=f6e765]:
+                      - heading [level=5] [ref=f6e766]:
+                        - link "অ্যাপ্লাইড হিউম্যান সায়েন্স কলেজ অধ্যক্ষের পদত্যাগ দাবিতে মধ্যরাতে সড়কে শিক্ষার্থীরা" [ref=f6e767] [cursor=pointer]:
+                          - /url: /youth/education/campus/news-3978091
+                      - generic [ref=f6e768]:
+                        - time [ref=f6e770]: ৬ নভেম্বর ২০২৬, ০১:৪৬ পূর্বাহ্ন
+                        - generic [ref=f6e771]: ক্যাম্পাস
+                  - generic [ref=f6e772]:
+                    - link "প্রকল্প অনুমোদন / প্রাথমিকের শিক্ষার্থীরা পাবে পোশাক-জুতা, শিক্ষকরা পাবেন ট্যাব" [ref=f6e775] [cursor=pointer]:
+                      - /url: /youth/education/news-3977841
+                      - 'img "ছবি: স্টার।" [ref=f6e777]'
+                    - generic [ref=f6e778]:
+                      - heading [level=5] [ref=f6e779]:
+                        - link "প্রকল্প অনুমোদন / প্রাথমিকের শিক্ষার্থীরা পাবে পোশাক-জুতা, শিক্ষকরা পাবেন ট্যাব" [ref=f6e780] [cursor=pointer]:
+                          - /url: /youth/education/news-3977841
+                      - generic [ref=f6e781]:
+                        - time [ref=f6e783]: ৫ নভেম্বর ২০২৬, ১২:৫৪ অপরাহ্ন
+                        - generic [ref=f6e784]: শিক্ষা
+                  - generic [ref=f6e785]:
+                    - 'link "বাংলাদেশে শিক্ষক-শিক্ষার্থীদের অন্যায়ভাবে শাস্তি দেওয়া হচ্ছে: এইচআরডব্লিউ" [ref=f6e788] [cursor=pointer]':
+                      - /url: /youth/education/news-3977626
+                      - img "হিউম্যান রাইটস ওয়াচ, অন্তর্বর্তীকালীন সরকার, জাতিসংঘ, র‌্যাব, ড. মুহাম্মদ ইউনূস," [ref=f6e790]
+                    - generic [ref=f6e791]:
+                      - heading [level=5] [ref=f6e792]:
+                        - 'link "বাংলাদেশে শিক্ষক-শিক্ষার্থীদের অন্যায়ভাবে শাস্তি দেওয়া হচ্ছে: এইচআরডব্লিউ" [ref=f6e793] [cursor=pointer]':
+                          - /url: /youth/education/news-3977626
+                      - generic [ref=f6e794]:
+                        - time [ref=f6e796]: ৪ নভেম্বর ২০২৬, ০৬:৫০ অপরাহ্ন
+                        - generic [ref=f6e797]: শিক্ষা
+                  - generic [ref=f6e798]:
+                    - link "এইচএসসিতে ফেল / সাপ্লিমেন্টারি পরীক্ষার আবেদন শুরু কাল, যেভাবে করবেন, খরচ কত" [ref=f6e801] [cursor=pointer]:
+                      - /url: /youth/education/news-3977546
+                      - img "এইচএসসির ফল" [ref=f6e803]
+                    - generic [ref=f6e804]:
+                      - heading [level=5] [ref=f6e805]:
+                        - link "এইচএসসিতে ফেল / সাপ্লিমেন্টারি পরীক্ষার আবেদন শুরু কাল, যেভাবে করবেন, খরচ কত" [ref=f6e806] [cursor=pointer]:
+                          - /url: /youth/education/news-3977546
+                      - generic [ref=f6e807]:
+                        - time [ref=f6e809]: ৪ নভেম্বর ২০২৬, ০৩:৩৮ অপরাহ্ন
+                        - generic [ref=f6e810]: শিক্ষা
+                  - generic [ref=f6e811]:
+                    - link "বাণিজ্য মেলার মাঠে সচিবালয় স্থানান্তরের প্রতিবাদ, রোকেয়া সরণি অবরোধ শেকৃবি শিক্ষার্থীদের" [ref=f6e814] [cursor=pointer]:
+                      - /url: /youth/education/campus/news-3977476
+                      - img "sau" [ref=f6e816]
+                    - generic [ref=f6e817]:
+                      - heading [level=5] [ref=f6e818]:
+                        - link "বাণিজ্য মেলার মাঠে সচিবালয় স্থানান্তরের প্রতিবাদ, রোকেয়া সরণি অবরোধ শেকৃবি শিক্ষার্থীদের" [ref=f6e819] [cursor=pointer]:
+                          - /url: /youth/education/campus/news-3977476
+                      - generic [ref=f6e820]:
+                        - time [ref=f6e822]: ৪ নভেম্বর ২০২৬, ০১:০৩ অপরাহ্ন
+                        - generic [ref=f6e823]: ক্যাম্পাস
+                  - generic [ref=f6e824]:
+                    - link "এইচএসসির সম্পূরক পরীক্ষা / বিশ্ববিদ্যালয়-মেডিকেলে ভর্তির সময়সূচি পরিবর্তন নিয়ে আলোচনা" [ref=f6e827] [cursor=pointer]:
+                      - /url: /news/bangladesh/news-3977441
+                      - img "স্টার ফাইল ছবি।" [ref=f6e829]
+                    - generic [ref=f6e830]:
+                      - heading [level=5] [ref=f6e831]:
+                        - link "এইচএসসির সম্পূরক পরীক্ষা / বিশ্ববিদ্যালয়-মেডিকেলে ভর্তির সময়সূচি পরিবর্তন নিয়ে আলোচনা" [ref=f6e832] [cursor=pointer]:
+                          - /url: /news/bangladesh/news-3977441
+                      - generic [ref=f6e833]:
+                        - time [ref=f6e835]: ৪ নভেম্বর ২০২৬, ১২:১৪ অপরাহ্ন
+                        - generic [ref=f6e836]: বাংলাদেশ
+                  - generic [ref=f6e837]:
+                    - link "মেয়াদ শেষের পরও হলে জিম সরঞ্জাম দিলো রাকসু, প্রশাসনের আপত্তি" [ref=f6e840] [cursor=pointer]:
+                      - /url: /youth/education/campus/news-3977306
+                      - img "ফাইল ছবি" [ref=f6e842]
+                    - generic [ref=f6e843]:
+                      - heading [level=5] [ref=f6e844]:
+                        - link "মেয়াদ শেষের পরও হলে জিম সরঞ্জাম দিলো রাকসু, প্রশাসনের আপত্তি" [ref=f6e845] [cursor=pointer]:
+                          - /url: /youth/education/campus/news-3977306
+                      - generic [ref=f6e846]:
+                        - time [ref=f6e848]: ৩ নভেম্বর ২০২৬, ০৯:৪৮ অপরাহ্ন
+                        - generic [ref=f6e849]: ক্যাম্পাস
+                  - generic [ref=f6e850]:
+                    - 'link "জাবি শিক্ষার্থীকে হয়রানির অভিযোগ: ক্যাম্পাসে ১২ বাস আটকে বিক্ষোভ" [ref=f6e853] [cursor=pointer]':
+                      - /url: /youth/education/campus/news-3976846
+                      - img "জাহাঙ্গীরনগর বাস" [ref=f6e855]
+                    - generic [ref=f6e856]:
+                      - heading [level=5] [ref=f6e857]:
+                        - 'link "জাবি শিক্ষার্থীকে হয়রানির অভিযোগ: ক্যাম্পাসে ১২ বাস আটকে বিক্ষোভ" [ref=f6e858] [cursor=pointer]':
+                          - /url: /youth/education/campus/news-3976846
+                      - generic [ref=f6e859]:
+                        - time [ref=f6e861]: ২ নভেম্বর ২০২৬, ০৭:১৬ অপরাহ্ন
+                        - generic [ref=f6e862]: ক্যাম্পাস
+                  - generic [ref=f6e863]:
+                    - link "এইচএসসির সম্পূরক পরীক্ষা শুরু ২ ডিসেম্বর, ফল ৩১ ডিসেম্বরের মধ্যে" [ref=f6e866] [cursor=pointer]:
+                      - /url: /youth/education/news-3976656
+                      - img "এইচএসসি স্থগিত পরীক্ষার নতুন তারিখ" [ref=f6e868]
+                    - generic [ref=f6e869]:
+                      - heading [level=5] [ref=f6e870]:
+                        - link "এইচএসসির সম্পূরক পরীক্ষা শুরু ২ ডিসেম্বর, ফল ৩১ ডিসেম্বরের মধ্যে" [ref=f6e871] [cursor=pointer]:
+                          - /url: /youth/education/news-3976656
+                      - generic [ref=f6e872]:
+                        - time [ref=f6e874]: ২ নভেম্বর ২০২৬, ১২:২৪ অপরাহ্ন
+                        - generic [ref=f6e875]: শিক্ষা
+              - generic [ref=f6e879]:
+                - heading [level=2] [ref=f6e881]:
+                  - link "পরিবেশ" [ref=f6e882] [cursor=pointer]:
+                    - /url: /environment
+                - generic [ref=f6e883]:
+                  - generic [ref=f6e884]:
+                    - link "ব্যাহত হতে পারে সেবা / প্রি-পেইড মিটার রিচার্জ করার পরামর্শ দিলো ডেসকো" [ref=f6e887] [cursor=pointer]:
+                      - /url: /environment/natural-resources/electricity-fuel/news-3977431
+                      - img "desco-final.jpg" [ref=f6e889]
+                    - generic [ref=f6e890]:
+                      - heading [level=5] [ref=f6e891]:
+                        - link "ব্যাহত হতে পারে সেবা / প্রি-পেইড মিটার রিচার্জ করার পরামর্শ দিলো ডেসকো" [ref=f6e892] [cursor=pointer]:
+                          - /url: /environment/natural-resources/electricity-fuel/news-3977431
+                      - generic [ref=f6e893]:
+                        - time [ref=f6e895]: ৪ নভেম্বর ২০২৬, ১১:৩৭ পূর্বাহ্ন
+                        - generic [ref=f6e896]: বিদ্যুৎ ও জ্বালানি
+                  - generic [ref=f6e897]:
+                    - link "আলোকচিত্র / কুয়াশার চাদরে শীতের আগমনী বার্তা" [ref=f6e900] [cursor=pointer]:
+                      - /url: /environment/news-3977081
+                      - img "Winter" [ref=f6e902]
+                    - generic [ref=f6e903]:
+                      - heading [level=5] [ref=f6e904]:
+                        - link "আলোকচিত্র / কুয়াশার চাদরে শীতের আগমনী বার্তা" [ref=f6e905] [cursor=pointer]:
+                          - /url: /environment/news-3977081
+                      - generic [ref=f6e906]:
+                        - time [ref=f6e908]: ৩ নভেম্বর ২০২৬, ০১:৪৬ অপরাহ্ন
+                        - generic [ref=f6e909]: পরিবেশ
+                  - generic [ref=f6e910]:
+                    - link "এলপিজি সিলিন্ডারের দাম ২২৩ টাকা বাড়িয়ে ২০৬০ টাকা নির্ধারণ" [ref=f6e913] [cursor=pointer]:
+                      - /url: /environment/natural-resources/electricity-fuel/news-3976841
+                      - img "lpg cylinder" [ref=f6e915]
+                    - generic [ref=f6e916]:
+                      - heading [level=5] [ref=f6e917]:
+                        - link "এলপিজি সিলিন্ডারের দাম ২২৩ টাকা বাড়িয়ে ২০৬০ টাকা নির্ধারণ" [ref=f6e918] [cursor=pointer]:
+                          - /url: /environment/natural-resources/electricity-fuel/news-3976841
+                      - generic [ref=f6e919]:
+                        - time [ref=f6e921]: ২ নভেম্বর ২০২৬, ০৭:০৪ অপরাহ্ন
+                        - generic [ref=f6e922]: বিদ্যুৎ ও জ্বালানি
+                  - generic [ref=f6e923]:
+                    - link "গতি কমেছে প্রবল ঘূর্ণিঝড় মুরাসুর" [ref=f6e926] [cursor=pointer]:
+                      - /url: /environment/weather/news-3976796
+                      - img "ঘূর্ণিঝড়" [ref=f6e928]
+                    - generic [ref=f6e929]:
+                      - heading [level=5] [ref=f6e930]:
+                        - link "গতি কমেছে প্রবল ঘূর্ণিঝড় মুরাসুর" [ref=f6e931] [cursor=pointer]:
+                          - /url: /environment/weather/news-3976796
+                      - generic [ref=f6e932]:
+                        - time [ref=f6e934]: ২ নভেম্বর ২০২৬, ০৫:২৪ অপরাহ্ন
+                        - generic [ref=f6e935]: আবহাওয়া
+                  - generic [ref=f6e936]:
+                    - link "সাগরে ২ নম্বর সংকেত / রাতে ভারতের অন্ধ্র উপকূল অতিক্রম করতে পারে প্রবল ঘূর্ণিঝড় মুরাসু" [ref=f6e939] [cursor=pointer]:
+                      - /url: /environment/weather/news-3976611
+                      - img "ঘূর্ণিঝড়" [ref=f6e941]
+                    - generic [ref=f6e942]:
+                      - heading [level=5] [ref=f6e943]:
+                        - link "সাগরে ২ নম্বর সংকেত / রাতে ভারতের অন্ধ্র উপকূল অতিক্রম করতে পারে প্রবল ঘূর্ণিঝড় মুরাসু" [ref=f6e944] [cursor=pointer]:
+                          - /url: /environment/weather/news-3976611
+                      - generic [ref=f6e945]:
+                        - time [ref=f6e947]: ২ নভেম্বর ২০২৬, ১০:০৩ পূর্বাহ্ন
+                        - generic [ref=f6e948]: আবহাওয়া
+                  - generic [ref=f6e949]:
+                    - 'link "উখিয়ায় গ্যাসের প্রবাহ ১৫ দিনের মধ্যে কমতে পারে: পেট্রোবাংলা" [ref=f6e952] [cursor=pointer]':
+                      - /url: /environment/natural-resources/electricity-fuel/news-3976571
+                      - img "Inani gas" [ref=f6e954]
+                    - generic [ref=f6e955]:
+                      - heading [level=5] [ref=f6e956]:
+                        - 'link "উখিয়ায় গ্যাসের প্রবাহ ১৫ দিনের মধ্যে কমতে পারে: পেট্রোবাংলা" [ref=f6e957] [cursor=pointer]':
+                          - /url: /environment/natural-resources/electricity-fuel/news-3976571
+                      - generic [ref=f6e958]:
+                        - time [ref=f6e960]: ২ নভেম্বর ২০২৬, ০১:১৪ পূর্বাহ্ন
+                        - generic [ref=f6e961]: বিদ্যুৎ ও জ্বালানি
+                  - generic [ref=f6e962]:
+                    - 'link "অতিরিক্ত গরমে ১৭.৫ বিলিয়ন ডলার সম্ভাব্য আয় হারিয়েছে বাংলাদেশ: ল্যানসেট" [ref=f6e965] [cursor=pointer]':
+                      - /url: /environment/climate-change/news-3976561
+                      - img "Khulna_Gabura water cirisis" [ref=f6e967]
+                    - generic [ref=f6e968]:
+                      - heading [level=5] [ref=f6e969]:
+                        - 'link "অতিরিক্ত গরমে ১৭.৫ বিলিয়ন ডলার সম্ভাব্য আয় হারিয়েছে বাংলাদেশ: ল্যানসেট" [ref=f6e970] [cursor=pointer]':
+                          - /url: /environment/climate-change/news-3976561
+                      - generic [ref=f6e971]:
+                        - time [ref=f6e973]: ১ নভেম্বর ২০২৬, ১১:৪২ অপরাহ্ন
+                        - generic [ref=f6e974]: পরিবেশ
+                  - generic [ref=f6e975]:
+                    - link "অব্যবহৃত পড়ে আছে ২ কোটির বেশি এলপিজি সিলিন্ডার" [ref=f6e978] [cursor=pointer]:
+                      - /url: /environment/natural-resources/electricity-fuel/news-3976466
+                      - img "lpg cylinder" [ref=f6e980]
+                    - generic [ref=f6e981]:
+                      - heading [level=5] [ref=f6e982]:
+                        - link "অব্যবহৃত পড়ে আছে ২ কোটির বেশি এলপিজি সিলিন্ডার" [ref=f6e983] [cursor=pointer]:
+                          - /url: /environment/natural-resources/electricity-fuel/news-3976466
+                      - generic [ref=f6e984]:
+                        - time [ref=f6e986]: ১ নভেম্বর ২০২৬, ০৭:০০ অপরাহ্ন
+                        - generic [ref=f6e987]: বিদ্যুৎ ও জ্বালানি
+                  - generic [ref=f6e988]:
+                    - link "বন্ধ থাকবে সামিট এলএনজি টার্মিনাল, ৪ নভেম্বর থেকে কমবে গ্যাস সরবরাহ" [ref=f6e991] [cursor=pointer]:
+                      - /url: /environment/natural-resources/electricity-fuel/news-3976456
+                      - img "gas" [ref=f6e993]
+                    - generic [ref=f6e994]:
+                      - heading [level=5] [ref=f6e995]:
+                        - link "বন্ধ থাকবে সামিট এলএনজি টার্মিনাল, ৪ নভেম্বর থেকে কমবে গ্যাস সরবরাহ" [ref=f6e996] [cursor=pointer]:
+                          - /url: /environment/natural-resources/electricity-fuel/news-3976456
+                      - generic [ref=f6e997]:
+                        - time [ref=f6e999]: ১ নভেম্বর ২০২৬, ০৬:৪২ অপরাহ্ন
+                        - generic [ref=f6e1000]: বিদ্যুৎ ও জ্বালানি
+                  - generic [ref=f6e1001]:
+                    - link "সাগরে আবারও ঘূর্ণিঝড়, সম্ভাব্য গতিপথ ভারতের অন্ধ্র উপকূল" [ref=f6e1004] [cursor=pointer]:
+                      - /url: /environment/weather/news-3976401
+                      - img "ঘূর্ণিঝড়" [ref=f6e1006]
+                    - generic [ref=f6e1007]:
+                      - heading [level=5] [ref=f6e1008]:
+                        - link "সাগরে আবারও ঘূর্ণিঝড়, সম্ভাব্য গতিপথ ভারতের অন্ধ্র উপকূল" [ref=f6e1009] [cursor=pointer]:
+                          - /url: /environment/weather/news-3976401
+                      - generic [ref=f6e1010]:
+                        - time [ref=f6e1012]: ১ নভেম্বর ২০২৬, ০৫:০১ অপরাহ্ন
+                        - generic [ref=f6e1013]: আবহাওয়া
+              - generic [ref=f6e1017]:
+                - heading [level=2] [ref=f6e1019]:
+                  - link "স্টার মাল্টিমিডিয়া" [ref=f6e1020] [cursor=pointer]:
+                    - /url: /star-multimedia
+                - generic [ref=f6e1021]:
+                  - generic [ref=f6e1022]:
+                    - link "জিন্নাহর ওপর ‘ইসলামের মানহানি’র অভিযোগ কেন তুলেছিলেন মওদূদী?" [ref=f6e1025] [cursor=pointer]:
+                      - /url: /star-multimedia/news-3961741
+                      - img "জিন্নাহর ওপর ‘ইসলামের মানহানি’র অভিযোগ কেন তুলেছিলেন মওদূদী?" [ref=f6e1027]
+                    - generic [ref=f6e1028]:
+                      - heading [level=3] [ref=f6e1029]:
+                        - link "জিন্নাহর ওপর ‘ইসলামের মানহানি’র অভিযোগ কেন তুলেছিলেন মওদূদী?" [ref=f6e1030] [cursor=pointer]:
+                          - /url: /star-multimedia/news-3961741
+                      - generic [ref=f6e1031]:
+                        - time [ref=f6e1033]: ১৫ সেপ্টেম্বর ২০২৬, ০৭:৫০ অপরাহ্ন
+                        - generic [ref=f6e1034]: স্টার মাল্টিমিডিয়া
+                  - generic [ref=f6e1035]:
+                    - link "৩৯-এ লিওনেল মেসি, এখনো রঙিন, এখনো চমৎকার" [ref=f6e1038] [cursor=pointer]:
+                      - /url: /star-multimedia/news-3936561
+                      - img "messi" [ref=f6e1040]
+                    - generic [ref=f6e1041]:
+                      - heading [level=3] [ref=f6e1042]:
+                        - link "৩৯-এ লিওনেল মেসি, এখনো রঙিন, এখনো চমৎকার" [ref=f6e1043] [cursor=pointer]:
+                          - /url: /star-multimedia/news-3936561
+                      - generic [ref=f6e1044]:
+                        - time [ref=f6e1046]: ২৪ জুন ২০২৬, ০৭:০২ অপরাহ্ন
+                        - generic [ref=f6e1047]: স্টার মাল্টিমিডিয়া
+                - generic [ref=f6e1048]:
+                  - generic [ref=f6e1049]:
+                    - link "নিরাপত্তা ঝুঁকি, ধকল পার করে ট্রেনে মানুষের বাড়িফেরা" [ref=f6e1052] [cursor=pointer]:
+                      - /url: /star-multimedia/news-3908986
+                      - img "ট্রেনযাত্রা" [ref=f6e1054]
+                    - generic [ref=f6e1055]:
+                      - heading [level=5] [ref=f6e1056]:
+                        - link "নিরাপত্তা ঝুঁকি, ধকল পার করে ট্রেনে মানুষের বাড়িফেরা" [ref=f6e1057] [cursor=pointer]:
+                          - /url: /star-multimedia/news-3908986
+                      - generic [ref=f6e1058]:
+                        - time [ref=f6e1060]: ১৯ মার্চ ২০২৬, ০২:৪৮ অপরাহ্ন
+                        - generic [ref=f6e1061]: স্টার মাল্টিমিডিয়া
+                  - generic [ref=f6e1062]:
+                    - link "যেভাবে ইরানকে নেতৃত্বশূন্য করতে সক্রিয় যুক্তরাষ্ট্র ও ইসরায়েল" [ref=f6e1065] [cursor=pointer]:
+                      - /url: /star-multimedia/news-3908976
+                      - img "ইরানে হামলা" [ref=f6e1067]
+                    - generic [ref=f6e1068]:
+                      - heading [level=5] [ref=f6e1069]:
+                        - link "যেভাবে ইরানকে নেতৃত্বশূন্য করতে সক্রিয় যুক্তরাষ্ট্র ও ইসরায়েল" [ref=f6e1070] [cursor=pointer]:
+                          - /url: /star-multimedia/news-3908976
+                      - generic [ref=f6e1071]:
+                        - time [ref=f6e1073]: ১৯ মার্চ ২০২৬, ০২:৩৪ অপরাহ্ন
+                        - generic [ref=f6e1074]: স্টার মাল্টিমিডিয়া
+                  - generic [ref=f6e1075]:
+                    - 'link "জুলাই গণঅভ্যুত্থান থেকে নির্বাচিত নতুন সরকার: ১৮ মাস ১২ মিনিটে" [ref=f6e1078] [cursor=pointer]':
+                      - /url: /star-multimedia/news-3899986
+                      - img "বিল্পব থেকে নির্বাচন" [ref=f6e1080]
+                    - generic [ref=f6e1081]:
+                      - heading [level=5] [ref=f6e1082]:
+                        - 'link "জুলাই গণঅভ্যুত্থান থেকে নির্বাচিত নতুন সরকার: ১৮ মাস ১২ মিনিটে" [ref=f6e1083] [cursor=pointer]':
+                          - /url: /star-multimedia/news-3899986
+                      - generic [ref=f6e1084]:
+                        - time [ref=f6e1086]: ১৯ ফেব্রুয়ারি ২০২৬, ০১:৩১ অপরাহ্ন
+                        - generic [ref=f6e1087]: স্টার মাল্টিমিডিয়া
+                  - generic [ref=f6e1088]:
+                    - 'link "বাংলাদেশের বিশ্বকাপ ভবিষ্যৎ: আইসিসির সামনে যেসব পথ" [ref=f6e1091] [cursor=pointer]':
+                      - /url: /star-multimedia/sports-multimedia/news-729541
+                      - img "bangladesh" [ref=f6e1093]
+                    - generic [ref=f6e1094]:
+                      - heading [level=5] [ref=f6e1095]:
+                        - 'link "বাংলাদেশের বিশ্বকাপ ভবিষ্যৎ: আইসিসির সামনে যেসব পথ" [ref=f6e1096] [cursor=pointer]':
+                          - /url: /star-multimedia/sports-multimedia/news-729541
+                      - generic [ref=f6e1097]:
+                        - time [ref=f6e1099]: ৬ জানুয়ারি ২০২৬, ০২:৪০ অপরাহ্ন
+                        - generic [ref=f6e1100]: খেলা মাল্টিমিডিয়া
+                  - generic [ref=f6e1101]:
+                    - link "বিসিবিকে সাহস দেখাতে বললেন আকরাম" [ref=f6e1104] [cursor=pointer]:
+                      - /url: /sports/cricket/news-728676
+                      - img "untitled.jpg" [ref=f6e1106]
+                    - generic [ref=f6e1107]:
+                      - heading [level=5] [ref=f6e1108]:
+                        - link "বিসিবিকে সাহস দেখাতে বললেন আকরাম" [ref=f6e1109] [cursor=pointer]:
+                          - /url: /sports/cricket/news-728676
+                      - generic [ref=f6e1110]:
+                        - time [ref=f6e1112]: ৪ জানুয়ারি ২০২৬, ০৩:৪৫ পূর্বাহ্ন
+                        - generic [ref=f6e1113]: খেলা মাল্টিমিডিয়া
+    - contentinfo [ref=f6e1114]:
+      - generic [ref=f6e1116]:
+        - link [ref=f6e1123] [cursor=pointer]:
+          - /url: /
+          - img "Home" [ref=f6e1124]
+        - generic [ref=f6e1126]:
+          - navigation "Footer" [ref=f6e1127]:
+            - heading "Footer" [level=2] [ref=f6e1128]
+            - list [ref=f6e1129]:
+              - listitem [ref=f6e1130]:
+                - link "আমাদের সম্পর্কে" [ref=f6e1131] [cursor=pointer]:
+                  - /url: /node/3895441
+              - listitem [ref=f6e1132]:
+                - link "যোগাযোগ করুন" [ref=f6e1133] [cursor=pointer]:
+                  - /url: /node/3895446
+              - listitem [ref=f6e1134]:
+                - link "মন্তব্য নীতি" [ref=f6e1135] [cursor=pointer]:
+                  - /url: /node/3895456
+              - listitem [ref=f6e1136]:
+                - link "অ্যাপস" [ref=f6e1137] [cursor=pointer]:
+                  - /url: /node/3895451
+              - listitem [ref=f6e1138]:
+                - link "গোপনীয়তা নীতি" [ref=f6e1139] [cursor=pointer]:
+                  - /url: /node/3895461
+              - listitem [ref=f6e1140]:
+                - link "বিজ্ঞাপন" [ref=f6e1141] [cursor=pointer]:
+                  - /url: http://www.thedailystar.net/advertisement
+          - generic [ref=f6e1143]:
+            - text: "© 2026 thedailystar.net | Powered by: RSI Lab"
+            - paragraph [ref=f6e1144]: "Copyright: Any unauthorized use or reproduction of The Daily Star content for commercial purposes is strictly prohibited and constitutes copyright infringement liable to legal action."
+      - generic:
+        - generic:
+          - iframe [ref=f6e1149]:
+            - link [ref=f9e2] [cursor=pointer]:
+              - /url: https://googleads.g.doubleclick.net/pcs/click?xai=AKAOjsumHpnoN4B-VbrFAKL2SuIoOcedghn7GSka5ZhyqEthMXmEQdN-UTttRp8OKwk3AtSoM1Rc1oxp1dGg8ILElHoQqOpG09K50s_R46JD3zYYZQ_xcwgFyBfxUlPsugL6K3u10aL61fq2qrhuLspbliX0huaNCKuq5xsQ9vToUzqaeqVu4rGYTMlBcYbMbTBGLhjLlQ7w0VtxRrTWSIbG97he6MNJfAi5tYhjcdyYzVlOgkizSBCE69DS0aHiNff75CDUsMZAaLaXx58_EESg3tc7_NOO8XlcXIbR56fY7Ubw7VIwAdMGOyXDkavZ19e74w6oehcBe4TcpC0nxnxv4vxECzQleA1Eae7NS6ZjxyuMG7h4boloP5Mb01K3E8Y6uSRiK6iNhEjKe21OlUho8IIDTh3wAmrzEkWcyVEAKadK5LBEiFY&sai=AMfl-YSVBe6v0WzK0it58VeXVTwdd5JYVmdRGMLvfZfIb2_ec7MlYo1pEC21TgO3N8zJFBZoKpALwZvzm42og4jNnyy6NgVMPq5iYxEzBWJ-7B1ie2c6zVVO_IxEx3_gHFlt439-ou68xFRVquRvv5_JIzmuzpOjBK8xbnlfBkWfJ8Aq7wbMWLX6LufVLIvhaHO-PX69OH-8aMv4oimzCxnXUkjJgAYbHnKVqORi6fIliF9c-i3MNRJKUarJOr-nILSFcYFbVLzrDwQHtpTvVvwVi_c-d-Y9LZkQFYNmz5IbvvWOFi5nXWqE-7eTgBEUbVEtHwxKsImwBbkmKaBYLaUX1ySf4WNRqBZMdoiV4rYscBmoRnpNxrX37_IG1T8E9gfD0SC7ZumlsdrAQC1d&sig=Cg0ArKJSzOr_ZpHKfDni&fbs_aeid=%5Bgw_fbsaeid%5D&adurl=https://aspireworld.thedailystar.net/
+          - link [ref=f6e1150] [cursor=pointer]:
+            - /url: javascript:void(0)

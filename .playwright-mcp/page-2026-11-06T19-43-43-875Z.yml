@@ -1,0 +1,116 @@
+- generic [ref=f4e4]:
+  - generic [ref=f4e6]:
+    - generic [ref=f4e7]:
+      - generic [ref=f4e8]: ⚡ Free delivery on orders over ৳1,500 ·
+      - generic [ref=f4e9]: 🎁 Cash on Delivery available everywhere in Bangladesh ·
+      - generic [ref=f4e10]: 🔥 Authentic branded products — fashion, watches, home & beauty ·
+      - generic [ref=f4e11]: ✨ Use code FABRYTHING for 10% off your first order ·
+      - generic [ref=f4e12]: 📦 Easy returns within 7 days
+    - generic [ref=f4e13]:
+      - generic [ref=f4e14]: ⚡ Free delivery on orders over ৳1,500 ·
+      - generic [ref=f4e15]: 🎁 Cash on Delivery available everywhere in Bangladesh ·
+      - generic [ref=f4e16]: 🔥 Authentic branded products — fashion, watches, home & beauty ·
+      - generic [ref=f4e17]: ✨ Use code FABRYTHING for 10% off your first order ·
+      - generic [ref=f4e18]: 📦 Easy returns within 7 days
+  - banner [ref=f4e19]:
+    - generic [ref=f4e20]:
+      - generic [ref=f4e21]:
+        - button "Open menu" [ref=f4e22] [cursor=pointer]
+        - link "Fabrything home" [ref=f4e25] [cursor=pointer]:
+          - /url: /
+          - img "Fabrything" [ref=f4e26]
+      - generic [ref=f4e27]:
+        - button "Switch to dark mode" [ref=f4e28] [cursor=pointer]
+        - button "Log in" [ref=f4e31] [cursor=pointer]
+        - button "View cart" [ref=f4e34] [cursor=pointer]:
+          - generic [ref=f4e35]: "0"
+    - generic [ref=f4e42]:
+      - textbox "Search for brands, products…" [ref=f4e46]
+      - button [ref=f4e48] [cursor=pointer]
+      - group [aria-hidden]
+  - main [ref=f4e51]:
+    - generic [ref=f4e52]:
+      - generic [ref=f4e53]:
+        - text: THE FABRYTHING JOURNAL
+        - heading "Good choices start with a little knowledge." [level=1] [ref=f4e54]: Good choices startwith a little knowledge.
+        - generic [ref=f4e55]:
+          - paragraph [ref=f4e56]: Product stories, useful buying guides and everyday advice. Take a closer look before you choose.
+          - link "Explore the shop" [ref=f4e57] [cursor=pointer]:
+            - /url: /shop
+      - generic [ref=f4e61]:
+        - heading "Our first stories are on their way." [level=5] [ref=f4e62]
+        - paragraph [ref=f4e63]: Visit again for product guides and advice from our team.
+  - generic [ref=f4e65]:
+    - generic [ref=f4e66]:
+      - generic [ref=f4e67]:
+        - img "Fabrything" [ref=f4e68]
+        - paragraph [ref=f4e69]: Fashion, electronics and everyday essentials — plus hot food delivered fast. Cash on Delivery nationwide.
+        - generic [ref=f4e70]:
+          - link "Facebook" [ref=f4e71] [cursor=pointer]:
+            - /url: https://www.facebook.com/fabrything
+          - link "Messenger" [ref=f4e74] [cursor=pointer]:
+            - /url: https://m.me/fabrything
+          - button "Instagram" [ref=f4e77] [cursor=pointer]
+      - generic [ref=f4e80]:
+        - heading "Shop" [level=6] [ref=f4e81]
+        - link "Fashion" [ref=f4e82] [cursor=pointer]:
+          - /url: /shop?category=fashion
+        - link "Health & Pharmacy" [ref=f4e83] [cursor=pointer]:
+          - /url: /shop?category=health
+        - link "Computers" [ref=f4e84] [cursor=pointer]:
+          - /url: /shop?category=computers
+        - link "Gadgets" [ref=f4e85] [cursor=pointer]:
+          - /url: /shop?category=gadgets
+        - link "Phones" [ref=f4e86] [cursor=pointer]:
+          - /url: /shop?category=phones
+        - link "Beauty & Health" [ref=f4e87] [cursor=pointer]:
+          - /url: /shop?category=beauty-health
+      - generic [ref=f4e88]:
+        - heading "Company" [level=6] [ref=f4e89]
+        - link "About Us" [ref=f4e90] [cursor=pointer]:
+          - /url: /about
+        - link "Product Journal" [ref=f4e91] [cursor=pointer]:
+          - /url: /blog
+        - link "Custom Printing" [ref=f4e92] [cursor=pointer]:
+          - /url: /custom-printing
+        - link "Deals" [ref=f4e93] [cursor=pointer]:
+          - /url: /deals
+        - link "Order Food" [ref=f4e94] [cursor=pointer]:
+          - /url: /food
+        - link "Become a Partner" [ref=f4e95] [cursor=pointer]:
+          - /url: /food/partner
+      - generic [ref=f4e96]:
+        - heading "Support" [level=6] [ref=f4e97]
+        - link "Delivery & Shipping" [ref=f4e98] [cursor=pointer]:
+          - /url: /shipping
+        - link "Privacy Policy" [ref=f4e99] [cursor=pointer]:
+          - /url: /privacy
+        - link "Terms of Use" [ref=f4e100] [cursor=pointer]:
+          - /url: /terms
+        - link "+8801353529899" [ref=f4e104] [cursor=pointer]:
+          - /url: tel:+8801353529899
+        - paragraph [ref=f4e108]: support@fabrything.com
+    - separator [ref=f4e109]
+    - generic [ref=f4e110]:
+      - generic [ref=f4e111]: How you can pay
+      - generic [ref=f4e112]: Cash on Delivery
+      - generic [ref=f4e115]: bKash
+      - generic [ref=f4e118]: Nagad
+      - generic [ref=f4e121]: — bKash & Nagad on food orders; shop orders are Cash on Delivery
+    - generic [ref=f4e122]:
+      - generic [ref=f4e123]: © 2026 Fabrything. All rights reserved.
+      - generic [ref=f4e124]:
+        - generic [ref=f4e125]: Delivering across Bangladesh
+        - button "Back to top" [ref=f4e126] [cursor=pointer]
+  - generic [ref=f4e130]:
+    - button "Home" [ref=f4e131] [cursor=pointer]
+    - button "Shop" [ref=f4e135] [cursor=pointer]
+    - button "0 Cart" [ref=f4e141] [cursor=pointer]:
+      - generic [ref=f4e142]: "0"
+      - generic [ref=f4e145]: Cart
+    - button "Account" [ref=f4e146] [cursor=pointer]
+  - link "Chat with us on WhatsApp" [ref=f4e150] [cursor=pointer]:
+    - /url: https://wa.me/8801353529899
+  - link "Message us on Facebook Messenger" [ref=f4e153] [cursor=pointer]:
+    - /url: https://m.me/fabrything?ref=website_floating_button
+  - button "Chat with us" [ref=f4e157] [cursor=pointer]

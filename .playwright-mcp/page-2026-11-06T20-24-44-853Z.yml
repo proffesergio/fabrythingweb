@@ -1,0 +1,189 @@
+- generic [ref=e2]:
+  - generic [ref=e4]:
+    - generic [ref=e5]: শনিবার, ৭ নভেম্বর ২০২৩
+    - generic [ref=e12]:
+      - generic [ref=e13]:
+        - link "সর্বশেষ" [ref=e14] [cursor=pointer]:
+          - /url: "#"
+        - link "ফটো গ্যালারি" [ref=e15] [cursor=pointer]:
+          - /url: "#"
+        - link "আমাদের সম্পর্কে" [ref=e16] [cursor=pointer]:
+          - /url: "#"
+        - link "যোগাযোগ" [ref=e17] [cursor=pointer]:
+          - /url: "#"
+      - generic [ref=e18]:
+        - link [ref=e19] [cursor=pointer]:
+          - /url: https://www.facebook.com/nobleseek
+        - link [ref=e23] [cursor=pointer]:
+          - /url: "#"
+        - link:
+          - /url: "#"
+  - banner [ref=e27]:
+    - link [ref=e29] [cursor=pointer]:
+      - /url: /
+      - img "NobleSeek" [ref=e30]
+  - navigation [ref=e31]:
+    - generic [ref=e32]:
+      - button [ref=e33] [cursor=pointer]
+      - generic [ref=e37]:
+        - link "সর্বশেষ" [ref=e38] [cursor=pointer]:
+          - /url: "#"
+        - link "বাংলাদেশ" [ref=e39] [cursor=pointer]:
+          - /url: "#"
+        - link "রাজনীতি" [ref=e40] [cursor=pointer]:
+          - /url: "#"
+        - link "আন্তর্জাতিক" [ref=e41] [cursor=pointer]:
+          - /url: "#"
+        - link "অর্থনীতি" [ref=e42] [cursor=pointer]:
+          - /url: "#"
+        - link "বাণিজ্য" [ref=e43] [cursor=pointer]:
+          - /url: "#"
+        - link "খেলা" [ref=e44] [cursor=pointer]:
+          - /url: "#"
+        - link "বিনোদন" [ref=e45] [cursor=pointer]:
+          - /url: "#"
+        - link "জীবনযাপন" [ref=e46] [cursor=pointer]:
+          - /url: "#"
+        - link "প্রযুক্তি" [ref=e47] [cursor=pointer]:
+          - /url: "#"
+        - link "শিক্ষা" [ref=e48] [cursor=pointer]:
+          - /url: "#"
+        - link "স্বাস্থ্য" [ref=e49] [cursor=pointer]:
+          - /url: "#"
+        - link "পরিবেশ" [ref=e50] [cursor=pointer]:
+          - /url: "#"
+      - button [ref=e51] [cursor=pointer]
+  - generic [ref=e57]: বিজ্ঞাপন
+  - main [ref=e60]:
+    - generic [ref=e61]:
+      - link "Lead Image স্বাস্থ্য ডেঙ্গুতে আরও ৩ জনের মৃত্যু, এক দিনেই ঢাকায় ভর্তি ৭২১ ডেঙ্গুতে বাড়ছে মৃতের সংখ্যা, ঢাকায় ভর্তি রোগীর সংখ্যাও বাড়ছে। ডেঙ্গু পরিস্থিতি নিয়ে আবারও উদ্বেগজনক খবর। গত ২৪ ঘণ্টায় ডেঙ্গুতে আরও ৩ জন মারা গেছেন, যা নিয়ে চলতি বছর মৃতের সংখ্যা... ২ ঘণ্টা আগে" [ref=e63] [cursor=pointer]:
+        - /url: "#"
+        - img "Lead Image" [ref=e65]
+        - generic [ref=e66]: স্বাস্থ্য
+        - heading "ডেঙ্গুতে আরও ৩ জনের মৃত্যু, এক দিনেই ঢাকায় ভর্তি ৭২১" [level=1] [ref=e67]
+        - paragraph [ref=e68]: ডেঙ্গুতে বাড়ছে মৃতের সংখ্যা, ঢাকায় ভর্তি রোগীর সংখ্যাও বাড়ছে। ডেঙ্গু পরিস্থিতি নিয়ে আবারও উদ্বেগজনক খবর। গত ২৪ ঘণ্টায় ডেঙ্গুতে আরও ৩ জন মারা গেছেন, যা নিয়ে চলতি বছর মৃতের সংখ্যা...
+        - generic [ref=e69]: ২ ঘণ্টা আগে
+      - generic [ref=e71]:
+        - 'link "রাজনীতি আ.লীগকে আর রাজনীতির সুযোগ দেবে না দেশের মানুষ: স্বরাষ্ট্রমন্ত্রী" [ref=e72] [cursor=pointer]':
+          - /url: "#"
+          - generic [ref=e75]: রাজনীতি
+          - 'heading "আ.লীগকে আর রাজনীতির সুযোগ দেবে না দেশের মানুষ: স্বরাষ্ট্রমন্ত্রী" [level=2] [ref=e76]'
+        - link "আন্তর্জাতিক সংঘাত বন্ধে সৌদি আরবের কাছে ৫৯ বিলিয়ন ডলার চেয়েছে হুতিরা, দাবি প্রত্যাখ্যান রিয়াদের" [ref=e77] [cursor=pointer]:
+          - /url: "#"
+          - generic [ref=e80]: আন্তর্জাতিক
+          - heading "সংঘাত বন্ধে সৌদি আরবের কাছে ৫৯ বিলিয়ন ডলার চেয়েছে হুতিরা, দাবি প্রত্যাখ্যান রিয়াদের" [level=2] [ref=e81]
+      - generic [ref=e82]:
+        - generic [ref=e83]: বিজ্ঞাপন
+        - generic [ref=e85]:
+          - generic [ref=e86]:
+            - button "সর্বশেষ" [ref=e87] [cursor=pointer]
+            - button "সর্বাধিক পঠিত" [ref=e88] [cursor=pointer]
+          - generic [ref=e90]:
+            - 'link "১ নতুন শিক্ষাক্রম: বাস্তবায়ন চ্যালেঞ্জ ও সম্ভাবনা নিয়ে আলোচনা ৩ ঘণ্টা আগে" [ref=e91] [cursor=pointer]':
+              - /url: "#"
+              - generic [ref=e92]: ১
+              - generic [ref=e93]:
+                - 'heading "নতুন শিক্ষাক্রম: বাস্তবায়ন চ্যালেঞ্জ ও সম্ভাবনা নিয়ে আলোচনা" [level=4] [ref=e94]'
+                - generic [ref=e95]: ৩ ঘণ্টা আগে
+            - link "২ বিশ্বজুড়ে বাড়ছে জলবায়ু ঝুঁকি, বাংলাদেশও মারাত্মক হুমকিতে ৪ ঘণ্টা আগে" [ref=e96] [cursor=pointer]:
+              - /url: "#"
+              - generic [ref=e97]: ২
+              - generic [ref=e98]:
+                - heading "বিশ্বজুড়ে বাড়ছে জলবায়ু ঝুঁকি, বাংলাদেশও মারাত্মক হুমকিতে" [level=4] [ref=e99]
+                - generic [ref=e100]: ৪ ঘণ্টা আগে
+            - link "৩ স্মার্ট বাংলাদেশ বিনির্মাণে তথ্যপ্রযুক্তি খাতের অবদান ৫ ঘণ্টা আগে" [ref=e101] [cursor=pointer]:
+              - /url: "#"
+              - generic [ref=e102]: ৩
+              - generic [ref=e103]:
+                - heading "স্মার্ট বাংলাদেশ বিনির্মাণে তথ্যপ্রযুক্তি খাতের অবদান" [level=4] [ref=e104]
+                - generic [ref=e105]: ৫ ঘণ্টা আগে
+            - link "৪ শেয়ারবাজারে দরপতন, বিনিয়োগকারীদের মধ্যে হতাশা ৬ ঘণ্টা আগে" [ref=e106] [cursor=pointer]:
+              - /url: "#"
+              - generic [ref=e107]: ৪
+              - generic [ref=e108]:
+                - heading "শেয়ারবাজারে দরপতন, বিনিয়োগকারীদের মধ্যে হতাশা" [level=4] [ref=e109]
+                - generic [ref=e110]: ৬ ঘণ্টা আগে
+    - generic [ref=e111]: বিজ্ঞাপন
+    - generic [ref=e114]:
+      - generic [ref=e115]:
+        - heading "সর্বশেষ (২৪টি খবর)" [level=2] [ref=e117]
+        - link "সব খবর" [ref=e118] [cursor=pointer]:
+          - /url: "#"
+      - generic [ref=e122]:
+        - link "চলচ্চিত্রে নতুন সম্ভাবনা খুঁজছেন শাকিব খান ৫ ঘণ্টা আগে" [ref=e123] [cursor=pointer]:
+          - /url: "#"
+          - heading "চলচ্চিত্রে নতুন সম্ভাবনা খুঁজছেন শাকিব খান" [level=3] [ref=e126]
+          - generic [ref=e127]: ৫ ঘণ্টা আগে
+        - link "বাংলাদেশের বোলারদের দারুণ লড়াই, মিরপুরে উত্তেজনা ৬ ঘণ্টা আগে" [ref=e128] [cursor=pointer]:
+          - /url: "#"
+          - heading "বাংলাদেশের বোলারদের দারুণ লড়াই, মিরপুরে উত্তেজনা" [level=3] [ref=e131]
+          - generic [ref=e132]: ৬ ঘণ্টা আগে
+        - link "ঢাকার জলাবদ্ধতা নিরসনে নতুন পরিকল্পনার ঘোষণা মেয়রের ৬ ঘণ্টা আগে" [ref=e133] [cursor=pointer]:
+          - /url: "#"
+          - heading "ঢাকার জলাবদ্ধতা নিরসনে নতুন পরিকল্পনার ঘোষণা মেয়রের" [level=3] [ref=e136]
+          - generic [ref=e137]: ৬ ঘণ্টা আগে
+        - link "ডলার সংকট মোকাবেলায় রেমিট্যান্স প্রবাহ বাড়ানোর উদ্যোগ ৭ ঘণ্টা আগে" [ref=e138] [cursor=pointer]:
+          - /url: "#"
+          - heading "ডলার সংকট মোকাবেলায় রেমিট্যান্স প্রবাহ বাড়ানোর উদ্যোগ" [level=3] [ref=e141]
+          - generic [ref=e142]: ৭ ঘণ্টা আগে
+    - generic [ref=e145]:
+      - img "NobleSeek" [ref=e146]
+      - paragraph [ref=e147]: সত্যের পথে, সবসময়
+      - link "ফেসবুকে আমাদের অনুসরণ করুন" [ref=e148] [cursor=pointer]:
+        - /url: https://www.facebook.com/nobleseek
+  - contentinfo [ref=e152]:
+    - generic [ref=e153]:
+      - generic [ref=e154]:
+        - generic [ref=e155]:
+          - img "NobleSeek" [ref=e156]
+          - paragraph [ref=e157]: দেশ-বিদেশের সর্বশেষ সংবাদ, বিশ্লেষণ ও মতামত — যাচাই করা তথ্য, দ্রুত পরিবেশন।
+          - generic [ref=e158]:
+            - link [ref=e159] [cursor=pointer]:
+              - /url: https://www.facebook.com/nobleseek
+            - link [ref=e163] [cursor=pointer]:
+              - /url: "#"
+            - link [ref=e167] [cursor=pointer]:
+              - /url: "#"
+        - generic [ref=e168]:
+          - heading "বিভাগসমূহ" [level=4] [ref=e169]
+          - list [ref=e170]:
+            - listitem [ref=e171]:
+              - link "রাজনীতি" [ref=e172] [cursor=pointer]:
+                - /url: "#"
+            - listitem [ref=e173]:
+              - link "আন্তর্জাতিক" [ref=e174] [cursor=pointer]:
+                - /url: "#"
+            - listitem [ref=e175]:
+              - link "খেলাধুলা" [ref=e176] [cursor=pointer]:
+                - /url: "#"
+            - listitem [ref=e177]:
+              - link "বিনোদন" [ref=e178] [cursor=pointer]:
+                - /url: "#"
+            - listitem [ref=e179]:
+              - link "জীবনযাপন" [ref=e180] [cursor=pointer]:
+                - /url: "#"
+        - generic [ref=e181]:
+          - heading "আরও পড়ুন" [level=4] [ref=e182]
+          - list [ref=e183]:
+            - listitem [ref=e184]:
+              - link "আমাদের সম্পর্কে" [ref=e185] [cursor=pointer]:
+                - /url: "#"
+            - listitem [ref=e186]:
+              - link "যোগাযোগ" [ref=e187] [cursor=pointer]:
+                - /url: "#"
+            - listitem [ref=e188]:
+              - link "গোপনীয়তা নীতি" [ref=e189] [cursor=pointer]:
+                - /url: "#"
+            - listitem [ref=e190]:
+              - link "শর্তাবলী" [ref=e191] [cursor=pointer]:
+                - /url: "#"
+        - generic [ref=e192]:
+          - heading "যোগাযোগ" [level=4] [ref=e193]
+          - generic [ref=e194]:
+            - paragraph [ref=e195]:
+              - generic [ref=e201]: নোবেলসিক নিউজরুমঢাকা, বাংলাদেশ
+            - paragraph [ref=e202]:
+              - generic [ref=e208]: support@fabrything.com
+      - generic [ref=e209]:
+        - paragraph [ref=e210]: © ২০২৩ নোবেলসিক • সর্বস্বত্ব সংরক্ষিত
+        - paragraph [ref=e211]: "ভুল সংশোধন: support@fabrything.com — ২৪ ঘণ্টার মধ্যে আপডেট"

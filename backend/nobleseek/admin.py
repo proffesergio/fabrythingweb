@@ -26,9 +26,9 @@ class TrendKeywordAdmin(admin.ModelAdmin):
 
 @admin.register(Article)
 class ArticleAdmin(admin.ModelAdmin):
-    list_display = ("headline", "category", "status", "is_featured",
+    list_display = ("headline", "content_type", "category", "status", "is_featured",
                     "is_breaking", "view_count", "published_at")
-    list_filter = ("status", "category", "is_featured", "is_breaking")
+    list_filter = ("content_type", "status", "category", "is_featured", "is_breaking")
     search_fields = ("headline", "headline_bn", "slug", "tags")
     prepopulated_fields = {"slug": ("headline",)}
     actions = ["publish_now", "unpublish"]

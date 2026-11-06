@@ -26,7 +26,8 @@ export default function NewsFonts() {
       .ns-clamp-3 { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
       @keyframes ns-ticker-scroll { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
       .ns-ticker-track { display: inline-flex; white-space: nowrap; animation: ns-ticker-scroll 60s linear infinite; }
-      .ns-ticker-track:hover { animation-play-state: paused; }
+      .ns-ticker-track:hover, .ns-ticker-track:focus-within { animation-play-state: paused; }
+      @media (prefers-reduced-motion: reduce) { .ns-ticker-track { animation: none; white-space: normal; flex-wrap: wrap; } }
     `;
     document.head.appendChild(style);
   }, []);

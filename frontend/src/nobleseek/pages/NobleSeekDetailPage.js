@@ -46,7 +46,7 @@ export default function NobleSeekDetailPage() {
   if (loading) {
     return (
       <Container maxWidth="lg" sx={{ py: 3 }}>
-        <Skeleton variant="rectangular" height={340} sx={{ borderRadius: 2 }} />
+        <Skeleton variant="rectangular" height={340} sx={{ borderRadius: 0 }} />
         <Skeleton width="70%" height={44} sx={{ mt: 2 }} />
         <Skeleton width="100%" height={120} /><Skeleton width="100%" height={220} />
       </Container>
@@ -64,6 +64,8 @@ export default function NobleSeekDetailPage() {
 
   const slots = { inarticle1: adConfig.slot_inarticle_1, inarticle2: adConfig.slot_inarticle_2, multiplex: adConfig.slot_multiplex };
   const catLabel = article.category_slug ? sectionName(article.category_slug, cats) : (article.category_name || 'সংবাদ');
+  const canonicalUrl = article.canonical_url || article.json_ld?.mainEntityOfPage?.['@id'];
+  const shareUrl = canonicalUrl?.split(/[?#]/, 1)[0];
 
   // AMP-lite: ultra-fast minimal markup (?amp=1).
   if (isAmp) {
@@ -71,7 +73,7 @@ export default function NobleSeekDetailPage() {
       <Container maxWidth="sm" sx={{ py: 2, bgcolor: 'white' }}>
         <NewsSeo title={article.seo_title || article.headline} description={article.seo_description || article.excerpt} image={article.hero_image} slug={article.slug} jsonLd={article.json_ld} />
         <Typography variant="h5" fontWeight={900} className="ns-serif">{article.headline_bn || article.headline}</Typography>
-        {article.hero_image && <Box component="img" src={article.hero_image} alt={article.hero_image_alt || article.headline} loading="eager" sx={{ width: '100%', borderRadius: 2, my: 1.5 }} />}
+        {article.hero_image && <Box component="img" src={article.hero_image} alt={article.hero_image_alt || article.headline} loading="eager" sx={{ width: '100%', borderRadius: 0, my: 1.5 }} />}
         <AdSlot slot={adConfig.slot_top} format="auto" minHeight={100} />
         <div dangerouslySetInnerHTML={{ __html: article.body_html }} />
         <AdSlot slot={adConfig.slot_inarticle_1} format="auto" minHeight={100} />
@@ -102,7 +104,7 @@ export default function NobleSeekDetailPage() {
             {article.is_breaking && <Chip size="small" label="ব্রেকিং" color="error" className="ns-sans" />}
           </Box>
 
-          <Typography variant="h3" fontWeight={900} className="ns-serif" sx={{ lineHeight: 1.4, fontSize: { xs: '1.55rem', md: '2.1rem' }, mb: 1.5 }}>
+          <Typography component="h1" variant="h3" fontWeight={900} className="ns-serif" sx={{ lineHeight: 1.4, fontSize: { xs: '1.55rem', md: '2.1rem' }, mb: 1.5 }}>
             {article.headline_bn || article.headline}
           </Typography>
 
@@ -123,7 +125,7 @@ export default function NobleSeekDetailPage() {
               </Typography>
             </Box>
             <Box sx={{ flex: 1 }} />
-            <ShareBar title={article.headline_bn || article.headline} />
+            <ShareBar title={article.headline_bn || article.headline} url={shareUrl} />
           </Box>
 
           {article.source_name && (
@@ -132,16 +134,16 @@ export default function NobleSeekDetailPage() {
             </Typography>
           )}
 
-          <AdSlot slot={adConfig.slot_top} format="auto" minHeight={110} />
+          <AdSlot slot={adConfig.slot_top} placement="leaderboard" format="auto" minHeight={90} />
 
           {article.hero_image && (
             <Box sx={{ mb: 2 }}>
-              <Box component="img" src={article.hero_image} alt={article.hero_image_alt || article.headline} loading="eager" fetchPriority="high" sx={{ width: '100%', borderRadius: 2, maxHeight: 520, objectFit: 'cover' }} />
+              <Box component="img" src={article.hero_image} alt={article.hero_image_alt || article.headline} loading="eager" fetchPriority="high" sx={{ width: '100%', borderRadius: 0, maxHeight: 520, objectFit: 'cover' }} />
               {article.image_credit && <Typography variant="caption" color="text.secondary" className="ns-sans">ছবি: {article.image_credit}</Typography>}
             </Box>
           )}
 
-          <Box className="ns-sans" sx={{ '& img': { maxWidth: '100%', borderRadius: 2 }, '& h2': { mt: 3, fontSize: '1.3rem', fontFamily: "'Noto Serif Bengali', serif", fontWeight: 800 }, '& p': { lineHeight: 1.95, mb: 1.75, fontSize: '1.05rem', color: '#222' }, '& ul': { lineHeight: 1.9 } }}>
+          <Box className="ns-sans" sx={{ '& img': { maxWidth: '100%', borderRadius: 0 }, '& h2': { mt: 3, fontSize: '1.3rem', fontFamily: "'Noto Serif Bengali', serif", fontWeight: 800 }, '& p': { lineHeight: 1.95, mb: 1.75, fontSize: '1.05rem', color: '#222' }, '& ul': { lineHeight: 1.9 } }}>
             <InArticleBody html={article.body_html} slots={slots} dropCap />
           </Box>
 
@@ -155,7 +157,7 @@ export default function NobleSeekDetailPage() {
           <Divider sx={{ my: 2.5 }} />
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 1 }}>
             <Typography variant="body2" fontWeight={800} className="ns-sans">খবরটি শেয়ার করুন</Typography>
-            <ShareBar title={article.headline_bn || article.headline} />
+            <ShareBar title={article.headline_bn || article.headline} url={shareUrl} />
           </Box>
 
           <CommentsSection articleId={article.id} />
@@ -165,12 +167,12 @@ export default function NobleSeekDetailPage() {
 
         <Grid item xs={12} md={4}>
           <Box sx={{ position: { md: 'sticky' }, top: 70, display: 'flex', flexDirection: 'column', gap: 2 }}>
-            <AdSlot slot={adConfig.slot_sidebar} format="auto" minHeight={300} />
+            <AdSlot slot={adConfig.slot_sidebar} placement="sidebar" format="auto" minHeight={250} />
             <MostRead />
-            <Box sx={{ p: 2.5, borderRadius: 2, bgcolor: NS_NAVY, color: 'white', textAlign: 'center' }}>
+            <Box sx={{ p: 2.5, borderRadius: 0, bgcolor: NS_NAVY, color: 'white', textAlign: 'center' }}>
               <Typography variant="subtitle1" fontWeight={900} className="ns-serif">নোবেলসিক ফলো করুন</Typography>
               <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.7)', mt: 0.5 }} className="ns-sans">সর্বশেষ খবর সবার আগে পেতে ফেসবুক পেজে যুক্ত হোন।</Typography>
-              <Button component="a" href="https://www.facebook.com/" target="_blank" rel="noreferrer" variant="contained" fullWidth sx={{ mt: 1.5, bgcolor: NS_ACCENT }} className="ns-sans">ফেসবুকে ফলো করুন</Button>
+              <Button component="a" href="https://www.facebook.com/nobleseek" target="_blank" rel="noreferrer" variant="contained" fullWidth sx={{ mt: 1.5, bgcolor: NS_ACCENT }} className="ns-sans">ফেসবুকে ফলো করুন</Button>
             </Box>
             <AdSlot slot={adConfig.slot_multiplex} format="autorelaxed" minHeight={250} />
           </Box>

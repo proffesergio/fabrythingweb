@@ -1,4 +1,7 @@
 from django.urls import path
+from .views import BlogDetailView, BlogListView
+from .views_operations import AdminOperationsView, AdminPublishingSettingsView
+from .views_sitemap import NewsXmlSitemapView
 
 from .views import (AdConfigPublicView, ArticleDetailView, ArticleListView,
                     CommentFlagView, CommentListCreateView, FlatPagePublicView,
@@ -18,6 +21,10 @@ from .views_admin import (AdminAdConfigView, AdminArticleDetailView,
                            AdminTrendListView)
 
 urlpatterns = [
+    path("blog/", BlogListView.as_view(), name="ns_blog"),
+    path("blog/<str:slug>/", BlogDetailView.as_view(), name="ns_blog_detail"),
+    path("admin/publishing-settings/", AdminPublishingSettingsView.as_view(), name="ns_publishing_settings"),
+    path("admin/operations/", AdminOperationsView.as_view(), name="ns_operations"),
     # Public — mounted under /api/store/nobleseek/
     path("categories/", NewsCategoryListView.as_view(), name="ns_categories"),
     path("articles/", ArticleListView.as_view(), name="ns_articles"),
@@ -28,6 +35,7 @@ urlpatterns = [
     path("articles/<str:slug>/related/", RelatedArticlesView.as_view(), name="ns_related"),
     path("latest/", LatestStripView.as_view(), name="ns_latest"),
     path("sitemap-data/", NewsSitemapView.as_view(), name="ns_sitemap"),
+    path("sitemap.xml", NewsXmlSitemapView.as_view(), name="ns_sitemap_xml"),
     path("rss-data/", NewsRssView.as_view(), name="ns_rss"),
     path("ad-config/", AdConfigPublicView.as_view(), name="ns_adconfig"),
     path("pages/<str:slug>/", FlatPagePublicView.as_view(), name="ns_page"),

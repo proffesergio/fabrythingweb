@@ -1,10 +1,12 @@
 """Serializers — public ones are deliberately slim for fast mobile loads."""
 from rest_framework import serializers
+from urllib.parse import urlsplit
 
 from core.helpers import absolutize_media_url
 
 from .models import (AdConfig, Article, Comment, FlatPage, NewsCategory,
-                     Poll, PollOption, PushCampaign, PushDevice, TrendKeyword)
+                     Poll, PollOption, PublishingSettings, PushCampaign, PushDevice, TrendKeyword)
+from .sanitization import sanitize_article_html
 
 
 def absolute_hero(obj, context):
@@ -40,7 +42,7 @@ class ArticleListSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Article
-        fields = ["id", "headline", "headline_bn", "slug", "excerpt",
+        fields = ["id", "content_type", "headline", "headline_bn", "slug", "excerpt",
                   "hero_image", "hero_image_alt", "category", "category_name",
                   "category_slug", "tags", "is_featured", "is_breaking",
                   "view_count", "read_time_minutes", "published_at", "created_at"]
@@ -54,31 +56,47 @@ class ArticleDetailSerializer(serializers.ModelSerializer):
     category_slug = serializers.SlugField(source="category.slug", read_only=True, default="")
     json_ld = serializers.SerializerMethodField()
     hero_image = serializers.SerializerMethodField()
+    canonical_url = serializers.SerializerMethodField()
 
     class Meta:
         model = Article
-        fields = ["id", "headline", "headline_bn", "slug", "excerpt", "body_html",
+        fields = ["id", "content_type", "headline", "headline_bn", "slug", "excerpt", "body_html",
                   "hero_image", "hero_image_alt", "image_credit", "source_name",
                   "source_url", "category", "category_name", "category_slug",
                   "tags", "related_product_ids", "seo_title", "seo_description",
                   "seo_keywords", "is_featured", "is_breaking", "view_count",
-                  "read_time_minutes", "published_at", "updated_at", "json_ld"]
+                  "read_time_minutes", "published_at", "updated_at", "json_ld", "canonical_url"]
+
+    def get_canonical_url(self, obj):
+        return obj.get_canonical_url()
 
     def get_json_ld(self, obj):
-        request = self.context.get("request")
-        site = "https://fabrything.com"
-        if request:
-            site = f"{request.scheme}://{request.get_host()}"
-        return obj.get_json_ld(site)
+        data = obj.get_json_ld()
+        data["image"] = [absolute_hero(obj, self.context)] if obj.hero_image else []
+        return data
 
     def get_hero_image(self, obj):
         return absolute_hero(obj, self.context)
 
 
 class ArticleAdminSerializer(serializers.ModelSerializer):
+    automation = serializers.BooleanField(write_only=True, required=False, default=False)
+
+    def validate_body_html(self, value):
+        return sanitize_article_html(value)
+
+    def create(self, validated_data):
+        from .services_publishing import create_article
+        automation = validated_data.pop("automation", False)
+        return create_article(validated_data, automation=automation)
+
+    def update(self, instance, validated_data):
+        validated_data.pop("automation", None)
+        return super().update(instance, validated_data)
+
     class Meta:
         model = Article
-        fields = ["id", "trend", "category", "headline", "headline_bn", "slug",
+        fields = ["id", "content_type", "automation", "trend", "category", "headline", "headline_bn", "slug",
                   "excerpt", "body_html", "hero_image", "hero_image_alt",
                   "image_credit", "source_name", "source_url", "tags", "status",
                   "is_featured", "is_breaking", "related_product_ids",
@@ -87,6 +105,23 @@ class ArticleAdminSerializer(serializers.ModelSerializer):
                   "published_at", "created_at", "updated_at"]
         read_only_fields = ["id", "view_count", "read_time_minutes",
                             "created_at", "updated_at"]
+
+
+class PublishingSettingsSerializer(serializers.ModelSerializer):
+    def validate_news_site_url(self, value):
+        parsed = urlsplit(value)
+        if (parsed.scheme not in {"http", "https"} or not parsed.hostname
+                or parsed.username or parsed.password or parsed.query or parsed.fragment
+                or parsed.path not in {"", "/"}):
+            raise serializers.ValidationError("Use an HTTP(S) origin without a path, credentials, query, or fragment.")
+        return value.rstrip("/")
+
+    class Meta:
+        model = PublishingSettings
+        fields = ["news_site_url", "ingestion_paused", "daily_article_limit",
+                  "require_review_for_automation", "estimated_text_bytes_per_article",
+                  "estimated_image_bytes_per_article", "updated_at"]
+        read_only_fields = ["updated_at"]
 
 
 class AdConfigSerializer(serializers.ModelSerializer):

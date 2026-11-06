@@ -1,5 +1,6 @@
 """Admin NobleSeek API — staff-only via isPlatformStaff."""
 from django.core.cache import cache
+from django.db import transaction
 from django.utils import timezone
 from rest_framework import generics, status
 from rest_framework.permissions import IsAuthenticated
@@ -38,6 +39,8 @@ class AdminArticleListCreateView(generics.ListCreateAPIView):
         p = self.request.query_params
         if p.get("status"):
             qs = qs.filter(status=p["status"])
+        if p.get("content_type"):
+            qs = qs.filter(content_type=p["content_type"])
         if p.get("search"):
             from django.db.models import Q
             qs = qs.filter(Q(headline__icontains=p["search"]) |
@@ -71,6 +74,10 @@ class AdminCategoryListCreateView(generics.ListCreateAPIView):
     pagination_class = None
     queryset = NewsCategory.objects.all().order_by("display_order")
 
+    def perform_create(self, serializer):
+        serializer.save()
+        cache.delete("nobleseek:categories")
+
 
 class AdminCategoryDetailView(generics.RetrieveUpdateDestroyAPIView):
     """Rename / reorder / deactivate sections from the Categories tab."""
@@ -78,6 +85,14 @@ class AdminCategoryDetailView(generics.RetrieveUpdateDestroyAPIView):
     permission_classes = [IsAuthenticated, StaffPerm]
     serializer_class = NewsCategorySerializer
     queryset = NewsCategory.objects.all()
+
+    def perform_update(self, serializer):
+        serializer.save()
+        cache.delete("nobleseek:categories")
+
+    def perform_destroy(self, instance):
+        instance.delete()
+        cache.delete("nobleseek:categories")
 
     def destroy(self, request, *args, **kwargs):
         # Deleting a section orphans its stories (they stay published but
@@ -131,12 +146,14 @@ class AdminTrendCreateDraftView(APIView):
         draft = ai_draft_for_keyword(t.keyword, t.geo, t.category_hint)
         headline = (draft["headlines"][0] if draft.get("headlines")
                     else t.keyword)[:255]
-        article = Article.objects.create(
-            trend=t, headline=headline, excerpt=draft.get("excerpt", "")[:300],
-            body_html=draft.get("body_html", "<p>Write here…</p>"),
-            status=Article.Status.DRAFT)
-        t.status = TrendKeyword.Status.USED
-        t.save(update_fields=["status"])
+        from .services_publishing import create_article
+        with transaction.atomic():
+            article = create_article(dict(
+                trend=t, headline=headline, excerpt=draft.get("excerpt", "")[:300],
+                body_html=draft.get("body_html", "<p>Write here…</p>"),
+                status=Article.Status.DRAFT), automation=True)
+            t.status = TrendKeyword.Status.USED
+            t.save(update_fields=["status"])
         return renderResponse(
             data={"article_id": article.pk, "slug": article.slug,
                   "headlines": draft.get("headlines", []),
@@ -208,16 +225,16 @@ class AdminTagsView(APIView):
 
 
 class AdminCategoryRestoreView(APIView):
-    """Re-run the taxonomy seed on demand (idempotent, create-only): restores
-    deleted default sections without touching articles or redeploying."""
+    """Reconcile canonical sections without creating articles or pages."""
     authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated, StaffPerm]
 
     def post(self, request):
-        from django.core.management import call_command
-        call_command("seed_nobleseek")
+        from .category_catalog import reconcile_categories
+        changes = reconcile_categories(apply=True)
         return renderResponse(
-            data={"categories": NewsCategory.objects.filter(is_active=True).count()},
+            data={"categories": NewsCategory.objects.filter(is_active=True).count(),
+                  "changes": len(changes)},
             message="ডিফল্ট বিভাগ ফিরিয়ে আনা হয়েছে")
 
 

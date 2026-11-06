@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { Provider } from 'react-redux';
 import { configureStore } from '@reduxjs/toolkit';
 import { MemoryRouter } from 'react-router-dom';
@@ -71,6 +71,21 @@ describe('getActiveBottomNavTab', () => {
 // queries must be scoped to actual buttons — BottomNavigationAction is the
 // only "Shop"/"Home"/"Cart"/"Account" text that renders as a <button>.
 describe('StorefrontLayout bottom navigation', () => {
+  test('mobile header and open drawer exclude NobleSeek while the footer retains its link', () => {
+    renderAt('/');
+    const header = screen.getByRole('banner');
+    expect(within(header).queryByRole('link', { name: /nobleseek|নোবেলসিক/i })).not.toBeInTheDocument();
+    expect(header.querySelector('a[href*="nobleseek"]')).toBeNull();
+    expect(screen.getByRole('link', { name: 'NobleSeek' }))
+      .toHaveAttribute('href', 'https://nobleseek.fabrything.com');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Open menu' }));
+    const drawer = screen.getByRole('presentation');
+    expect(within(drawer).getByRole('link', { name: 'Deals' })).toBeInTheDocument();
+    expect(within(drawer).queryByRole('link', { name: /nobleseek|নোবেলসিক/i })).not.toBeInTheDocument();
+    expect(drawer.querySelector('a[href*="nobleseek"]')).toBeNull();
+  });
+
   test('highlights Home on /', async () => {
     renderAt('/');
     expect(await screen.findByRole('button', { name: 'Home' })).toHaveClass('Mui-selected');

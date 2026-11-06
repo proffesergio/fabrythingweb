@@ -1,23 +1,23 @@
-import React from 'react';
-import { Box, Typography, Chip } from '@mui/material';
+import React, { useState } from 'react';
+import { Box, Typography } from '@mui/material';
 import { Link } from 'react-router-dom';
 import { articleUrl } from '../api';
-import { timeAgoBn } from '../bn';
+import { timeAgoBn, toBn } from '../bn';
 import { NS_ACCENT } from '../portal/PortalHeader';
 
-// Shared image block with branded gradient fallback (no photo → still looks
-// like a designed newspaper card, never a broken-image icon).
-export function NewsImage({ src, alt, ratio = '56.25%', radius = 2, eager = false }) {
+// Neutral branded fallback for missing or failed API images.
+export function NewsImage({ src, alt, ratio = '56.25%', radius = 0, eager = false }) {
+  const [failedSrc, setFailedSrc] = useState(null);
   return (
-    <Box sx={{ position: 'relative', paddingTop: ratio, bgcolor: '#1a1a1a', borderRadius: radius, overflow: 'hidden' }}>
-      {src ? (
+    <Box sx={{ position: 'relative', paddingTop: ratio, bgcolor: '#F2F2F2', borderRadius: radius, overflow: 'hidden' }}>
+      {src && failedSrc !== src ? (
         <Box
-          component="img" src={src} alt={alt || ''} loading={eager ? 'eager' : 'lazy'}
-          {...(eager ? { fetchPriority: 'high' } : {})}
+          component="img" src={src} onError={() => setFailedSrc(src)} alt={alt || ''} loading={eager ? 'eager' : 'lazy'}
+          {...(eager ? { fetchpriority: 'high' } : {})}
           sx={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}
         />
       ) : (
-        <Box sx={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg,#101244,#F2631F)', color: 'white', fontWeight: 900, fontSize: '1.5rem' }} className="ns-serif">
+        <Box sx={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#F2F2F2', color: '#101244', fontWeight: 900, fontSize: '1.5rem' }} className="ns-serif">
           নোবেলসিক
         </Box>
       )}
@@ -33,66 +33,43 @@ function Meta({ article, light = false }) {
   );
 }
 
-// Red-bar section title with "আরও" link — the newspaper section rhythm.
+// Flat section rule from the approved editorial layout.
 export function SectionHeader({ title, to, actionLabel = 'আরও' }) {
   return (
-    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.2, mb: 2, mt: 5 }}>
-      <Box sx={{ width: 5, height: 26, bgcolor: NS_ACCENT, borderRadius: 1 }} />
-      <Typography variant="h5" fontWeight={900} className="ns-serif" sx={{ fontSize: '1.35rem' }}>{title}</Typography>
-      <Box sx={{ flex: 1, height: 1, bgcolor: '#e5e5e5' }} />
-      {to && (
-        <Typography component={Link} to={to} variant="body2" fontWeight={700} sx={{ color: NS_ACCENT, textDecoration: 'none', whiteSpace: 'nowrap' }} className="ns-sans">
-          {actionLabel} →
-        </Typography>
-      )}
+    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, pb: 1, mb: 3, mt: 4, borderBottom: '1px solid #101244' }}>
+      <Box aria-hidden="true" sx={{ width: 6, height: 24, bgcolor: NS_ACCENT, flexShrink: 0 }} />
+      <Typography component="h2" fontWeight={800} className="ns-serif" sx={{ color: '#040D33', fontSize: '1.5rem', flex: 1, minWidth: 0 }}>{title}</Typography>
+      {to && <Typography component={Link} to={to} fontWeight={700} sx={{ color: NS_ACCENT, textDecoration: 'none', flexShrink: 0, '&:hover': { textDecoration: 'underline' } }} className="ns-sans">{actionLabel} →</Typography>}
     </Box>
   );
 }
 
-// Big overlay hero for the lead story.
 export function LeadCard({ article, utm }) {
   if (!article) return null;
   return (
-    <Box
-      component={Link} to={articleUrl(article.slug, utm)}
-      sx={{ position: 'relative', display: 'block', borderRadius: 3, overflow: 'hidden', textDecoration: 'none', minHeight: { xs: 300, md: 430 }, bgcolor: '#141414' }}
-    >
-      {article.hero_image ? (
-        <Box component="img" src={article.hero_image} alt={article.hero_image_alt || article.headline} loading="eager" fetchPriority="high" sx={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
-      ) : (
-        <Box sx={{ position: 'absolute', inset: 0, background: 'linear-gradient(135deg,#2a0709,#C1121F)' }} />
-      )}
-      <Box sx={{ position: 'absolute', inset: 0, background: 'linear-gradient(transparent 30%, rgba(0,0,0,0.88))' }} />
-      <Box sx={{ position: 'absolute', bottom: 0, left: 0, right: 0, p: { xs: 2, md: 3 }, color: 'white' }}>
-        <Box sx={{ display: 'flex', gap: 1, mb: 1 }}>
-          {article.category_name && <Chip size="small" label={article.category_name} sx={{ bgcolor: NS_ACCENT, color: 'white', fontWeight: 700 }} />}
-          {article.is_breaking && <Chip size="small" label="ব্রেকিং" sx={{ bgcolor: 'white', color: NS_ACCENT, fontWeight: 800 }} />}
-        </Box>
-        <Typography variant="h4" fontWeight={900} className="ns-serif ns-clamp-3" sx={{ lineHeight: 1.35, fontSize: { xs: '1.4rem', md: '2rem' } }}>
-          {article.headline_bn || article.headline}
-        </Typography>
-        {article.excerpt && (
-          <Typography variant="body2" className="ns-sans ns-clamp-2" sx={{ mt: 1, color: 'rgba(255,255,255,0.85)', display: { xs: 'none', sm: 'block' } }}>
-            {article.excerpt}
-          </Typography>
-        )}
-        <Box sx={{ mt: 1 }}><Meta article={article} light /></Box>
+    <Box component={Link} to={articleUrl(article.slug, utm)} sx={{ display: 'block', color: '#040D33', textDecoration: 'none', overflowWrap: 'anywhere', '&:hover h1': { color: NS_ACCENT } }}>
+      <NewsImage src={article.hero_image} alt={article.hero_image_alt || ''} ratio="62.5%" eager />
+      <Box sx={{ pt: 2 }}>
+        {(article.category_name || article.is_breaking) && <Typography className="ns-sans" sx={{ color: NS_ACCENT, fontWeight: 700, mb: 1 }}>{article.category_name}{article.is_breaking && ' · ব্রেকিং'}</Typography>}
+        <Typography component="h1" className="ns-serif" fontWeight={800} sx={{ fontSize: { xs: '2rem', md: '2.375rem' }, lineHeight: 1.25 }}>{article.headline_bn || article.headline}</Typography>
+        {article.excerpt && <Typography className="ns-serif ns-clamp-3" sx={{ mt: 1.5, mb: 2, fontSize: 18, lineHeight: 1.6, color: '#28303B' }}>{article.excerpt}</Typography>}
+        <Box sx={{ mt: 1 }}><Meta article={article} /></Box>
       </Box>
     </Box>
   );
 }
 
 // Standard card: image top, headline below.
-export function SecondaryCard({ article, utm }) {
+export function SecondaryCard({ article, utm, heading = 'h3' }) {
   if (!article) return null;
   return (
-    <Box component={Link} to={articleUrl(article.slug, utm)} sx={{ textDecoration: 'none', color: 'inherit', display: 'block', height: '100%' }}>
-      <NewsImage src={article.hero_image} alt={article.hero_image_alt || article.headline} />
+    <Box component={Link} to={articleUrl(article.slug, utm)} sx={{ textDecoration: 'none', display: 'block', height: '100%', overflowWrap: 'anywhere', color: '#040D33', '&:hover h2, &:hover h3': { color: NS_ACCENT } }}>
+      <NewsImage src={article.hero_image} alt={article.hero_image_alt || ''} ratio="62.5%" />
       <Box sx={{ pt: 1 }}>
         {article.category_name && (
           <Typography variant="caption" fontWeight={800} sx={{ color: NS_ACCENT }} className="ns-sans">{article.category_name}</Typography>
         )}
-        <Typography variant="subtitle1" fontWeight={800} className="ns-serif ns-clamp-3" sx={{ lineHeight: 1.5, fontSize: '1.02rem', mt: 0.25 }}>
+        <Typography component={heading} variant="subtitle1" fontWeight={800} className="ns-serif ns-clamp-3" sx={{ lineHeight: 1.4, fontSize: heading === 'h2' ? '1.375rem' : '1.25rem', mt: 0.25 }}>
           {article.headline_bn || article.headline}
         </Typography>
         <Box sx={{ mt: 0.5 }}><Meta article={article} /></Box>
@@ -105,12 +82,12 @@ export function SecondaryCard({ article, utm }) {
 export function HorizontalCard({ article, thumb = 112, utm }) {
   if (!article) return null;
   return (
-    <Box component={Link} to={articleUrl(article.slug, utm)} sx={{ display: 'flex', gap: 1.5, textDecoration: 'none', color: 'inherit', py: 1.25, borderBottom: '1px solid #eee' }}>
+    <Box component={Link} to={articleUrl(article.slug, utm)} sx={{ display: 'flex', gap: 1.5, textDecoration: 'none', color: 'inherit', py: 1.25, borderBottom: '1px solid #E8E8E8', overflowWrap: 'anywhere' }}>
       <Box sx={{ width: thumb, flexShrink: 0 }}>
-        <NewsImage src={article.hero_image} alt={article.hero_image_alt || article.headline} ratio="75%" radius={1.5} />
+        <NewsImage src={article.hero_image} alt={article.hero_image_alt || article.headline} ratio="75%" radius={0} />
       </Box>
       <Box sx={{ minWidth: 0 }}>
-        <Typography variant="body2" fontWeight={700} className="ns-serif ns-clamp-3" sx={{ lineHeight: 1.55 }}>
+        <Typography component="h3" variant="body2" fontWeight={700} className="ns-serif ns-clamp-3" sx={{ lineHeight: 1.55 }}>
           {article.headline_bn || article.headline}
         </Typography>
         <Box sx={{ mt: 0.5 }}><Meta article={article} /></Box>
@@ -123,12 +100,12 @@ export function HorizontalCard({ article, thumb = 112, utm }) {
 export function TextOnlyItem({ article, rank, utm }) {
   if (!article) return null;
   return (
-    <Box component={Link} to={articleUrl(article.slug, utm)} sx={{ display: 'flex', gap: 1.5, textDecoration: 'none', color: 'inherit', py: 1.25, borderBottom: '1px solid #eee' }}>
-      <Typography className="ns-serif" sx={{ fontSize: '1.9rem', fontWeight: 900, color: '#e3e3e3', lineHeight: 1, minWidth: 34 }}>
-        {rank}
+    <Box component={Link} to={articleUrl(article.slug, utm)} sx={{ display: 'flex', gap: 1.5, textDecoration: 'none', color: 'inherit', py: 1.25, borderBottom: '1px solid #E8E8E8', overflowWrap: 'anywhere' }}>
+      <Typography className="ns-serif" sx={{ fontSize: '1.9rem', fontWeight: 900, color: '#a4a9b4', lineHeight: 1, minWidth: 34 }}>
+        {toBn(rank)}
       </Typography>
       <Box sx={{ minWidth: 0 }}>
-        <Typography variant="body2" fontWeight={700} className="ns-serif ns-clamp-3" sx={{ lineHeight: 1.55 }}>
+        <Typography component="h3" variant="body2" fontWeight={700} className="ns-serif ns-clamp-3" sx={{ lineHeight: 1.55 }}>
           {article.headline_bn || article.headline}
         </Typography>
         <Box sx={{ mt: 0.5 }}><Meta article={article} /></Box>

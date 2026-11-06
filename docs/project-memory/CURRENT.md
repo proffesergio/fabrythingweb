@@ -1,3 +1,28 @@
+# Newspaper UI completion — 2026-11-07
+
+- Approved NobleSeek newspaper design is implemented; recovered alignment kits
+  and design direction were preserved. See [completion report](../NEWSPAPER_UI_2026-11-07.md).
+- Closed homepage failure/retry, search focus/query, accessible ticker and
+  shopping install prompt leakage on news routes. Focused tests pass.
+- Local browser with real API responses confirms desktop/mobile layout,
+  search, no horizontal overflow and no interaction page exceptions.
+- Final optimized production build passed. No deployment or push in this completion
+  session; previous production release below is unchanged.
+
+# Publishing/domain release checkpoint — 2026-11-07
+
+- User approved Superdesign draft and completed Cloudflare DNS. Vercel verified `nobleseek.fabrything.com`; HTTPS renews automatically.
+- API production `dpl_HsTAX1r3TLMBdq3zLXfuE63yVbN3` ready; migration 0004 and news canonical update succeeded.
+- Blog/editor, NEWS/BLOG split, publishing policies, SEO audit and measured operations panel implemented. Blog has no articles yet.
+- Decimal attractive BDT prices apply after markup on import/sync. Existing prices not bulk repriced; never stack markup onto selling prices.
+- Production snapshot: PostgreSQL 53,207,040 bytes; news28, live26; database image payload29,874,490 bytes. Correct Vercel team fabrything/Hobby. R2/Neon quotas and reader limits remain unverified.
+- Backend1,148 tests passed; focused frontend tests passed. Final frontend deployment/route evidence: see [publishing checkpoint](../PUBLISHING_CAPACITY_2026-11-07.md).
+- Manual: AdSense account setup/manual slots with Auto ads OFF; Search Console verification/sitemap submission; n8n link updates and optional automation:true review gate; editorial blog content.
+- Client-rendered HTML remains a crawler limitation. Admin reports usage/estimates; it does not provision paid scaling or expose provider credentials.
+- Source remains uncommitted in the shared workspace; production was deployed directly through the authorized Vercel CLI. Historical release notes follow.
+
+---
+
 # Fabrything release checkpoint — 2026-11-03
 
 ## Local admin/performance/SEO work — pending release

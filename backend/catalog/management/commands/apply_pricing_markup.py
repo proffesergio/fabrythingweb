@@ -24,6 +24,8 @@ Skips nothing silently: any product whose current price data can't be
 processed (missing/negative/non-numeric initial_selling_price) is reported
 by name and reason rather than silently dropped from the run.
 """
+from decimal import Decimal, InvalidOperation
+
 from django.core.management.base import BaseCommand
 from django.db import transaction
 
@@ -48,22 +50,22 @@ class Command(BaseCommand):
         rows, skipped = [], []
         for product in candidates:
             try:
-                base = float(product.initial_selling_price)
-            except (TypeError, ValueError):
+                base = Decimal(str(product.initial_selling_price))
+            except (InvalidOperation, TypeError, ValueError):
                 skipped.append((product, f"initial_selling_price is not a number: "
                                         f"{product.initial_selling_price!r}"))
                 continue
-            if base < 0:
+            if not base.is_finite() or base <= 0:
                 skipped.append((product, f"initial_selling_price is negative: {base}"))
                 continue
 
             old_discount = product.discount_price
             try:
-                old_discount = float(old_discount) if old_discount is not None else None
-            except (TypeError, ValueError):
+                old_discount = Decimal(str(old_discount)) if old_discount is not None else None
+            except (InvalidOperation, TypeError, ValueError):
                 skipped.append((product, f"discount_price is not a number: {product.discount_price!r}"))
                 continue
-            if old_discount is not None and old_discount < 0:
+            if old_discount is not None and (not old_discount.is_finite() or old_discount <= 0):
                 skipped.append((product, f"discount_price is negative: {old_discount}"))
                 continue
 
@@ -88,10 +90,10 @@ class Command(BaseCommand):
             self.stdout.write(
                 f"{'id':>6}  {'sku':<12} {'name':<32} {'old price':>12} {'new price':>12} "
                 f"{'old disc':>12} {'new disc':>12}")
-            total_change = 0.0
+            total_change = Decimal("0")
             for r in rows:
                 p = r["product"]
-                total_change += r["new_selling"] - r["old_selling"]
+                total_change += r["new_selling"] - Decimal(str(r["old_selling"]))
                 old_disc_s = f"{r['old_discount']:.2f}" if r["old_discount"] is not None else "-"
                 new_disc_s = f"{r['new_discount']:.2f}" if r["new_discount"] is not None else "-"
                 self.stdout.write(

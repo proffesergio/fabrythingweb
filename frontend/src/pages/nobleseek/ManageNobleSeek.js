@@ -25,6 +25,7 @@ import CommentsManager from './tabs/CommentsManager';
 import PushManager from './tabs/PushManager';
 import PollsManager from './tabs/PollsManager';
 import ShareMenu from './ShareMenu';
+import PublishingOperations from './PublishingOperations';
 
 // Last-good snapshot so the desk stays usable while the backend sleeps:
 // categories render instantly from cache, then refresh in background.
@@ -57,7 +58,7 @@ const STATUS_BN = { DRAFT: 'খসড়া', REVIEW: 'রিভিউ', PUBLISH
 
 // Sidebar deep links (?tab=…) land here without a remount — honour them on
 // mount and on every query change.
-const TAB_BY_NAME = { dashboard: 0, articles: 1, trends: 2, tags: 3, categories: 4, comments: 5, push: 6, polls: 7, pages: 8, ads: 9 };
+const TAB_BY_NAME = { dashboard: 0, articles: 1, trends: 2, tags: 3, categories: 4, comments: 5, push: 6, polls: 7, pages: 8, ads: 9, operations: 10, seo: 10 };
 function tabFromSearch(search) {
   const q = new URLSearchParams(search || '');
   const t = TAB_BY_NAME[q.get('tab')];
@@ -69,7 +70,7 @@ const EMPTY = {
   image_credit: '', source_name: '', source_url: '', tags: '',
   status: 'DRAFT', is_featured: false, is_breaking: false,
   related_product_ids: '', seo_title: '', seo_description: '', fb_post_url: '',
-  published_at: '',
+  published_at: '', content_type: 'NEWS',
 };
 
 const stripTags = (s) => String(s || '').replace(/<[^>]+>/g, ' ');
@@ -107,6 +108,7 @@ function toPayload(f) {
   const splitList = (s) => String(s || '').split(',').map((x) => x.trim()).filter(Boolean);
   const trendId = f.trend === '' || f.trend == null ? null : Number(f.trend);
   const payload = {
+    content_type: f.content_type || 'NEWS',
     trend: Number.isFinite(trendId) ? trendId : null,
     category: f.category === '' ? null : Number(f.category),
     headline: f.headline.trim(),
@@ -162,6 +164,7 @@ export default function ManageNobleSeek() {
   const [authError, setAuthError] = useState(false);
   const [statusFilter, setStatusFilter] = useState('');
   const [catFilter, setCatFilter] = useState('');
+  const [contentTypeFilter, setContentTypeFilter] = useState('');
   const [searchInput, setSearchInput] = useState('');
   const search = useDebounced(searchInput);
   const [trendSearchInput, setTrendSearchInput] = useState('');
@@ -224,6 +227,7 @@ export default function ManageNobleSeek() {
     setAuthError(false);
     try {
       const params = { status: statusFilter, search };
+      if (contentTypeFilter) params.content_type = contentTypeFilter;
       if (catFilter) params.category = catFilter;
       const [s, a, t, c, ad] = await Promise.all([
         api({ url: 'store/nobleseek/admin/stats/', silent: true }),
@@ -268,7 +272,7 @@ export default function ManageNobleSeek() {
       inflight.current = false;
       setLoading(false);
     }
-  }, [statusFilter, catFilter, search, trendSearch, trendGeo, breakingOnly, tagDrill]);
+  }, [statusFilter, catFilter, contentTypeFilter, search, trendSearch, trendGeo, breakingOnly, tagDrill]);
 
   useEffect(() => { loadAll(); }, [loadAll]);
 
@@ -283,6 +287,7 @@ export default function ManageNobleSeek() {
   }, [location.search]);
   // Dashboard + tag-cloud drills land here with preset filters.
   const drillArticles = (f = {}) => {
+    setContentTypeFilter(f.content_type || '');
     setStatusFilter(f.status || '');
     setBreakingOnly(!!f.breaking);
     setTagDrill(f.tag || '');
@@ -322,6 +327,13 @@ export default function ManageNobleSeek() {
       published_at: toLocalInput(a.published_at),
     });
     setDialogOpen(true);
+  };
+
+  const openAuditArticle = async (id) => {
+    const response = await callApi({ url: `store/nobleseek/admin/articles/${id}/`, timeout: LOADER_TIMEOUT, silent: true, rawError: true });
+    const article = response?.data?.data || response?.data;
+    if (response?.status === 200 && article?.id) openEdit(article);
+    else toast.error(drfErrorText(response?.data, 'Could not load this article. Check staff access and retry.'));
   };
 
   const saveArticle = async (targetStatus) => {
@@ -410,7 +422,7 @@ export default function ManageNobleSeek() {
 
   const words = wordCount(form.body_html);
   const gaps = publishGaps(form);
-  const previewUrl = form.slug ? `/nobleseek/${form.slug}` : null;
+  const previewUrl = form.slug ? `/${form.content_type === 'BLOG' ? 'blog' : 'nobleseek'}/${form.slug}` : null;
 
   return (
     <Box sx={{ p: 2 }}>
@@ -418,6 +430,7 @@ export default function ManageNobleSeek() {
         <Typography variant="h5" fontWeight={800}>নোবেলসিক ডেস্ক</Typography>
         <Typography variant="body2" color="text.secondary">প্রতিবেদন লিখুন, রিভিউ করুন, প্রকাশ করুন</Typography>
         <Box sx={{ flex: 1 }} />
+        <Button variant="outlined" onClick={() => setTab(TAB.operations)} size="small">SEO &amp; publishing</Button>
         <Button startIcon={<RefreshIcon />} onClick={loadAll} disabled={loading} size="small">রিলোড</Button>
         <Button startIcon={<AddIcon />} variant="contained" onClick={openNew} size="small">নতুন প্রতিবেদন</Button>
       </Box>
@@ -433,6 +446,7 @@ export default function ManageNobleSeek() {
         <Tab label="জরিপ" />
         <Tab label="পেজ" />
         <Tab label="বিজ্ঞাপন" />
+        <Tab label="SEO & operations" />
       </Tabs>
 
       {authError && (
@@ -462,6 +476,9 @@ export default function ManageNobleSeek() {
         <Paper sx={{ p: 2 }}>
           <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5} sx={{ mb: 2 }}>
             <TextField size="small" label="অনুসন্ধান" value={searchInput} onChange={(e) => setSearchInput(e.target.value)} sx={{ minWidth: 200 }} />
+            <TextField size="small" select label="Content type" value={contentTypeFilter} onChange={(e) => setContentTypeFilter(e.target.value)} sx={{ minWidth: 150 }}>
+              <MenuItem value="">News &amp; blog</MenuItem><MenuItem value="NEWS">News</MenuItem><MenuItem value="BLOG">Blog</MenuItem>
+            </TextField>
             <TextField size="small" select label="স্ট্যাটাস" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} sx={{ minWidth: 150 }}>
               <MenuItem value="">সব</MenuItem>{STATUS.map((s) => <MenuItem key={s} value={s}>{STATUS_BN[s]}</MenuItem>)}
             </TextField>
@@ -476,8 +493,8 @@ export default function ManageNobleSeek() {
             {tagDrill && (
               <Chip size="small" label={`#${tagDrill}`} color="primary" onDelete={() => setTagDrill('')} sx={{ alignSelf: 'center' }} />
             )}
-            {(statusFilter || catFilter || searchInput || breakingOnly || tagDrill) && (
-              <Button size="small" onClick={() => { setStatusFilter(''); setCatFilter(''); setSearchInput(''); setBreakingOnly(false); setTagDrill(''); }}>ফিল্টার মুছুন</Button>
+            {(statusFilter || catFilter || contentTypeFilter || searchInput || breakingOnly || tagDrill) && (
+              <Button size="small" onClick={() => { setStatusFilter(''); setCatFilter(''); setContentTypeFilter(''); setSearchInput(''); setBreakingOnly(false); setTagDrill(''); }}>ফিল্টার মুছুন</Button>
             )}
           </Stack>
           {loading ? <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}><CircularProgress /></Box> : (
@@ -493,6 +510,7 @@ export default function ManageNobleSeek() {
                           <Typography variant="body2" fontWeight={700} sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 300 }}>{a.headline}</Typography>
                           <Typography variant="caption" color="text.secondary">/{a.slug}</Typography>
                           <Box sx={{ display: 'flex', gap: 0.5, mt: 0.25 }}>
+                            <Chip size="small" variant="outlined" label={a.content_type === 'BLOG' ? 'Blog' : 'News'} sx={{ height: 18, fontSize: 10 }} />
                             {a.is_breaking && <Chip size="small" label="ব্রেকিং" color="error" sx={{ height: 18, fontSize: 10 }} />}
                             {a.is_featured && <Chip size="small" label="ফিচার্ড" color="secondary" sx={{ height: 18, fontSize: 10 }} />}
                           </Box>
@@ -511,7 +529,7 @@ export default function ManageNobleSeek() {
                     <TableCell>{a.view_count}</TableCell>
                     <TableCell><Typography variant="caption">{a.published_at ? new Date(a.published_at).toLocaleString('bn-BD') : '—'}</Typography></TableCell>
                     <TableCell align="right" sx={{ whiteSpace: 'nowrap' }}>
-                      <Tooltip title="প্রিভিউ"><IconButton size="small" component="a" href={`/nobleseek/${a.slug}`} target="_blank"><VisibilityIcon fontSize="small" /></IconButton></Tooltip>
+                      <Tooltip title="প্রিভিউ"><IconButton size="small" component="a" href={`/${a.content_type === 'BLOG' ? 'blog' : 'nobleseek'}/${a.slug}`} target="_blank" rel="noopener noreferrer"><VisibilityIcon fontSize="small" /></IconButton></Tooltip>
                       <ShareMenu article={a} />
                       <Tooltip title="সম্পাদনা"><IconButton size="small" onClick={() => openEdit(a)}><EditIcon fontSize="small" /></IconButton></Tooltip>
                       <Tooltip title="ফিচার্ড টগল"><span><IconButton size="small" color={a.is_featured ? 'secondary' : 'default'} onClick={() => quickPatch(a.id, { is_featured: !a.is_featured }, 'ফিচার্ড হালনাগাদ')}><PublishIcon fontSize="small" /></IconButton></span></Tooltip>
@@ -678,6 +696,8 @@ export default function ManageNobleSeek() {
         </Paper>
       )}
 
+      {tab === 10 && <PublishingOperations onEditArticle={openAuditArticle} onShowArticles={(content_type) => drillArticles({ content_type })} />}
+
       {/* ── Editor ── */}
       <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} maxWidth="lg" fullWidth>
         <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
@@ -690,10 +710,13 @@ export default function ManageNobleSeek() {
             {/* Main column */}
             <Grid item xs={12} md={7}>
               <Stack spacing={1.75}>
+                <TextField select fullWidth size="small" label="Content type" value={form.content_type || 'NEWS'} onChange={(e) => setForm({ ...form, content_type: e.target.value })}>
+                  <MenuItem value="NEWS">News</MenuItem><MenuItem value="BLOG">Blog / product guide</MenuItem>
+                </TextField>
                 <TextField fullWidth label="শিরোনাম" value={form.headline} onChange={(e) => setForm({ ...form, headline: e.target.value })} helperText={`${form.headline.length}/255`} />
                 <TextField fullWidth size="small" label="বাংলা প্রদর্শন শিরোনাম (ঐচ্ছিক)" value={form.headline_bn} onChange={(e) => setForm({ ...form, headline_bn: e.target.value })} />
                 <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-start' }}>
-                  <TextField fullWidth size="small" label="স্লাগ (খালি = অটো)" value={form.slug} onChange={(e) => setForm({ ...form, slug: e.target.value })} helperText={form.slug ? `/nobleseek/${form.slug}` : 'সংরক্ষণে শিরোনাম থেকে বানানো হবে'} />
+                  <TextField fullWidth size="small" label="স্লাগ (খালি = অটো)" value={form.slug} onChange={(e) => setForm({ ...form, slug: e.target.value })} helperText={form.slug ? `/${form.content_type === 'BLOG' ? 'blog' : 'nobleseek'}/${form.slug}` : 'সংরক্ষণে শিরোনাম থেকে বানানো হবে'} />
                   <Button size="small" variant="outlined" sx={{ mt: 0.5, whiteSpace: 'nowrap' }} onClick={() => setForm({ ...form, slug: slugify(form.headline_bn || form.headline) })} disabled={!form.headline.trim()}>অটো</Button>
                 </Box>
                 <TextField fullWidth label="সারসংক্ষেপ (কার্ড + SEO)" value={form.excerpt} onChange={(e) => setForm({ ...form, excerpt: e.target.value })} multiline rows={2} helperText={`${form.excerpt.length}/300`} />

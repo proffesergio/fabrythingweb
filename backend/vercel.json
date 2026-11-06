@@ -1,7 +1,13 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": "django",
-  "regions": ["sin1"],
-  "buildCommand": "if [ \"$VERCEL_ENV\" = \"production\" ]; then python manage.py migrate --noinput; fi",
-  "functions": { "config/wsgi.py": { "maxDuration": 60 } }
+  "regions": [
+    "sin1"
+  ],
+  "buildCommand": "sh scripts/vercel_release.sh",
+  "functions": {
+    "config/wsgi.py": {
+      "maxDuration": 60
+    }
+  }
 }

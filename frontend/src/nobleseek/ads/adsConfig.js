@@ -35,16 +35,15 @@ export function useAdConfig() {
   return adConfig || {};
 }
 
-const NO_AD_PATHS = ['/cart', '/checkout', '/account', '/auth/', '/admin', '/rider', '/vendor'];
-
-// True when ads must be suppressed (shop checkout funnel + backoffice).
+// Advertising is allowed only on the two editorial surfaces.
 export function shouldSuppressAds(pathname = '') {
-  return NO_AD_PATHS.some(p => pathname === p || pathname.startsWith(p));
+  return !['/nobleseek', '/blog'].some(p => pathname === p || pathname.startsWith(`${p}/`));
 }
 
 let adsenseLoading = null;
 export function loadAdSense(client) {
   if (typeof document === 'undefined') return Promise.resolve(false);
+  if (shouldSuppressAds(window.location.pathname)) return Promise.resolve(false);
   if (document.querySelector('script[data-ns-adsense]')) return Promise.resolve(true);
   const id = (client || process.env.REACT_APP_ADSENSE_CLIENT || '').trim();
   if (!id || id.includes('REACT_APP') || !id.startsWith('ca-pub-')) return Promise.resolve(false);

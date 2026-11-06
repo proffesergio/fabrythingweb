@@ -5,7 +5,12 @@ One rule lives here and nowhere else, the same shape as the commission rule
 in ``food/pricing.py``:
 
     markup       = max(markup_floor, base_price * markup_percentage / 100)
-    selling_price = base_price + markup
+    selling_price = attractive_price(base_price + markup)
+
+The confirmed attractive-price bands are applied once after markup. Nearest
+rounding can reduce the nominal markup floor; only explicit supplier-policy
+fee/shipping/margin guarantees force an upward adjustment. Existing manual
+prices and order snapshots are never rounded on read or at checkout.
 
 A flat percentage loses money on a cheap item (3% of a 99 BDT item is under
 3 taka) and a flat floor gives up all upside on an expensive one (a flat 100
@@ -33,6 +38,42 @@ from django.utils import timezone
 from datetime import datetime
 
 CENTS = Decimal("0.01")
+
+
+def attractive_price(value, *, currency="BDT", minimum=None):
+    """Round a computed BDT selling price, using Decimal and half-up ties.
+
+    Confirmed policy: choose the band BEFORE rounding:
+    below 50 -> nearest 5; below 500 -> nearest 10; otherwise nearest 100
+    minus 1. Positive prices have a minimum of 5, so rounding cannot make
+    a product free. Zero and None survive. Other currencies retain cents.
+    Only computed prices use this helper; manual and historical prices do
+    not. An explicit supplier revenue minimum advances to the next attractive
+    price when nearest rounding would breach the fee/shipping/margin promise.
+    """
+    if value is None:
+        return None
+    try:
+        amount = Decimal(str(value))
+        if not amount.is_finite() or amount < 0:
+            raise ValueError('Price must be finite and non-negative.')
+    except (InvalidOperation, TypeError) as exc:
+        raise ValueError('Price must be a valid decimal amount.') from exc
+    if currency != "BDT":
+        return _q(amount)
+    if not amount:
+        return Decimal("0")
+    step = Decimal("5") if amount < 50 else Decimal("10") if amount < 500 else Decimal("100")
+    ending = Decimal("1") if amount >= 500 else Decimal("0")
+    rounded = max(step, (amount / step).quantize(Decimal("1"), rounding=ROUND_HALF_UP) * step - ending)
+    if minimum is not None and rounded < minimum:
+        # Re-select the band at the minimum: crossing 50/500 must not leave
+        # a result on the previous band's grid.
+        minimum = Decimal(str(minimum))
+        step = Decimal("5") if minimum < 50 else Decimal("10") if minimum < 500 else Decimal("100")
+        ending = Decimal("1") if minimum >= 500 else Decimal("0")
+        rounded = ((minimum + ending) / step).quantize(Decimal("1"), rounding=ROUND_CEILING) * step - ending
+    return rounded
 
 
 def _q(value):
@@ -65,7 +106,7 @@ def markup_for(base_price, *, floor=None, percentage=None, config=None):
     return max(_q(floor_v), by_percentage)
 
 
-def apply_markup(base_price, *, floor=None, percentage=None, config=None):
+def apply_markup(base_price, *, floor=None, percentage=None, config=None, currency=None):
     """The selling price for one base (pre-markup) price: ``base_price +
     markup_for(base_price)``.
 
@@ -76,24 +117,25 @@ def apply_markup(base_price, *, floor=None, percentage=None, config=None):
     never on the current ``initial_selling_price``, or the markup stacks on
     every re-run.
 
-    Returns ``None`` for a ``None`` base_price (nothing to sell), and a
-    ``float`` otherwise to match ``Products.initial_selling_price`` /
-    ``discount_price``, which are plain ``FloatField``s.
+    Returns ``None`` for an absent base and Decimal otherwise. BDT prices
+    receive attractive rounding AFTER markup; other store currencies retain
+    cents. Legacy product FloatFields convert only when storing the value.
     """
     if base_price is None:
         return None
+    cfg = config or StoreConfiguration.get_solo()
     base = Decimal(str(base_price))
-    markup = markup_for(base_price, floor=floor, percentage=percentage, config=config)
-    return float(_q(base + markup))
+    markup = markup_for(base_price, floor=floor, percentage=percentage, config=cfg)
+    return attractive_price(base + markup, currency=currency if currency is not None else cfg.currency)
 
 
 def quote_supplier_price(source_price, policy, *, weight_grams=None):
     """Convert supplier cost to BDT and enforce shipping, fees, and margin."""
     if not policy:
-        selling = apply_markup(source_price)
+        selling = apply_markup(source_price, currency='BDT')
         if _q(selling) > Decimal('99999999.99'):
             raise ValueError('Selling price exceeds the variant field limit.')
-        return {'base_price': float(_q(source_price)),
+        return {'base_price': _q(source_price),
                 'selling_price': selling, 'shipping_fee': None}
     currency = policy.get('source_currency', 'BDT')
     if not isinstance(currency, str) or len(currency) != 3 or not currency.isalpha() or not currency.isupper():
@@ -148,10 +190,11 @@ def quote_supplier_price(source_price, policy, *, weight_grams=None):
     target_gross = (cost_bdt + shipping + absolute_floor) / (
         Decimal('1') - (fee + margin) / Decimal('100'))
     target_item = target_gross.quantize(CENTS, rounding=ROUND_CEILING)
-    selling = max(_q(apply_markup(cost_bdt)), target_item)
+    selling = attractive_price(max(cost_bdt + markup_for(cost_bdt), target_item),
+                               minimum=target_item)
     if selling > Decimal('99999999.99'):
         raise ValueError('Selling price exceeds the variant field limit.')
-    return {'base_price': float(cost_bdt), 'selling_price': float(selling),
+    return {'base_price': cost_bdt, 'selling_price': selling,
             'shipping_cost': shipping, 'shipping_fee': None,
             'weight_grams': int(weight_value),
             'source_currency': currency}

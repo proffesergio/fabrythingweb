@@ -26,7 +26,8 @@ export async function fetchRelated(slug) {
 
 export async function fetchNewsCategories() {
   const res = await axios.get(`${config.API_URL}${BASE}categories/`);
-  return unwrap(res) || [];
+  const categories = unwrap(res);
+  return Array.isArray(categories) ? [...categories].sort((a, b) => (a.display_order ?? 0) - (b.display_order ?? 0) || (a.id ?? 0) - (b.id ?? 0)) : [];
 }
 
 export async function fetchLatestStrip() {
@@ -66,18 +67,30 @@ export const PORTAL_SECTIONS = [
   { slug: 'politics', name: 'রাজনীতি' },
   { slug: 'world', name: 'আন্তর্জাতিক' },
   { slug: 'economy', name: 'অর্থনীতি' },
-  { slug: 'crime', name: 'অপরাধ' },
-  { slug: 'court', name: 'আদালত' },
-  { slug: 'opinion', name: 'মতামত' },
+  { slug: 'business', name: 'বাণিজ্য' },
   { slug: 'sports', name: 'খেলা' },
   { slug: 'entertainment', name: 'বিনোদন' },
   { slug: 'lifestyle', name: 'জীবনযাপন' },
-  { slug: 'tech', name: 'প্রযুক্তি' },
+  { slug: 'tech', name: 'প্রযুক্তি ও স্টার্টআপ' },
+  { slug: 'opinion', name: 'মতামত' },
+  { slug: 'analysis', name: 'বিশ্লেষণ' },
+  { slug: 'explainer', name: 'এক্সপ্লেইনার' },
+  { slug: 'feature', name: 'ফিচার' },
+  { slug: 'culture', name: 'সংস্কৃতি' },
+  { slug: 'easel', name: 'ইজেল' },
+  { slug: 'offbeat', name: 'অফবিট' },
+  { slug: 'country', name: 'সারাদেশ' },
+  { slug: 'corporate', name: 'কর্পোরেট' },
+  { slug: 'jobs', name: 'চাকরি' },
+  { slug: 'expatriate', name: 'প্রবাস' },
   { slug: 'education', name: 'শিক্ষা' },
   { slug: 'health', name: 'স্বাস্থ্য' },
   { slug: 'environment', name: 'পরিবেশ' },
-  { slug: 'expatriate', name: 'প্রবাস' },
-  { slug: 'jobs', name: 'চাকরি' },
+  { slug: 'crime', name: 'অপরাধ' },
+  { slug: 'court', name: 'আদালত' },
+  { slug: 'video', name: 'ভিডিও' },
+  { slug: 'multimedia', name: 'মাল্টিমিডিয়া' },
+  { slug: 'ai', name: 'কৃত্রিম বুদ্ধিমত্তা' },
 ];
 
 export function sectionName(slug, cats = []) {
@@ -144,5 +157,6 @@ export function timeAgo(iso) {
 }
 
 export function articleUrl(slug, utm = 'nobleseek-fb') {
-  return `/nobleseek/${slug}?utm_source=facebook&utm_medium=social&utm_campaign=${encodeURIComponent(utm)}`;
+  const origin = process.env.NODE_ENV === 'production' ? 'https://nobleseek.fabrything.com' : '';
+  return `${origin}/nobleseek/${encodeURIComponent(slug)}?utm_source=facebook&utm_medium=social&utm_campaign=${encodeURIComponent(utm)}`;
 }

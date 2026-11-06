@@ -1,33 +1,41 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useId, useState } from 'react';
 import { Box, Typography, Tabs, Tab } from '@mui/material';
 import { Link } from 'react-router-dom';
 import { fetchPopular, fetchSection } from '../api';
-import { HorizontalCard, TextOnlyItem } from './NewsCards';
+import { TextOnlyItem } from './NewsCards';
 import { NS_ACCENT } from '../portal/PortalHeader';
 
-// Tabbed sidebar: সর্বাধিক পঠিত (by views) / সর্বশেষ.
+// Each tab keeps its own API ordering; empty latest never substitutes popularity.
 export default function MostRead({ latest = [] }) {
   const [tab, setTab] = useState(0);
   const [popular, setPopular] = useState([]);
-
+  const [loading, setLoading] = useState(true);
+  const id = useId();
   useEffect(() => {
-    fetchPopular(5).then(setPopular).catch(() => {});
+    let live = true;
+    fetchPopular(5).then((items) => { if (live) setPopular(Array.isArray(items) ? items : []); })
+      .catch(() => {}).finally(() => { if (live) setLoading(false); });
+    return () => { live = false; };
   }, []);
-
+  const items = (tab === 0 ? latest : popular).slice(0, 5);
   return (
-    <Box sx={{ border: '1px solid #e8e8e8', borderRadius: 2, overflow: 'hidden', bgcolor: 'white' }}>
-      <Tabs value={tab} onChange={(_, v) => setTab(v)} variant="fullWidth" sx={{ '& .MuiTab-root': { fontWeight: 800, fontSize: 14 }, '& .Mui-selected': { color: NS_ACCENT }, '& .MuiTabs-indicator': { backgroundColor: NS_ACCENT } }}>
-        <Tab label="সর্বাধিক পঠিত" className="ns-sans" />
-        <Tab label="সর্বশেষ" className="ns-sans" />
+    <Box sx={{ borderTop: '3px solid #00141A', bgcolor: '#FEFEFE', minWidth: 0 }}>
+      <Tabs aria-label="সংবাদ তালিকা" value={tab} onChange={(_, value) => setTab(value)} variant="fullWidth" sx={{ bgcolor: '#00141A', '& .MuiTab-root': { color: '#c6ced8', fontWeight: 700, fontSize: 16, minWidth: 0, px: 1 }, '& .Mui-selected': { color: '#fff !important' }, '& .MuiTabs-indicator': { backgroundColor: '#fff' } }}>
+        {['সর্বশেষ', 'সর্বাধিক পঠিত'].map((label, index) => <Tab key={label} id={`${id}-tab-${index}`} aria-controls={`${id}-panel-${index}`} label={label} className="ns-sans" />)}
       </Tabs>
-      <Box sx={{ px: 1.5, pb: 1 }}>
-        {tab === 0
-          ? popular.map((a, i) => <TextOnlyItem key={a.id || a.slug} article={a} rank={i + 1} />)
-          : (latest.length ? latest : popular).slice(0, 5).map((a) => <HorizontalCard key={a.id || a.slug} article={a} thumb={88} />)}
-        {!popular.length && tab === 0 && (
-          <Typography variant="body2" color="text.secondary" sx={{ py: 2, textAlign: 'center' }} className="ns-sans">শীঘ্রই আসছে</Typography>
-        )}
+      <Box role="tabpanel" id={`${id}-panel-${tab}`} aria-labelledby={`${id}-tab-${tab}`} sx={{ px: 1, pt: 1 }}>
+        {items.map((article, index) => <TextOnlyItem key={article.id || article.slug} article={article} rank={index + 1} />)}
+        {!items.length && <Typography role="status" className="ns-sans" sx={{ py: 3, color: '#475467' }}>{tab === 1 && loading ? 'লোড হচ্ছে…' : 'কোনো খবর পাওয়া যায়নি'}</Typography>}
       </Box>
+    </Box>
+  );
+}
+
+export function FacebookFollow() {
+  return (
+    <Box sx={{ bgcolor: '#F5F8FA', border: '1px solid #E8E8E8', p: 3, textAlign: 'center' }}>
+      <Typography className="ns-serif" sx={{ color: '#040D33', fontSize: 18, fontWeight: 700, mb: 2 }}>সত্যের পথে, সবসময়</Typography>
+      <Box component="a" href="https://www.facebook.com/nobleseek" target="_blank" rel="noopener noreferrer" className="ns-sans" sx={{ display: 'block', bgcolor: '#1877F2', color: '#fff', py: 1.25, px: 2, fontWeight: 700, textDecoration: 'none', '&:hover': { bgcolor: '#166FE5' } }}>ফেসবুকে আমাদের অনুসরণ করুন</Box>
     </Box>
   );
 }

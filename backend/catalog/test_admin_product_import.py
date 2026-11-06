@@ -297,7 +297,7 @@ class ImportProductsTests(AdminProductImportTestBase):
         # selling price via apply_markup (defaults floor=50/3%): 3% of
         # 15000 is 450, above the floor.
         self.assertEqual(product.base_price, 15000)
-        self.assertEqual(product.initial_selling_price, 15450.0)
+        self.assertEqual(product.initial_selling_price, 15499)
         self.assertEqual(product.source_url, "https://potakait.com/new-phone")
         self.assertTrue(product.image)
         self.assertTrue(product.variants.filter(is_active=True).exists())

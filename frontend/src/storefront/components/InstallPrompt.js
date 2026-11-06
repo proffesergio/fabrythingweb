@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useSyncExternalStore } from 'react';
 import {
     Box, Button, Dialog, DialogContent, DialogTitle, IconButton, Paper, Slide,
     Stack, Typography,
@@ -12,6 +12,8 @@ import {
     shouldOfferInstall,
     wasRecentlyDismissed,
 } from '../../utils/pwa';
+
+const noRouterSubscription = () => () => {};
 
 /**
  * "Install Fabrything" bar for mobile browsers.
@@ -28,7 +30,14 @@ import {
  * All of the "should this show?" logic lives in utils/pwa.js and is unit
  * tested; this component is the rendering.
  */
-export default function InstallPrompt() {
+export default function InstallPrompt({ router }) {
+    // App mounts this beside RouterProvider, so subscribe to its router directly.
+    const pathname = useSyncExternalStore(
+        router?.subscribe || noRouterSubscription,
+        () => router?.state.location.pathname || window.location.pathname,
+    );
+    const isNews = /^\/nobleseek(?:\/|$)/i.test(pathname)
+        || window.location.hostname === 'nobleseek.fabrything.com';
     const [promptEvent, setPromptEvent] = useState(null);
     const [elapsed, setElapsed] = useState(0);
     const [dismissed, setDismissed] = useState(() => wasRecentlyDismissed());
@@ -84,6 +93,8 @@ export default function InstallPrompt() {
         setPromptEvent(null);
         close();
     };
+
+    if (isNews) return null;
 
     return (
         <>

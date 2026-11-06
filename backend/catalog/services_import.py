@@ -109,7 +109,7 @@ def seed_product_entry(entry, category, domain_user, added_by_user=None, *,
 
     try:
         price_decimal = Decimal(str(entry.get('price')))
-        price = float(price_decimal) if price_decimal.is_finite() and price_decimal > 0 else None
+        price = price_decimal if price_decimal.is_finite() and price_decimal > 0 else None
     except (TypeError, ValueError, InvalidOperation):
         price = None
     if price is None:
@@ -124,7 +124,7 @@ def seed_product_entry(entry, category, domain_user, added_by_user=None, *,
 
     try:
         discount_decimal = Decimal(str(entry['discount_price'])) if entry.get('discount_price') else None
-        disc = float(discount_decimal) if discount_decimal is not None and discount_decimal.is_finite() and 0 < discount_decimal < price_decimal else None
+        disc = discount_decimal if discount_decimal is not None and discount_decimal.is_finite() and 0 < discount_decimal < price_decimal else None
     except (TypeError, ValueError, InvalidOperation):
         disc = None
     weight = entry.get('weight_grams')
@@ -160,7 +160,7 @@ def seed_product_entry(entry, category, domain_user, added_by_user=None, *,
         "available_sizes": entry.get("sizes") or [],
         "size_chart": entry.get("size_chart") or {},
         "image": images,
-        "initial_buying_price": round(quote['base_price'] * 0.85),  # dealer-price placeholder
+        "initial_buying_price": round(quote['base_price'] * Decimal('0.85')),  # dealer-price placeholder
         "base_price": quote['base_price'],
         "initial_selling_price": quote['selling_price'],
         "discount_price": discount_quote['selling_price'] if discount_quote else None,

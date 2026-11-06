@@ -243,17 +243,17 @@ class CandidateSellingPriceTests(TestCase):
         from catalog.services_scrape_import import _candidate_from_product
         c = _candidate_from_product("https://x/y", {"name": "Alcohol Pad", "price": 74.0})
         self.assertEqual(c["price"], 74.0)          # untouched source price
-        self.assertEqual(c["selling_price"], 124.0)  # 74 + max(50, 3%)
+        self.assertEqual(c["selling_price"], 120)  # 74 + max(50, 3%)
 
     def test_percentage_wins_over_the_floor_on_an_expensive_item(self):
         from catalog.services_scrape_import import _candidate_from_product
         c = _candidate_from_product("https://x/y", {"name": "Laptop", "price": 100000.0})
-        self.assertEqual(c["selling_price"], 103000.0)
+        self.assertEqual(c["selling_price"], 102999)
 
     def test_discount_price_is_marked_up_too(self):
         from catalog.services_scrape_import import _candidate_from_product
         c = _candidate_from_product("https://x/y", {"name": "Tee", "price": 980.0, "discount_price": 850.0})
-        self.assertEqual(c["selling_discount_price"], 900.0)
+        self.assertEqual(c["selling_discount_price"], 899)
 
     def test_absent_price_yields_no_selling_price_rather_than_zero(self):
         from catalog.services_scrape_import import _candidate_from_product
@@ -263,4 +263,4 @@ class CandidateSellingPriceTests(TestCase):
     def test_listing_cards_are_priced_the_same_way(self):
         from catalog.services_scrape_import import _candidate_from_card
         c = _candidate_from_card({"source_url": "https://x/y", "name": "Pad", "price": 74.0, "images": []})
-        self.assertEqual(c["selling_price"], 124.0)
+        self.assertEqual(c["selling_price"], 120)

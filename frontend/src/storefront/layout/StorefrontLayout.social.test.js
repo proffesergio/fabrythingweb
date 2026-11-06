@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import { Provider } from 'react-redux';
 import { configureStore } from '@reduxjs/toolkit';
 import { MemoryRouter } from 'react-router-dom';
@@ -33,6 +33,21 @@ test('renders Facebook link to the fabrything page', async () => {
   expect(fb).toHaveAttribute('target', '_blank');
 });
 
+test('desktop header excludes NobleSeek and Company footer links to its portal beside Product Journal', () => {
+  renderLayout();
+  const header = screen.getByRole('banner');
+  expect(within(header).queryByRole('link', { name: /nobleseek|নোবেলসিক/i })).not.toBeInTheDocument();
+  expect(header.querySelector('a[href*="nobleseek"]')).toBeNull();
+
+  const company = screen.getByText('Company').parentElement;
+  const journal = within(company).getByRole('link', { name: 'Product Journal' });
+  const portal = within(company).getByRole('link', { name: 'NobleSeek' });
+  expect(journal).toHaveAttribute('href', '/blog');
+  expect(journal.nextElementSibling).toBe(portal);
+  expect(portal).toHaveAttribute('href', 'https://nobleseek.fabrything.com');
+  expect(screen.getAllByRole('link', { name: /nobleseek|নোবেলসিক/i })).toEqual([portal]);
+});
+
 test('renders Messenger link to the fabrything messenger', async () => {
   renderLayout();
   const messenger = await screen.findByRole('link', { name: /messenger/i });
@@ -62,4 +77,11 @@ test.each([
   expect(document.querySelector('link[rel="canonical"]')).toHaveAttribute(
     'href', `https://www.fabrything.com${path}`,
   );
+});
+
+
+test.each(['/blog', '/blog/buying-guide'])('preserves editorial page metadata at %s', (path) => {
+  document.title = 'Guide title — Fabrything Journal';
+  renderLayout(path);
+  expect(document.title).toBe('Guide title — Fabrything Journal');
 });

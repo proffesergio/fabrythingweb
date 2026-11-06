@@ -55,7 +55,7 @@ class ApplyPricingMarkupTests(TestCase):
         self.cheap.refresh_from_db()
         self.assertEqual(self.cheap.base_price, 99)
         self.assertEqual(self.cheap.initial_selling_price, apply_markup(99))
-        self.assertEqual(self.cheap.initial_selling_price, 149.0)  # floor wins
+        self.assertEqual(self.cheap.initial_selling_price, 150)  # floor wins
 
     def test_apply_marks_up_an_expensive_item_by_percentage(self):
         _run("--apply")
@@ -68,7 +68,7 @@ class ApplyPricingMarkupTests(TestCase):
         _run("--apply")
         self.cheap_variant.refresh_from_db()
         self.expensive_variant.refresh_from_db()
-        self.assertEqual(self.cheap_variant.price, 149.0)
+        self.assertEqual(self.cheap_variant.price, 150)
         self.assertEqual(self.expensive_variant.price, apply_markup(989900))
         self.assertEqual(self.expensive_variant.discount_price, apply_markup(950000))
 

@@ -10,17 +10,17 @@ from rest_framework.views import APIView
 
 from core.helpers import CustomPageNumberPagination, renderResponse
 
-from .models import AdConfig, Article, Comment, FlatPage, NewsCategory, Poll, PushDevice
+from .models import AdConfig, Article, Comment, FlatPage, NewsCategory, Poll, PublishingSettings, PushDevice
 from .serializers import (AdConfigSerializer, ArticleDetailSerializer,
                           ArticleListSerializer, CommentSerializer,
                           FlatPageSerializer, NewsCategorySerializer,
                           PollResultsSerializer, PushDeviceSerializer)
 
 
-def _visible_qs():
+def _visible_qs(content_type=Article.ContentType.NEWS):
     """Published AND already live. Editors can schedule a future
     published_at — those stay hidden until the timestamp passes."""
-    return Article.objects.filter(status=Article.Status.PUBLISHED,
+    return Article.objects.filter(content_type=content_type, status=Article.Status.PUBLISHED,
                                   published_at__lte=timezone.now())
 
 
@@ -32,7 +32,9 @@ class NewsCategoryListView(generics.ListAPIView):
     def get_queryset(self):
         return NewsCategory.objects.filter(is_active=True).annotate(
             article_count=Count("articles",
-                                filter=Q(articles__status=Article.Status.PUBLISHED)))
+                                filter=Q(articles__status=Article.Status.PUBLISHED,
+                                         articles__content_type=Article.ContentType.NEWS,
+                                         articles__published_at__lte=timezone.now()))).order_by("display_order", "id")
 
     def list(self, request, *args, **kwargs):
         data = cache.get("nobleseek:categories")
@@ -43,12 +45,13 @@ class NewsCategoryListView(generics.ListAPIView):
 
 
 class ArticleListView(generics.ListAPIView):
+    content_type = Article.ContentType.NEWS
     permission_classes = [AllowAny]
     serializer_class = ArticleListSerializer
     pagination_class = CustomPageNumberPagination
 
     def get_queryset(self):
-        qs = _visible_qs().select_related("category")
+        qs = _visible_qs(self.content_type).select_related("category")
         p = self.request.query_params
         if p.get("popular") == "1":
             qs = qs.order_by("-view_count", "-published_at")
@@ -70,23 +73,31 @@ class ArticleListView(generics.ListAPIView):
 
 
 class ArticleDetailView(APIView):
+    content_type = Article.ContentType.NEWS
     permission_classes = [AllowAny]
 
     def get(self, request, slug):
         try:
-            a = _visible_qs().select_related("category").get(slug=slug)
+            a = _visible_qs(self.content_type).select_related("category").get(slug=slug)
         except Article.DoesNotExist:
             return Response({"message": "Article not found"}, status=404)
         # lightweight view counter (1 per 30 min per IP via cache)
         ip = request.META.get("HTTP_X_FORWARDED_FOR", "").split(",")[0].strip() \
             or request.META.get("REMOTE_ADDR", "")
         key = f"nobleseek:view:{a.pk}:{ip}"
-        if not cache.get(key):
-            Article.objects.filter(pk=a.pk).update(view_count=a.view_count + 1)
-            a.view_count += 1
-            cache.set(key, 1, 1800)
+        if cache.add(key, 1, 1800):
+            Article.objects.filter(pk=a.pk).update(view_count=models.F("view_count") + 1)
+            a.refresh_from_db(fields=["view_count"])
         ser = ArticleDetailSerializer(a, context={"request": request})
         return renderResponse(data=ser.data, message="Article detail")
+
+
+class BlogListView(ArticleListView):
+    content_type = Article.ContentType.BLOG
+
+
+class BlogDetailView(ArticleDetailView):
+    content_type = Article.ContentType.BLOG
 
 
 class RelatedArticlesView(APIView):
@@ -129,13 +140,13 @@ class NewsSitemapView(APIView):
     permission_classes = [AllowAny]
 
     def get(self, request):
-        base = f"{request.scheme}://{request.get_host()}"
+        base = PublishingSettings.current().news_site_url.rstrip("/")
         urls = [f"{base}/nobleseek",
                 f"{base}/nobleseek/about",
                 f"{base}/nobleseek/contact"]
         for a in _visible_qs().order_by(
                 "-published_at")[:500].only("slug", "updated_at"):
-            urls.append({"loc": f"{base}/nobleseek/{a.slug}",
+            urls.append({"loc": a.get_canonical_url(base),
                          "lastmod": a.updated_at.date().isoformat()})
         return renderResponse(data={"urls": urls}, message="News sitemap")
 
@@ -144,7 +155,7 @@ class NewsRssView(APIView):
     permission_classes = [AllowAny]
 
     def get(self, request):
-        base = f"{request.scheme}://{request.get_host()}"
+        base = PublishingSettings.current().news_site_url.rstrip("/")
         items = ArticleDetailSerializer(
             _visible_qs()
             .select_related("category").order_by("-published_at")[:20],

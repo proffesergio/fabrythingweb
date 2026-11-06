@@ -6,7 +6,7 @@ import { loadAdSense, shouldSuppressAds, useAdConfig } from './adsConfig';
 // visible (IntersectionObserver), pushes once, never re-pushes. Hides
 // itself on no-ad routes and when slot id is missing (so local dev with
 // no AdSense IDs shows a subtle placeholder instead of breaking layout).
-export default function AdSlot({ slot, format = 'auto', layout, style, label = 'Advertisement', minHeight = 90 }) {
+export default function AdSlot({ slot, format = 'auto', layout, style, label = 'Advertisement', minHeight = 90, placement }) {
   const ref = useRef(null);
   const [visible, setVisible] = useState(false);
   const [pushed, setPushed] = useState(false);
@@ -23,7 +23,7 @@ export default function AdSlot({ slot, format = 'auto', layout, style, label = '
     }, { rootMargin: '400px 0px' });
     io.observe(el);
     return () => io.disconnect();
-  }, []);
+  }, [slot, client, placement]);
 
   useEffect(() => {
     if (!visible || pushed || !slot || shouldSuppressAds(location.pathname)) return;
@@ -39,16 +39,22 @@ export default function AdSlot({ slot, format = 'auto', layout, style, label = '
   }, [visible, pushed, slot, client, location.pathname]);
 
   if (shouldSuppressAds(location.pathname)) return null;
-  if (!slot) {
-    if (process.env.NODE_ENV === 'production') return null;
+  const reservedStyle = {
+    margin: '24px auto', textAlign: 'center', minHeight,
+    width: '100%', maxWidth: placement === 'sidebar' ? 300 : placement === 'leaderboard' ? 970 : undefined,
+    background: '#f4f4f4', overflow: 'hidden', ...style,
+  };
+  // Keep newspaper ad geometry stable without showing setup instructions or fake ads.
+  if (!slot || !client) {
+    if (!placement) return null;
     return (
-      <div ref={ref} style={{ ...style, minHeight, border: '1px dashed #cbd5e1', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94a3b8', fontSize: 12, background: '#f8fafc', margin: '16px 0' }}>
-        AdSlot placeholder — set slot id in Admin → NobleSeek → Ads
-      </div>
+      <aside ref={ref} aria-label={label} data-ad-placement={placement} style={{ ...reservedStyle, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <span style={{ fontSize: 10, color: '#767676', letterSpacing: '0.1em', textTransform: 'uppercase' }}>{label}</span>
+      </aside>
     );
   }
   return (
-    <div ref={ref} style={{ margin: '20px 0', textAlign: 'center', minHeight, ...style }} aria-label={label}>
+    <aside ref={ref} data-ad-placement={placement} style={reservedStyle} aria-label={label}>
       <div style={{ fontSize: 10, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#94a3b8', marginBottom: 4 }}>{label}</div>
       {visible && (
         <ins
@@ -61,6 +67,6 @@ export default function AdSlot({ slot, format = 'auto', layout, style, label = '
           data-full-width-responsive="true"
         />
       )}
-    </div>
+    </aside>
   );
 }

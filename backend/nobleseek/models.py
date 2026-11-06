@@ -10,6 +10,7 @@ Design notes:
 """
 import math
 import re
+from urllib.parse import quote
 
 from django.db import models
 from django.utils import timezone
@@ -90,12 +91,18 @@ class TrendKeyword(models.Model):
 
 
 class Article(models.Model):
+    class ContentType(models.TextChoices):
+        NEWS = "NEWS", "News"
+        BLOG = "BLOG", "Blog"
+
     class Status(models.TextChoices):
         DRAFT = "DRAFT", "Draft"
         REVIEW = "REVIEW", "In review"
         PUBLISHED = "PUBLISHED", "Published"
         ARCHIVED = "ARCHIVED", "Archived"
 
+    content_type = models.CharField(max_length=4, choices=ContentType.choices,
+                                    default=ContentType.NEWS, db_index=True)
     trend = models.ForeignKey(TrendKeyword, null=True, blank=True,
                               on_delete=models.SET_NULL, related_name="articles")
     category = models.ForeignKey(NewsCategory, null=True, blank=True,
@@ -156,10 +163,17 @@ class Article(models.Model):
     def effective_headline(self) -> str:
         return self.headline_bn or self.headline
 
-    def get_json_ld(self, site_url: str) -> dict:
+    def get_canonical_url(self, site_url=None):
+        if self.content_type == self.ContentType.BLOG:
+            return f"https://www.fabrything.com/blog/{quote(self.slug, safe='')}"
+        site_url = site_url or PublishingSettings.current().news_site_url
+        return f"{site_url.rstrip('/')}/nobleseek/{quote(self.slug, safe='')}"
+
+    def get_json_ld(self, site_url=None) -> dict:
+        site_url = site_url or PublishingSettings.current().news_site_url
         return {
             "@context": "https://schema.org",
-            "@type": "NewsArticle",
+            "@type": "BlogPosting" if self.content_type == self.ContentType.BLOG else "NewsArticle",
             "headline": self.headline,
             "description": self.seo_description or self.excerpt,
             "image": [self.hero_image] if self.hero_image else [],
@@ -171,8 +185,39 @@ class Article(models.Model):
                           "logo": {"@type": "ImageObject",
                                    "url": f"{site_url.rstrip('/')}/logo192.png"}},
             "mainEntityOfPage": {"@type": "WebPage",
-                                 "@id": f"{site_url.rstrip('/')}/nobleseek/{self.slug}"},
+                                 "@id": self.get_canonical_url(site_url)},
         }
+
+
+class PublishingSettings(models.Model):
+    """One publishing policy row; API writers lock it before checking limits."""
+
+    news_site_url = models.URLField(default="https://www.fabrything.com", max_length=500)
+    ingestion_paused = models.BooleanField(default=False)
+    daily_article_limit = models.PositiveIntegerField(default=0, help_text="0 disables the limit")
+    require_review_for_automation = models.BooleanField(default=False)
+    estimated_text_bytes_per_article = models.PositiveIntegerField(default=20000)
+    estimated_image_bytes_per_article = models.PositiveIntegerField(default=300000)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        constraints = [models.CheckConstraint(check=models.Q(pk=1), name="ns_publishing_singleton")]
+
+    def save(self, *args, **kwargs):
+        self.pk = 1
+        return super().save(*args, **kwargs)
+
+    @classmethod
+    def current(cls):
+        # Public reads must not create configuration rows.
+        return cls.objects.filter(pk=1).first() or cls(pk=1)
+
+    @classmethod
+    def locked(cls):
+        # Must be called inside atomic(). get_or_create handles a concurrent
+        # initial insert; select_for_update serializes all supported writers.
+        cls.objects.get_or_create(pk=1)
+        return cls.objects.select_for_update().get(pk=1)
 
 
 class AdConfig(models.Model):

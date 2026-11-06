@@ -58,8 +58,8 @@ class PriceSyncTests(TestCase):
         changes = sync_source_prices(fetcher=fake_fetcher)
         self.p.refresh_from_db()
         self.assertEqual(self.p.base_price, 46000.0)
-        self.assertEqual(self.p.initial_selling_price, 47380.0)
-        self.assertEqual(self.p.discount_price, 45835.0)
+        self.assertEqual(self.p.initial_selling_price, 47399)
+        self.assertEqual(self.p.discount_price, 45799)
         self.assertEqual(self.p.source_price, 46000.0)
         self.assertIsNotNone(self.p.price_synced_at)
         self.assertEqual(len([c for c in changes if c["updated"]]), 1)
@@ -71,9 +71,50 @@ class PriceSyncTests(TestCase):
         # stale seed-time variant price -- shown one price, charged another.
         sync_source_prices(fetcher=fake_fetcher)
         self.variant.refresh_from_db()
-        self.assertEqual(self.variant.price, 47380.0)
-        self.assertEqual(self.variant.discount_price, 45835.0)
-        self.assertEqual(self.variant.effective_price, 45835.0)
+        self.assertEqual(self.variant.price, 47399)
+        self.assertEqual(self.variant.discount_price, 45799)
+        self.assertEqual(self.variant.effective_price, 45799)
+
+    def test_synced_cart_checkout_and_order_snapshot_agree(self):
+        from types import SimpleNamespace
+        from orders.services import place_cod_order
+        from storefront.serializers import CartItemSerializer, CustomerOrderDetailSerializer
+
+        sync_source_prices(fetcher=fake_fetcher)
+        self.variant.refresh_from_db()
+        cart = CartItemSerializer(SimpleNamespace(variant=self.variant, quantity=2)).data
+        order = place_cod_order(
+            customer=None,
+            items=[{'variant_id': self.variant.pk, 'quantity': 2, 'unit_price': '1.00'}],
+            contact_name='Pricing test', contact_phone='01700000000',
+            shipping_address={'address': 'Test', 'city': 'Dhaka'},
+        )
+        line = order.items.get()
+        self.assertEqual(Decimal(cart['unit_price']), Decimal('45799'))
+        self.assertEqual(line.unit_price, Decimal(cart['unit_price']))
+        self.assertEqual(order.subtotal, Decimal('91598'))
+        self.assertEqual(order.total_amount, order.subtotal + order.shipping_amount)
+        # Order/invoice data is a snapshot, even after the catalog changes.
+        self.variant.price = Decimal('50000')
+        self.variant.discount_price = None
+        self.variant.save()
+        serialized = CustomerOrderDetailSerializer(order).data
+        self.assertEqual(Decimal(serialized['items'][0]['unit_price']), Decimal('45799'))
+        self.assertEqual(Decimal(serialized['items'][0]['line_total']), Decimal('91598'))
+
+    def test_manual_fractional_variant_price_is_not_rounded_at_checkout(self):
+        from orders.services import place_cod_order
+
+        self.variant.price = Decimal('273.45')
+        self.variant.discount_price = Decimal('269.25')
+        self.variant.save()
+        order = place_cod_order(
+            customer=None, items=[{'variant_id': self.variant.pk, 'quantity': 2}],
+            contact_name='Manual price', contact_phone='01700000000',
+            shipping_address={'address': 'Test', 'city': 'Dhaka'},
+        )
+        self.assertEqual(order.items.get().unit_price, Decimal('269.25'))
+        self.assertEqual(order.subtotal, Decimal('538.50'))
 
     def test_dry_run_writes_nothing(self):
         sync_source_prices(fetcher=fake_fetcher, dry_run=True)
@@ -112,7 +153,7 @@ class PriceSyncTests(TestCase):
         cfg.save()
         sync_source_prices(fetcher=fake_fetcher)
         self.p.refresh_from_db()
-        self.assertEqual(self.p.initial_selling_price, 50600.0)  # 46000 * 1.10
+        self.assertEqual(self.p.initial_selling_price, 50599)  # 46000 * 1.10
 
     def test_fetch_failure_skips_product(self):
         def boom(url):

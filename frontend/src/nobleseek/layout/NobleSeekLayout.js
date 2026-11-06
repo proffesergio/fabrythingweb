@@ -13,7 +13,7 @@ export default function NobleSeekLayout() {
     <Box className="ns-sans" sx={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', bgcolor: '#ffffff', color: '#141414' }}>
       <NewsFonts />
       <PortalHeader />
-      <Box sx={{ flex: 1 }}>
+      <Box component="main" sx={{ flex: 1, minWidth: 0 }}>
         <Outlet />
       </Box>
       <NewsFooter />

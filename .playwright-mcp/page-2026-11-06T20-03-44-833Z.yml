@@ -1,0 +1,317 @@
+- generic [ref=f32e3]:
+  - generic [ref=f32e5]:
+    - generic [ref=f32e6]: শনিবার, ৭ নভেম্বর ২০২৬
+    - generic [ref=f32e7]:
+      - link "সর্বশেষ" [ref=f32e8] [cursor=pointer]:
+        - /url: /nobleseek
+      - link "মতামত" [ref=f32e9] [cursor=pointer]:
+        - /url: /nobleseek?category=opinion
+      - link "আমাদের সম্পর্কে" [ref=f32e10] [cursor=pointer]:
+        - /url: /nobleseek/about
+      - link "যোগাযোগ" [ref=f32e11] [cursor=pointer]:
+        - /url: /nobleseek/contact
+    - generic [ref=f32e12]:
+      - link "Facebook" [ref=f32e13] [cursor=pointer]:
+        - /url: https://www.facebook.com/
+      - link "X" [ref=f32e16] [cursor=pointer]:
+        - /url: https://x.com/
+      - link "YouTube" [ref=f32e19] [cursor=pointer]:
+        - /url: https://www.youtube.com/
+  - generic [ref=f32e23]:
+    - generic [ref=f32e24]: শনিবার, ৭ নভেম্বর ২০২৬
+    - link "নোবেলসিক হোম" [ref=f32e25] [cursor=pointer]:
+      - /url: /nobleseek
+      - img "নোবেলসিক — NobleSeek" [ref=f32e26]
+  - generic [ref=f32e28]:
+    - button "মেনু" [ref=f32e29] [cursor=pointer]
+    - generic [ref=f32e32]:
+      - link "সর্বশেষ" [ref=f32e33] [cursor=pointer]:
+        - /url: /nobleseek
+      - link "Tech" [ref=f32e34] [cursor=pointer]:
+        - /url: /nobleseek?category=tech
+      - link "আদালত" [ref=f32e35] [cursor=pointer]:
+        - /url: /nobleseek?category=court
+      - link "Sports" [ref=f32e36] [cursor=pointer]:
+        - /url: /nobleseek?category=sports
+      - link "বাণিজ্য" [ref=f32e37] [cursor=pointer]:
+        - /url: /nobleseek?category=business
+      - link "অর্থনীতি" [ref=f32e38] [cursor=pointer]:
+        - /url: /nobleseek?category=economy
+      - link "জীবনযাপন" [ref=f32e39] [cursor=pointer]:
+        - /url: /nobleseek?category=lifestyle
+      - link "অপরাধ" [ref=f32e40] [cursor=pointer]:
+        - /url: /nobleseek?category=crime
+      - link "শিক্ষা" [ref=f32e41] [cursor=pointer]:
+        - /url: /nobleseek?category=education
+      - link "Bangladesh" [ref=f32e42] [cursor=pointer]:
+        - /url: /nobleseek?category=bangladesh
+      - link "Entertainment" [ref=f32e43] [cursor=pointer]:
+        - /url: /nobleseek?category=entertainment
+      - link "Ai" [ref=f32e44] [cursor=pointer]:
+        - /url: /nobleseek?category=ai
+      - link "World" [ref=f32e45] [cursor=pointer]:
+        - /url: /nobleseek?category=world
+      - link "প্রবাস" [ref=f32e46] [cursor=pointer]:
+        - /url: /nobleseek?category=expatriate
+      - link "পরিবেশ" [ref=f32e47] [cursor=pointer]:
+        - /url: /nobleseek?category=environment
+      - link "রাজনীতি" [ref=f32e48] [cursor=pointer]:
+        - /url: /nobleseek?category=politics
+      - link "চাকরি" [ref=f32e49] [cursor=pointer]:
+        - /url: /nobleseek?category=jobs
+      - link "মতামত" [ref=f32e50] [cursor=pointer]:
+        - /url: /nobleseek?category=opinion
+      - link "স্বাস্থ্য" [ref=f32e51] [cursor=pointer]:
+        - /url: /nobleseek?category=health
+    - button "খুঁজুন" [ref=f32e52] [cursor=pointer]
+  - generic [ref=f32e56]:
+    - generic [ref=f32e57]:
+      - link "ডেঙ্গুতে আরও ৩ মৃত্যু, এক দিনেই ঢাকায় ভর্তি ৭২১ স্বাস্থ্য ডেঙ্গুতে আরও ৩ মৃত্যু, এক দিনেই ঢাকায় ভর্তি ৭২১ ডেঙ্গুতে বাড়ছে মৃতের সংখ্যা, ঢাকায় ভর্তি রোগীর সংখ্যাও বাড়ছে ডেঙ্গু পরিস্থিতি নিয়ে আবারও উদ্বেগজনক খবর। গত ২৪ ঘণ্টায় ডেঙ্গুতে আরও ৩ জন মারা গেছেন, যা নিয়ে চলতি বছর মৃতের সংখ্যা বেড়ে দাঁড়িয়ে ৪৫৫-এ। একই সময়ে ঢাকায় ৭২১ জন এবং জাতীয়ভাবে ১ হাজার ৫৩৫ জন নতুন ডেঙ্গু রোগী হাসপাতালে ভর্তি হয়েছেন। স্বাস্থ্য ৫১ মিনিট আগে" [ref=f32e59] [cursor=pointer]:
+        - /url: https://nobleseek.fabrything.com/nobleseek/echolink-815b93eb-0da6-44aa-9bc0-a2dff3f43270?utm_source=facebook&utm_medium=social&utm_campaign=portal-lead
+        - img "ডেঙ্গুতে আরও ৩ মৃত্যু, এক দিনেই ঢাকায় ভর্তি ৭২১" [ref=f32e60]
+        - generic [ref=f32e62]:
+          - generic [ref=f32e63]: স্বাস্থ্য
+          - heading "ডেঙ্গুতে আরও ৩ মৃত্যু, এক দিনেই ঢাকায় ভর্তি ৭২১" [level=4] [ref=f32e66]
+          - paragraph [ref=f32e67]: ডেঙ্গুতে বাড়ছে মৃতের সংখ্যা, ঢাকায় ভর্তি রোগীর সংখ্যাও বাড়ছে ডেঙ্গু পরিস্থিতি নিয়ে আবারও উদ্বেগজনক খবর। গত ২৪ ঘণ্টায় ডেঙ্গুতে আরও ৩ জন মারা গেছেন, যা নিয়ে চলতি বছর মৃতের সংখ্যা বেড়ে দাঁড়িয়ে ৪৫৫-এ। একই সময়ে ঢাকায় ৭২১ জন এবং জাতীয়ভাবে ১ হাজার ৫৩৫ জন নতুন ডেঙ্গু রোগী হাসপাতালে ভর্তি হয়েছেন। স্বাস্থ্য
+          - generic [ref=f32e68]: ৫১ মিনিট আগে
+      - generic [ref=f32e70]:
+        - 'link "আ.লীগকে আর রাজনীতির সুযোগ দেবে না দেশের মানুষ: স্বরাষ্ট্রমন্ত্রী রাজনীতি আ.লীগকে আর রাজনীতির সুযোগ দেবে না দেশের মানুষ: স্বরাষ্ট্রমন্ত্রী ২ ঘণ্টা আগে" [ref=f32e71] [cursor=pointer]':
+          - /url: https://nobleseek.fabrything.com/nobleseek/echolink-28d42332-1960-465f-9998-eb2b62189df5?utm_source=facebook&utm_medium=social&utm_campaign=portal-secondary
+          - 'img "আ.লীগকে আর রাজনীতির সুযোগ দেবে না দেশের মানুষ: স্বরাষ্ট্রমন্ত্রী" [ref=f32e73]'
+          - generic [ref=f32e74]:
+            - text: রাজনীতি
+            - 'heading "আ.লীগকে আর রাজনীতির সুযোগ দেবে না দেশের মানুষ: স্বরাষ্ট্রমন্ত্রী" [level=6] [ref=f32e75]'
+            - generic [ref=f32e76]: ২ ঘণ্টা আগে
+        - link "সংঘাত বন্ধে সৌদি আরবের কাছে ৫১ বিলিয়ন ডলার চেয়েছে হুথিরা, দাবি প্রত্যাখ্যান রিয়াদের World সংঘাত বন্ধে সৌদি আরবের কাছে ৫১ বিলিয়ন ডলার চেয়েছে হুথিরা, দাবি প্রত্যাখ্যান রিয়াদের ৩ ঘণ্টা আগে" [ref=f32e77] [cursor=pointer]:
+          - /url: https://nobleseek.fabrything.com/nobleseek/echolink-2fcd5533-e395-434b-b9d5-9e32e2250ab2?utm_source=facebook&utm_medium=social&utm_campaign=portal-secondary
+          - img "সংঘাত বন্ধে সৌদি আরবের কাছে ৫১ বিলিয়ন ডলার চেয়েছে হুথিরা, দাবি প্রত্যাখ্যান রিয়াদের" [ref=f32e79]
+          - generic [ref=f32e80]:
+            - text: World
+            - heading "সংঘাত বন্ধে সৌদি আরবের কাছে ৫১ বিলিয়ন ডলার চেয়েছে হুথিরা, দাবি প্রত্যাখ্যান রিয়াদের" [level=6] [ref=f32e81]
+            - generic [ref=f32e82]: ৩ ঘণ্টা আগে
+    - generic [ref=f32e84]:
+      - generic [ref=f32e85]:
+        - generic [ref=f32e86]:
+          - heading "সর্বশেষ (26টি খবর)" [level=5] [ref=f32e88]
+          - link "সব খবর →" [ref=f32e89] [cursor=pointer]:
+            - /url: /nobleseek?search=
+        - generic [ref=f32e90]:
+          - link "চেনা ভাবমূর্তি ভেঙে ডার্ক কমেডি ‘সিন’-এ সূরিয়ার চমক চেনা ভাবমূর্তি ভেঙে ডার্ক কমেডি ‘সিন’-এ সূরিয়ার চমক ৪ ঘণ্টা আগে" [ref=f32e92] [cursor=pointer]:
+            - /url: https://nobleseek.fabrything.com/nobleseek/echolink-8003fd8f-c259-40c1-9181-d64310b9030a?utm_source=facebook&utm_medium=social&utm_campaign=portal-latest
+            - img "চেনা ভাবমূর্তি ভেঙে ডার্ক কমেডি ‘সিন’-এ সূরিয়ার চমক" [ref=f32e94]
+            - generic [ref=f32e95]:
+              - heading "চেনা ভাবমূর্তি ভেঙে ডার্ক কমেডি ‘সিন’-এ সূরিয়ার চমক" [level=6] [ref=f32e96]
+              - generic [ref=f32e97]: ৪ ঘণ্টা আগে
+          - 'link "পাঁচ দেশের বিপক্ষে পাঁচ উইকেট: লিয়নের পর হাসান মাহমুদ Sports পাঁচ দেশের বিপক্ষে পাঁচ উইকেট: লিয়নের পর হাসান মাহমুদ ৫ ঘণ্টা আগে" [ref=f32e99] [cursor=pointer]':
+            - /url: https://nobleseek.fabrything.com/nobleseek/echolink-30e67186-f3a3-4c77-b372-32f1960784af?utm_source=facebook&utm_medium=social&utm_campaign=portal-latest
+            - 'img "পাঁচ দেশের বিপক্ষে পাঁচ উইকেট: লিয়নের পর হাসান মাহমুদ" [ref=f32e101]'
+            - generic [ref=f32e102]:
+              - text: Sports
+              - 'heading "পাঁচ দেশের বিপক্ষে পাঁচ উইকেট: লিয়নের পর হাসান মাহমুদ" [level=6] [ref=f32e103]'
+              - generic [ref=f32e104]: ৫ ঘণ্টা আগে
+          - 'link "গণহত্যা ও জুলুমকারীদের রাজনীতি করতে দেওয়া হবে না: স্বরাষ্ট্রমন্ত্রী Bangladesh গণহত্যা ও জুলুমকারীদের রাজনীতি করতে দেওয়া হবে না: স্বরাষ্ট্রমন্ত্রী ৬ ঘণ্টা আগে" [ref=f32e106] [cursor=pointer]':
+            - /url: https://nobleseek.fabrything.com/nobleseek/echolink-04179a1b-c21e-45e3-81fe-5b1285c7bbc2?utm_source=facebook&utm_medium=social&utm_campaign=portal-latest
+            - 'img "গণহত্যা ও জুলুমকারীদের রাজনীতি করতে দেওয়া হবে না: স্বরাষ্ট্রমন্ত্রী" [ref=f32e108]'
+            - generic [ref=f32e109]:
+              - text: Bangladesh
+              - 'heading "গণহত্যা ও জুলুমকারীদের রাজনীতি করতে দেওয়া হবে না: স্বরাষ্ট্রমন্ত্রী" [level=6] [ref=f32e110]'
+              - generic [ref=f32e111]: ৬ ঘণ্টা আগে
+          - link "পরীমনির পাশে দাঁড়ালেন আলোচিত অভিনেত্রী প্রভা Entertainment পরীমনির পাশে দাঁড়ালেন আলোচিত অভিনেত্রী প্রভা ৭ ঘণ্টা আগে" [ref=f32e113] [cursor=pointer]:
+            - /url: https://nobleseek.fabrything.com/nobleseek/echolink-c765d8c3-ffc9-428f-9bb7-4edf186ea1e4?utm_source=facebook&utm_medium=social&utm_campaign=portal-latest
+            - img "পরীমনির পাশে দাঁড়ালেন আলোচিত অভিনেত্রী প্রভা" [ref=f32e115]
+            - generic [ref=f32e116]:
+              - text: Entertainment
+              - heading "পরীমনির পাশে দাঁড়ালেন আলোচিত অভিনেত্রী প্রভা" [level=6] [ref=f32e117]
+              - generic [ref=f32e118]: ৭ ঘণ্টা আগে
+          - link "মনস্তাত্ত্বিক থ্রিলার ‘খলনায়ক’-এ নিশো, তমা মনস্তাত্ত্বিক থ্রিলার ‘খলনায়ক’-এ নিশো, তমা ৮ ঘণ্টা আগে" [ref=f32e120] [cursor=pointer]:
+            - /url: https://nobleseek.fabrything.com/nobleseek/echolink-bdf01c33-c78b-41e5-828a-ff89c17deb23?utm_source=facebook&utm_medium=social&utm_campaign=portal-latest
+            - img "মনস্তাত্ত্বিক থ্রিলার ‘খলনায়ক’-এ নিশো, তমা" [ref=f32e122]
+            - generic [ref=f32e123]:
+              - heading "মনস্তাত্ত্বিক থ্রিলার ‘খলনায়ক’-এ নিশো, তমা" [level=6] [ref=f32e124]
+              - generic [ref=f32e125]: ৮ ঘণ্টা আগে
+          - link "দেশের বিভিন্ন স্থানে বৃষ্টির আভাস, কমতে পারে তাপমাত্রা দেশের বিভিন্ন স্থানে বৃষ্টির আভাস, কমতে পারে তাপমাত্রা ১০ ঘণ্টা আগে" [ref=f32e127] [cursor=pointer]:
+            - /url: https://nobleseek.fabrything.com/nobleseek/echolink-3f4fd584-878d-4303-a37d-3370091a332e?utm_source=facebook&utm_medium=social&utm_campaign=portal-latest
+            - img "দেশের বিভিন্ন স্থানে বৃষ্টির আভাস, কমতে পারে তাপমাত্রা" [ref=f32e129]
+            - generic [ref=f32e130]:
+              - heading "দেশের বিভিন্ন স্থানে বৃষ্টির আভাস, কমতে পারে তাপমাত্রা" [level=6] [ref=f32e131]
+              - generic [ref=f32e132]: ১০ ঘণ্টা আগে
+        - link "আরও খবর পড়ুন" [ref=f32e134] [cursor=pointer]:
+          - /url: /nobleseek?search=
+      - generic [ref=f32e137]:
+        - tablist [ref=f32e140]:
+          - tab "সর্বাধিক পঠিত" [selected] [ref=f32e141] [cursor=pointer]
+          - tab "সর্বশেষ" [ref=f32e142] [cursor=pointer]
+        - generic [ref=f32e144]:
+          - 'link "1 iPhone 17 price in Bangladesh: full breakdown ১ অক্টোবর ২০২৬" [ref=f32e145] [cursor=pointer]':
+            - /url: https://nobleseek.fabrything.com/nobleseek/iphone-17-price-in-bangladesh-full-breakdown?utm_source=facebook&utm_medium=social&utm_campaign=nobleseek-fb
+            - paragraph [ref=f32e146]: "1"
+            - generic [ref=f32e147]:
+              - paragraph [ref=f32e148]: "iPhone 17 price in Bangladesh: full breakdown"
+              - generic [ref=f32e149]: ১ অক্টোবর ২০২৬
+          - 'link "2 Bitcoin price surges: what it means for BD investors ১ অক্টোবর ২০২৬" [ref=f32e150] [cursor=pointer]':
+            - /url: https://nobleseek.fabrything.com/nobleseek/bitcoin-price-surges-what-it-means-for-bd-investors?utm_source=facebook&utm_medium=social&utm_campaign=nobleseek-fb
+            - paragraph [ref=f32e151]: "2"
+            - generic [ref=f32e152]:
+              - paragraph [ref=f32e153]: "Bitcoin price surges: what it means for BD investors"
+              - generic [ref=f32e154]: ১ অক্টোবর ২০২৬
+          - link "3 নতুন ওয়েব সিরিজে ঝড় তুললেন জনপ্রিয় অভিনেতা | Viral Web Series ১ অক্টোবর ২০২৬" [ref=f32e155] [cursor=pointer]:
+            - /url: https://nobleseek.fabrything.com/nobleseek/%E0%A6%A8%E0%A6%A4%E0%A6%A8-%E0%A6%93%E0%A6%AF%E0%A6%AC-%E0%A6%B8%E0%A6%B0%E0%A6%9C-%E0%A6%9D%E0%A6%A1-%E0%A6%A4%E0%A6%B2%E0%A6%B2%E0%A6%A8-%E0%A6%9C%E0%A6%A8%E0%A6%AA%E0%A6%B0%E0%A6%AF-%E0%A6%85%E0%A6%AD%E0%A6%A8%E0%A6%A4-viral-web-series?utm_source=facebook&utm_medium=social&utm_campaign=nobleseek-fb
+            - paragraph [ref=f32e156]: "3"
+            - generic [ref=f32e157]:
+              - paragraph [ref=f32e158]: নতুন ওয়েব সিরিজে ঝড় তুললেন জনপ্রিয় অভিনেতা | Viral Web Series
+              - generic [ref=f32e159]: ১ অক্টোবর ২০২৬
+          - 'link "4 ঢাকায় মেট্রোরেলের নতুন রুট: যা জানা জরুরি | Dhaka Metro New Route ১ অক্টোবর ২০২৬" [ref=f32e160] [cursor=pointer]':
+            - /url: https://nobleseek.fabrything.com/nobleseek/%E0%A6%A2%E0%A6%95%E0%A6%AF-%E0%A6%AE%E0%A6%9F%E0%A6%B0%E0%A6%B0%E0%A6%B2%E0%A6%B0-%E0%A6%A8%E0%A6%A4%E0%A6%A8-%E0%A6%B0%E0%A6%9F-%E0%A6%AF-%E0%A6%9C%E0%A6%A8-%E0%A6%9C%E0%A6%B0%E0%A6%B0-dhaka-metro-new-route?utm_source=facebook&utm_medium=social&utm_campaign=nobleseek-fb
+            - paragraph [ref=f32e161]: "4"
+            - generic [ref=f32e162]:
+              - paragraph [ref=f32e163]: "ঢাকায় মেট্রোরেলের নতুন রুট: যা জানা জরুরি | Dhaka Metro New Route"
+              - generic [ref=f32e164]: ১ অক্টোবর ২০২৬
+          - link "5 যুক্তরাষ্ট্রের ইতিহাসে প্রথম মুসলিম সিনেটর আল-সাঈদ ১ দিন আগে" [ref=f32e165] [cursor=pointer]:
+            - /url: https://nobleseek.fabrything.com/nobleseek/echolink-4ff0e405-0717-4dd4-9e76-d2126aaba948?utm_source=facebook&utm_medium=social&utm_campaign=nobleseek-fb
+            - paragraph [ref=f32e166]: "5"
+            - generic [ref=f32e167]:
+              - paragraph [ref=f32e168]: যুক্তরাষ্ট্রের ইতিহাসে প্রথম মুসলিম সিনেটর আল-সাঈদ
+              - generic [ref=f32e169]: ১ দিন আগে
+    - generic [ref=f32e170]:
+      - generic [ref=f32e171]:
+        - heading "Sports" [level=5] [ref=f32e173]
+        - link "আরও →" [ref=f32e174] [cursor=pointer]:
+          - /url: /nobleseek?category=sports
+      - generic [ref=f32e175]:
+        - 'link "পাঁচ দেশের বিপক্ষে পাঁচ উইকেট: লিয়নের পর হাসান মাহমুদ Sports পাঁচ দেশের বিপক্ষে পাঁচ উইকেট: লিয়নের পর হাসান মাহমুদ ৫ ঘণ্টা আগে" [ref=f32e177] [cursor=pointer]':
+          - /url: https://nobleseek.fabrything.com/nobleseek/echolink-30e67186-f3a3-4c77-b372-32f1960784af?utm_source=facebook&utm_medium=social&utm_campaign=portal-sports
+          - 'img "পাঁচ দেশের বিপক্ষে পাঁচ উইকেট: লিয়নের পর হাসান মাহমুদ" [ref=f32e179]'
+          - generic [ref=f32e180]:
+            - text: Sports
+            - 'heading "পাঁচ দেশের বিপক্ষে পাঁচ উইকেট: লিয়নের পর হাসান মাহমুদ" [level=6] [ref=f32e181]'
+            - generic [ref=f32e182]: ৫ ঘণ্টা আগে
+        - 'link "নোবেলসিক Sports বাংলাদেশ বনাম ভারত: টানটান উত্তেজনার ম্যাচ | BAN vs IND Thriller ১ অক্টোবর ২০২৬" [ref=f32e184] [cursor=pointer]':
+          - /url: https://nobleseek.fabrything.com/nobleseek/%E0%A6%AC%E0%A6%B2%E0%A6%A6%E0%A6%B6-%E0%A6%AC%E0%A6%A8%E0%A6%AE-%E0%A6%AD%E0%A6%B0%E0%A6%A4-%E0%A6%9F%E0%A6%A8%E0%A6%9F%E0%A6%A8-%E0%A6%89%E0%A6%A4%E0%A6%A4%E0%A6%9C%E0%A6%A8%E0%A6%B0-%E0%A6%AE%E0%A6%AF%E0%A6%9A-ban-vs-ind-thriller?utm_source=facebook&utm_medium=social&utm_campaign=portal-sports
+          - generic [ref=f32e185]: নোবেলসিক
+          - generic [ref=f32e187]:
+            - text: Sports
+            - 'heading "বাংলাদেশ বনাম ভারত: টানটান উত্তেজনার ম্যাচ | BAN vs IND Thriller" [level=6] [ref=f32e188]'
+            - generic [ref=f32e189]: ১ অক্টোবর ২০২৬
+    - generic [ref=f32e190]:
+      - generic [ref=f32e191]:
+        - heading "Entertainment" [level=5] [ref=f32e193]
+        - link "আরও →" [ref=f32e194] [cursor=pointer]:
+          - /url: /nobleseek?category=entertainment
+      - generic [ref=f32e195]:
+        - link "পরীমনির পাশে দাঁড়ালেন আলোচিত অভিনেত্রী প্রভা Entertainment পরীমনির পাশে দাঁড়ালেন আলোচিত অভিনেত্রী প্রভা ৭ ঘণ্টা আগে" [ref=f32e197] [cursor=pointer]:
+          - /url: https://nobleseek.fabrything.com/nobleseek/echolink-c765d8c3-ffc9-428f-9bb7-4edf186ea1e4?utm_source=facebook&utm_medium=social&utm_campaign=portal-entertainment
+          - img "পরীমনির পাশে দাঁড়ালেন আলোচিত অভিনেত্রী প্রভা" [ref=f32e199]
+          - generic [ref=f32e200]:
+            - text: Entertainment
+            - heading "পরীমনির পাশে দাঁড়ালেন আলোচিত অভিনেত্রী প্রভা" [level=6] [ref=f32e201]
+            - generic [ref=f32e202]: ৭ ঘণ্টা আগে
+        - link "নোবেলসিক Entertainment নতুন ওয়েব সিরিজে ঝড় তুললেন জনপ্রিয় অভিনেতা | Viral Web Series ১ অক্টোবর ২০২৬" [ref=f32e204] [cursor=pointer]:
+          - /url: https://nobleseek.fabrything.com/nobleseek/%E0%A6%A8%E0%A6%A4%E0%A6%A8-%E0%A6%93%E0%A6%AF%E0%A6%AC-%E0%A6%B8%E0%A6%B0%E0%A6%9C-%E0%A6%9D%E0%A6%A1-%E0%A6%A4%E0%A6%B2%E0%A6%B2%E0%A6%A8-%E0%A6%9C%E0%A6%A8%E0%A6%AA%E0%A6%B0%E0%A6%AF-%E0%A6%85%E0%A6%AD%E0%A6%A8%E0%A6%A4-viral-web-series?utm_source=facebook&utm_medium=social&utm_campaign=portal-entertainment
+          - generic [ref=f32e205]: নোবেলসিক
+          - generic [ref=f32e207]:
+            - text: Entertainment
+            - heading "নতুন ওয়েব সিরিজে ঝড় তুললেন জনপ্রিয় অভিনেতা | Viral Web Series" [level=6] [ref=f32e208]
+            - generic [ref=f32e209]: ১ অক্টোবর ২০২৬
+    - generic [ref=f32e210]:
+      - generic [ref=f32e211]:
+        - heading "Tech" [level=5] [ref=f32e213]
+        - link "আরও →" [ref=f32e214] [cursor=pointer]:
+          - /url: /nobleseek?category=tech
+      - 'link "নোবেলসিক Tech iPhone 17 price in Bangladesh: full breakdown ১ অক্টোবর ২০২৬" [ref=f32e217] [cursor=pointer]':
+        - /url: https://nobleseek.fabrything.com/nobleseek/iphone-17-price-in-bangladesh-full-breakdown?utm_source=facebook&utm_medium=social&utm_campaign=portal-tech
+        - generic [ref=f32e218]: নোবেলসিক
+        - generic [ref=f32e220]:
+          - text: Tech
+          - 'heading "iPhone 17 price in Bangladesh: full breakdown" [level=6] [ref=f32e221]'
+          - generic [ref=f32e222]: ১ অক্টোবর ২০২৬
+    - generic [ref=f32e223]:
+      - generic [ref=f32e224]:
+        - heading "World" [level=5] [ref=f32e226]
+        - link "আরও →" [ref=f32e227] [cursor=pointer]:
+          - /url: /nobleseek?category=world
+      - generic [ref=f32e228]:
+        - link "সংঘাত বন্ধে সৌদি আরবের কাছে ৫১ বিলিয়ন ডলার চেয়েছে হুথিরা, দাবি প্রত্যাখ্যান রিয়াদের World সংঘাত বন্ধে সৌদি আরবের কাছে ৫১ বিলিয়ন ডলার চেয়েছে হুথিরা, দাবি প্রত্যাখ্যান রিয়াদের ৩ ঘণ্টা আগে" [ref=f32e230] [cursor=pointer]:
+          - /url: https://nobleseek.fabrything.com/nobleseek/echolink-2fcd5533-e395-434b-b9d5-9e32e2250ab2?utm_source=facebook&utm_medium=social&utm_campaign=portal-world
+          - img "সংঘাত বন্ধে সৌদি আরবের কাছে ৫১ বিলিয়ন ডলার চেয়েছে হুথিরা, দাবি প্রত্যাখ্যান রিয়াদের" [ref=f32e232]
+          - generic [ref=f32e233]:
+            - text: World
+            - heading "সংঘাত বন্ধে সৌদি আরবের কাছে ৫১ বিলিয়ন ডলার চেয়েছে হুথিরা, দাবি প্রত্যাখ্যান রিয়াদের" [level=6] [ref=f32e234]
+            - generic [ref=f32e235]: ৩ ঘণ্টা আগে
+        - 'link "নোবেলসিক World Bitcoin price surges: what it means for BD investors ১ অক্টোবর ২০২৬" [ref=f32e237] [cursor=pointer]':
+          - /url: https://nobleseek.fabrything.com/nobleseek/bitcoin-price-surges-what-it-means-for-bd-investors?utm_source=facebook&utm_medium=social&utm_campaign=portal-world
+          - generic [ref=f32e238]: নোবেলসিক
+          - generic [ref=f32e240]:
+            - text: World
+            - 'heading "Bitcoin price surges: what it means for BD investors" [level=6] [ref=f32e241]'
+            - generic [ref=f32e242]: ১ অক্টোবর ২০২৬
+  - generic [ref=f32e244]:
+    - generic [ref=f32e245]:
+      - generic [ref=f32e246]:
+        - img "নোবেলসিক — NobleSeek" [ref=f32e247]
+        - paragraph [ref=f32e248]: দেশ-বিদেশের সর্বশেষ সংবাদ, বিশ্লেষণ ও মতামত — যাচাই করা তথ্য, দ্রুত পরিবেশন।
+        - generic [ref=f32e249]:
+          - link "Facebook" [ref=f32e250] [cursor=pointer]:
+            - /url: https://www.facebook.com/
+          - link "X" [ref=f32e253] [cursor=pointer]:
+            - /url: https://x.com/
+          - link "YouTube" [ref=f32e256] [cursor=pointer]:
+            - /url: https://www.youtube.com/
+      - generic [ref=f32e259]:
+        - heading "বিভাগসমূহ" [level=6] [ref=f32e260]
+        - link "Tech" [ref=f32e261] [cursor=pointer]:
+          - /url: /nobleseek?category=tech
+        - link "আদালত" [ref=f32e262] [cursor=pointer]:
+          - /url: /nobleseek?category=court
+        - link "Sports" [ref=f32e263] [cursor=pointer]:
+          - /url: /nobleseek?category=sports
+        - link "বাণিজ্য" [ref=f32e264] [cursor=pointer]:
+          - /url: /nobleseek?category=business
+        - link "অর্থনীতি" [ref=f32e265] [cursor=pointer]:
+          - /url: /nobleseek?category=economy
+        - link "জীবনযাপন" [ref=f32e266] [cursor=pointer]:
+          - /url: /nobleseek?category=lifestyle
+        - link "অপরাধ" [ref=f32e267] [cursor=pointer]:
+          - /url: /nobleseek?category=crime
+        - link "শিক্ষা" [ref=f32e268] [cursor=pointer]:
+          - /url: /nobleseek?category=education
+      - generic [ref=f32e269]:
+        - heading "আরও পড়ুন" [level=6] [ref=f32e270]
+        - link "Bangladesh" [ref=f32e271] [cursor=pointer]:
+          - /url: /nobleseek?category=bangladesh
+        - link "Entertainment" [ref=f32e272] [cursor=pointer]:
+          - /url: /nobleseek?category=entertainment
+        - link "Ai" [ref=f32e273] [cursor=pointer]:
+          - /url: /nobleseek?category=ai
+        - link "World" [ref=f32e274] [cursor=pointer]:
+          - /url: /nobleseek?category=world
+        - link "প্রবাস" [ref=f32e275] [cursor=pointer]:
+          - /url: /nobleseek?category=expatriate
+        - link "পরিবেশ" [ref=f32e276] [cursor=pointer]:
+          - /url: /nobleseek?category=environment
+        - link "রাজনীতি" [ref=f32e277] [cursor=pointer]:
+          - /url: /nobleseek?category=politics
+        - link "চাকরি" [ref=f32e278] [cursor=pointer]:
+          - /url: /nobleseek?category=jobs
+        - link "মতামত" [ref=f32e279] [cursor=pointer]:
+          - /url: /nobleseek?category=opinion
+        - link "স্বাস্থ্য" [ref=f32e280] [cursor=pointer]:
+          - /url: /nobleseek?category=health
+        - link "আমাদের সম্পর্কে" [ref=f32e281] [cursor=pointer]:
+          - /url: /nobleseek/about
+        - link "যোগাযোগ" [ref=f32e282] [cursor=pointer]:
+          - /url: /nobleseek/contact
+        - link "গোপনীয়তা নীতি" [ref=f32e283] [cursor=pointer]:
+          - /url: /nobleseek/privacy
+        - link "ডিসক্লেইমার" [ref=f32e284] [cursor=pointer]:
+          - /url: /nobleseek/disclaimer
+        - link "সম্পাদকীয় নীতি" [ref=f32e285] [cursor=pointer]:
+          - /url: /nobleseek/ethics
+      - generic [ref=f32e286]:
+        - heading "যোগাযোগ" [level=6] [ref=f32e287]
+        - paragraph [ref=f32e288]: নোবেলসিক নিউজরুমঢাকা, বাংলাদেশ
+        - paragraph [ref=f32e289]: support@fabrything.com
+        - paragraph [ref=f32e290]: "সম্পাদক: নোবেলসিক সম্পাদনা পর্ষদ"
+    - separator [ref=f32e291]
+    - generic [ref=f32e292]:
+      - generic [ref=f32e293]: © 2026 নোবেলসিক • সর্বস্বত্ব সংরক্ষিত
+      - generic [ref=f32e294]: "ভুল সংশোধন: support@fabrything.com — ২৪ ঘণ্টার মধ্যে আপডেট"

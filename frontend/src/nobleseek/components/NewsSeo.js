@@ -6,7 +6,7 @@ import React, { useEffect } from 'react';
 export default function NewsSeo({ title, description, image, slug, jsonLd, publishedAt }) {
   useEffect(() => {
     const site = window.location.origin;
-    const url = `${site}/nobleseek/${slug || ''}`;
+    const url = jsonLd?.mainEntityOfPage?.['@id'] || `${site}/nobleseek${slug ? `/${encodeURIComponent(slug)}` : ''}`;
     document.title = title ? `${title} — নোবেলসিক` : 'নোবেলসিক — সর্বশেষ সংবাদ';
     const setMeta = (attr, key, content) => {
       if (!content) return;

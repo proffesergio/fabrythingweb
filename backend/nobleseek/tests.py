@@ -263,19 +263,23 @@ class NobleSeekCategorySafetyTests(TestCase):
 
     def test_restore_recreates_defaults_idempotently(self):
         from nobleseek.models import FlatPage
+        from nobleseek.category_catalog import NEWS_CATEGORY_CATALOG
         from nobleseek.views_admin import AdminCategoryRestoreView
         assert NewsCategory.objects.count() == 0
         req = self._staff()
         req.method = "POST"
         r = AdminCategoryRestoreView.as_view()(req)
         assert r.status_code == 200, r.data
-        assert NewsCategory.objects.count() == 16
-        assert FlatPage.objects.count() == 5
+        assert NewsCategory.objects.count() == len(NEWS_CATEGORY_CATALOG)
+        assert FlatPage.objects.count() == 0
+        assert Article.objects.count() == 0
         # second run changes nothing, articles untouched
         art = Article.objects.create(
             headline="kept", body_html="<p>hi</p>",
             status=Article.Status.DRAFT)
         r2 = AdminCategoryRestoreView.as_view()(req)
         assert r2.status_code == 200
-        assert NewsCategory.objects.count() == 16
+        assert NewsCategory.objects.count() == len(NEWS_CATEGORY_CATALOG)
         assert Article.objects.filter(pk=art.pk).exists()
+        assert Article.objects.count() == 1
+        assert FlatPage.objects.count() == 0
