@@ -50,20 +50,9 @@ export default function ProductCard({ product, showFlashBadge, affiliate = null 
         (new Date() - new Date(product.created_at)) / (1000 * 60 * 60 * 24) < 7
     );
 
-    // `effective_shipping_fee` is always a number from the storefront API --
-    // the product's own override, or the store's flat rate when it has none
-    // -- so the customer is never shown nothing (see ProductDetail for the
-    // more prominent version of the same rule). `free_shipping` is the
-    // separate, explicit promo flag (distinct from shipping_fee == 0, see
-    // docs/SHIPPING_FEES.md) -- it always wins the "Free delivery" text, and
-    // that text always takes precedence over the delivery-fee caption: the
-    // two are never shown together.
-    const shippingFee = product.effective_shipping_fee;
-    const isFreeShippingPromo = !!product.free_shipping;
-    const showFreeDelivery = isFreeShippingPromo || shippingFee === 0;
-    const shippingText = showFreeDelivery
-        ? 'Free delivery'
-        : (shippingFee != null ? `+${taka(shippingFee)} delivery` : null);
+    // Paid delivery depends on the destination and is explained on the detail page.
+    const showFreeDelivery = !!product.free_shipping;
+    const shippingText = showFreeDelivery ? "Free delivery" : null;
 
     const imageUrl = Array.isArray(product.image) && product.image.length > 0
         ? product.image[0]
@@ -93,7 +82,7 @@ export default function ProductCard({ product, showFlashBadge, affiliate = null 
                 href={isAffiliate ? (affiliate.targetUrl || affiliate.goUrl) : undefined}
                 target={isAffiliate ? '_blank' : undefined}
                 rel={isAffiliate ? 'noopener noreferrer sponsored' : undefined}
-                onClick={isAffiliate ? () => pingClick(affiliate.goUrl) : undefined}
+                onClick={isAffiliate ? () => pingClick(affiliate.goUrl) : () => navigate(`/product/${product.slug}`)}
                 onAuxClick={isAffiliate ? () => pingClick(affiliate.goUrl) : undefined}
                 sx={{
                     cursor: 'pointer',
@@ -111,7 +100,6 @@ export default function ProductCard({ product, showFlashBadge, affiliate = null 
                         '&, & *': { transition: 'none !important', transform: 'none !important' },
                     },
                 }}
-                onClick={isAffiliate ? undefined : () => navigate(`/product/${product.slug}`)}
             >
                 {/* Badges */}
                 <Box sx={{ position: 'absolute', top: 8, left: 8, zIndex: 2, display: 'flex', flexDirection: 'column', gap: 0.5 }}>

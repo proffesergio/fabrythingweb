@@ -5,7 +5,8 @@ from .models import StoreConfiguration, WhatsAppAlertLog
 
 @admin.register(StoreConfiguration)
 class StoreConfigurationAdmin(admin.ModelAdmin):
-    list_display = ("store_name", "fixed_shipping_rate", "free_shipping_threshold", "cod_enabled",
+    list_display = ("store_name", "fixed_shipping_rate", "outside_dhaka_shipping_rate",
+                    "free_shipping_threshold", "cod_enabled",
                     "currency", "markup_percentage", "markup_floor", "alert_email",
                     "whatsapp_admin_number", "messenger_page_id", "whatsapp_chat_number")
 

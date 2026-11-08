@@ -1,5 +1,7 @@
 # Per-product shipping fee and the free-shipping promo
 
+Current regional rates are BDT70 inside Dhaka and BDT120 outside Dhaka; paid delivery text is removed from product cards. See the [2026-11-09 update](PRODUCT_PRICING_AND_DETAILS_2026-11-09.md), which supersedes older flat-rate and zero-fee display examples below.
+
 Products can now carry their own shipping fee, plus a separate `free_shipping`
 promo flag, both shown to customers and used to work out what an order is
 actually charged for delivery. This document explains the rule the owner

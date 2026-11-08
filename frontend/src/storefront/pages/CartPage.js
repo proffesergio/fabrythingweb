@@ -8,6 +8,7 @@ import { useSelector, useDispatch } from 'react-redux';
 import { selectCartItems, selectCartTotal, removeFromCart, updateQuantity, clearCart } from '../../redux/reducer/cartSlice';
 import useApi from '../../hooks/APIHandler';
 import { taka } from '../format';
+import { estimateShipping, INSIDE_DHAKA, OUTSIDE_DHAKA } from '../shipping';
 
 export default function CartPage() {
     const items = useSelector(selectCartItems);
@@ -16,22 +17,23 @@ export default function CartPage() {
     const navigate = useNavigate();
     const { callApi } = useApi();
 
-    const [shippingRate, setShippingRate] = useState(60);
-    const [freeThreshold, setFreeThreshold] = useState(null);
+    const [shippingConfig, setShippingConfig] = useState(null);
 
     useEffect(() => {
         (async () => {
             const res = await callApi({ url: 'store/config/' });
             const cfg = res?.data?.data;
             if (cfg) {
-                setShippingRate(cfg.fixed_shipping_rate);
-                setFreeThreshold(cfg.free_shipping_threshold);
+                setShippingConfig(cfg);
             }
         })();
     }, []);
 
-    const deliveryCharge = (freeThreshold != null && subtotal >= freeThreshold) ? 0 : shippingRate;
-    const total = subtotal + deliveryCharge;
+    const insideCharge = estimateShipping(items, subtotal, shippingConfig, INSIDE_DHAKA);
+    const outsideCharge = estimateShipping(items, subtotal, shippingConfig, OUTSIDE_DHAKA);
+    const deliveryRange = insideCharge === outsideCharge
+        ? (insideCharge === 0 ? 'Free' : taka(insideCharge))
+        : `${taka(insideCharge)}–${taka(outsideCharge)}`;
 
     // Guest checkout is allowed — everyone goes straight to checkout. Signing in
     // is offered there as an option, never forced.
@@ -130,14 +132,17 @@ export default function CartPage() {
                         </Box>
                         <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
                             <Typography color="text.secondary">Delivery</Typography>
-                            <Typography fontWeight={600} color={deliveryCharge === 0 ? 'success.main' : 'text.primary'}>
-                                {deliveryCharge === 0 ? 'Free' : `৳${deliveryCharge}`}
+                            <Typography fontWeight={600} color={insideCharge === 0 && outsideCharge === 0 ? 'success.main' : 'text.primary'}>
+                                {deliveryRange}
                             </Typography>
                         </Box>
+                        <Typography variant="caption" color="text.secondary">Inside Dhaka / outside Dhaka. Final rate is confirmed at checkout.</Typography>
                         <Divider sx={{ my: 2 }} />
                         <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3 }}>
                             <Typography variant="h6">Total</Typography>
-                            <Typography variant="h6" fontWeight={800}>{taka(total)}</Typography>
+                            <Typography variant="h6" fontWeight={800}>
+                                {insideCharge === outsideCharge ? taka(subtotal + insideCharge) : `${taka(subtotal + insideCharge)}–${taka(subtotal + outsideCharge)}`}
+                            </Typography>
                         </Box>
                         <Button
                             variant="contained"

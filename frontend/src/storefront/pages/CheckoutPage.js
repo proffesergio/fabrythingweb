@@ -17,6 +17,7 @@ import { isAuthenticated } from '../../utils/Helper';
 import useApi from '../../hooks/APIHandler';
 import { taka } from '../format';
 import { trackBeginCheckout, trackPurchase } from '../../utils/analytics';
+import { estimateShipping, INSIDE_DHAKA, OUTSIDE_DHAKA } from '../shipping';
 
 const STEPS = ['Delivery Details', 'Review & Confirm', 'Done'];
 
@@ -55,8 +56,8 @@ export default function CheckoutPage() {
     const [orderPlaced, setOrderPlaced] = useState(null);
     const [error, setError] = useState('');
 
-    const [shippingRate, setShippingRate] = useState(60);
-    const [freeThreshold, setFreeThreshold] = useState(null);
+    const [shippingConfig, setShippingConfig] = useState(null);
+    const [deliveryZone, setDeliveryZone] = useState('');
     const [currency, setCurrency] = useState('BDT');
 
     const [newAddress, setNewAddress] = useState({
@@ -67,8 +68,9 @@ export default function CheckoutPage() {
         address: '', city: '', state: '', pincode: '',
     });
 
-    const deliveryCharge = (freeThreshold != null && subtotal >= freeThreshold) ? 0 : shippingRate;
-    const total = subtotal + deliveryCharge;
+    const deliveryCharge = deliveryZone
+        ? estimateShipping(items, subtotal, shippingConfig, deliveryZone) : null;
+    const total = deliveryCharge == null ? null : subtotal + deliveryCharge;
 
     useEffect(() => {
         if (items.length === 0 && !orderPlaced) {
@@ -98,8 +100,7 @@ export default function CheckoutPage() {
         ]);
         const cfg = cfgRes?.data?.data;
         if (cfg) {
-            setShippingRate(cfg.fixed_shipping_rate);
-            setFreeThreshold(cfg.free_shipping_threshold);
+            setShippingConfig(cfg);
             setCurrency(cfg.currency || 'BDT');
         }
         const prof = profRes?.data?.data;
@@ -133,8 +134,8 @@ export default function CheckoutPage() {
 
     const phoneOk = contactPhone.replace(/\D/g, '').length >= 6;
     const canProceedFromDelivery = authed
-        ? (selectedAddress && contactName.trim() && phoneOk)
-        : (guestAddress.address.trim() && guestAddress.city.trim() && contactName.trim() && phoneOk);
+        ? (selectedAddress && deliveryZone && contactName.trim() && phoneOk)
+        : (guestAddress.address.trim() && guestAddress.city.trim() && deliveryZone && contactName.trim() && phoneOk);
 
     const handleNext = () => {
         setError('');
@@ -154,6 +155,7 @@ export default function CheckoutPage() {
             contact_phone: contactPhone.trim(),
             notes,
             website, // honeypot
+            delivery_zone: deliveryZone,
             items: items.map((item) => ({ variant_id: item.variantId, quantity: item.quantity })),
             ...(authed
                 ? { shipping_address_id: parseInt(selectedAddress, 10) }
@@ -337,7 +339,7 @@ export default function CheckoutPage() {
                                             </Grid>
                                             <Grid item xs={6} sm={3}>
                                                 <TextField
-                                                    fullWidth label="District/State"
+                                                    fullWidth label="District (e.g. Dhaka)"
                                                     value={guestAddress.state}
                                                     onChange={(e) => setGuestAddress({ ...guestAddress, state: e.target.value })}
                                                 />
@@ -351,6 +353,15 @@ export default function CheckoutPage() {
                                             </Grid>
                                         </Grid>
                                     )}
+                                </Card>
+
+                                <Card sx={{ p: 3, mb: 3 }}>
+                                    <Typography variant="h6" gutterBottom>Delivery Zone</Typography>
+                                    <RadioGroup value={deliveryZone} onChange={(e) => setDeliveryZone(e.target.value)}>
+                                        <FormControlLabel value={INSIDE_DHAKA} control={<Radio />} label={`Inside Dhaka · ${money(shippingConfig?.fixed_shipping_rate ?? 70)} base delivery`} />
+                                        <FormControlLabel value={OUTSIDE_DHAKA} control={<Radio />} label={`Outside Dhaka · ${money(shippingConfig?.outside_dhaka_shipping_rate ?? 120)} base delivery`} />
+                                    </RadioGroup>
+                                    <Typography variant="caption" color="text.secondary">For inside Dhaka, enter Dhaka or a neighborhood such as Dhanmondi as the city. If you enter a district, use Dhaka.</Typography>
                                 </Card>
 
                                 {/* Contact (COD needs a reachable phone) */}
@@ -458,14 +469,14 @@ export default function CheckoutPage() {
                         <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
                             <Typography color="text.secondary">Delivery ({currency})</Typography>
                             <Typography fontWeight={600} color={deliveryCharge === 0 ? 'success.main' : 'text.primary'}>
-                                {deliveryCharge === 0 ? 'Free' : money(deliveryCharge)}
+                                {deliveryCharge == null ? 'Select delivery zone' : deliveryCharge === 0 ? 'Free' : money(deliveryCharge)}
                             </Typography>
                         </Box>
                         <Divider sx={{ my: 2 }} />
                         <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3 }}>
                             <Typography variant="h6">Total</Typography>
                             <motion.div key={total} initial={{ scale: 1.15 }} animate={{ scale: 1 }} transition={{ type: 'spring', stiffness: 300, damping: 15 }}>
-                                <Typography variant="h6" fontWeight={800}>{money(total)}</Typography>
+                                <Typography variant="h6" fontWeight={800}>{total == null ? 'Select delivery zone' : money(total)}</Typography>
                             </motion.div>
                         </Box>
 
@@ -508,7 +519,7 @@ export default function CheckoutPage() {
                                 value={newAddress.city} onChange={(e) => setNewAddress({ ...newAddress, city: e.target.value })} />
                         </Grid>
                         <Grid item xs={6}>
-                            <TextField fullWidth label="District/State" required
+                            <TextField fullWidth label="District (e.g. Dhaka)" required
                                 value={newAddress.state} onChange={(e) => setNewAddress({ ...newAddress, state: e.target.value })} />
                         </Grid>
                         <Grid item xs={6}>

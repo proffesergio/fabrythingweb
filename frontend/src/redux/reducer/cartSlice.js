@@ -104,6 +104,8 @@ export const syncCartOnLogin = () => async (dispatch, getState) => {
             price: Number(s.unit_price),
             stock: s.stock_quantity,
             quantity: s.quantity,
+            shipping_fee: s.shipping_fee,
+            free_shipping: s.free_shipping,
         }));
         dispatch(setCart(merged));
     } catch (e) {

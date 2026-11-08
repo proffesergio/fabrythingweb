@@ -7,9 +7,9 @@ in ``food/pricing.py``:
     markup       = max(markup_floor, base_price * markup_percentage / 100)
     selling_price = attractive_price(base_price + markup)
 
-The confirmed attractive-price bands are applied once after markup. Nearest
-rounding can reduce the nominal markup floor; only explicit supplier-policy
-fee/shipping/margin guarantees force an upward adjustment. Existing manual
+The confirmed attractive-price bands are applied once after markup. The
+configured absolute floor survives rounding; explicit supplier policies also
+protect fees, shipping, and target margin. Existing manual
 prices and order snapshots are never rounded on read or at checkout.
 
 A flat percentage loses money on a cheap item (3% of a 99 BDT item is under
@@ -126,7 +126,18 @@ def apply_markup(base_price, *, floor=None, percentage=None, config=None, curren
     cfg = config or StoreConfiguration.get_solo()
     base = Decimal(str(base_price))
     markup = markup_for(base_price, floor=floor, percentage=percentage, config=cfg)
-    return attractive_price(base + markup, currency=currency if currency is not None else cfg.currency)
+    selected_currency = currency if currency is not None else cfg.currency
+    # Nearest attractive rounding can erase a small markup entirely (1290 +
+    # the default 50 used to become 1299). Keep the configured cash floor even
+    # when the percentage target rounds down. This is product revenue only;
+    # delivery fees are calculated separately and never counted here.
+    minimum = base + Decimal(str(floor if floor is not None else cfg.markup_floor))
+    target = _q(base + markup)
+    rounded = attractive_price(target, currency=selected_currency,
+                               minimum=minimum if selected_currency == 'BDT' else None)
+    # Cosmetic rounding must never charge more than the configured markup.
+    # In particular, 1290 + 50 stays 1340 instead of jumping to 1399.
+    return min(rounded, target)
 
 
 def quote_supplier_price(source_price, policy, *, weight_grams=None):

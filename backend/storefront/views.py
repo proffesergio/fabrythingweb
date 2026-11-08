@@ -70,6 +70,7 @@ class StoreConfigView(APIView):
                 'currency': cfg.currency,
                 'cod_enabled': cfg.cod_enabled,
                 'fixed_shipping_rate': float(cfg.fixed_shipping_rate),
+                'outside_dhaka_shipping_rate': float(cfg.outside_dhaka_shipping_rate),
                 'free_shipping_threshold': (
                     float(cfg.free_shipping_threshold) if cfg.free_shipping_threshold is not None else None
                 ),
@@ -587,6 +588,7 @@ class PlaceOrderView(APIView):
                 contact_name=data['contact_name'],
                 contact_phone=data['contact_phone'],
                 shipping_address=address_snapshot,
+                delivery_zone=data.get('delivery_zone'),
                 notes=data.get('notes', ''),
                 client_ip=get_client_ip(request),
             )

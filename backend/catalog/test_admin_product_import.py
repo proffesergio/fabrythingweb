@@ -85,6 +85,71 @@ class AdminProductImportTestBase(TestCase):
 
 
 class BrowseCandidatesTests(AdminProductImportTestBase):
+    def test_small_batches_consume_entire_native_opencart_page(self):
+        listing = '<html><body>' + ''.join(
+            f'<div class="product-item"><a href="https://potakait.com/item-{n}">Item {n}</a></div>'
+            for n in range(20)) + '</body></html>'
+        def fake_fetch(url):
+            if 'laptops' in url:
+                return listing
+            return _opencart_product_page(url.rsplit('/', 1)[-1], 1290)
+        batches = []
+        with patch('catalog.services_scrape_import.polite_get', side_effect=fake_fetch):
+            page, offset = 1, 0
+            for expected_count in (6, 6, 6, 2):
+                response = self.browse({'source': 'potakait', 'category': 'laptops',
+                                        'page': page, 'offset': offset, 'limit': 6}, self.owner)
+                self.assertEqual(response.status_code, 200, response.data)
+                data = response.data['data']
+                batches.extend(candidate['source_url'] for candidate in data['candidates'])
+                self.assertEqual(data['listing_product_count'], expected_count)
+                page, offset = data['next_page'], data['next_offset']
+        self.assertEqual(batches, [f'https://potakait.com/item-{n}' for n in range(20)])
+        self.assertEqual((page, offset), (2, 0))
+
+    def test_fabrilife_uses_requested_batch_size_as_algolia_page_size(self):
+        with patch('catalog.services_scrape_import._fabrilife_search',
+                   return_value=FABRILIFE_LISTING_JSON) as search, \
+             patch('catalog.services_scrape_import.polite_get',
+                   return_value=_fabrilife_product_page('Fab Tee', 990)):
+            response = self.browse({'source': 'fabrilife', 'category': 'men-tshirts',
+                                    'page': 2, 'limit': 6}, self.owner)
+        self.assertEqual(response.status_code, 200, response.data)
+        self.assertEqual(search.call_args.kwargs['hits_per_page'], 6)
+        self.assertEqual(search.call_args.kwargs['page'], 2)
+        self.assertEqual(response.data['data']['next_offset'], 0)
+
+    def test_page_and_larger_bounded_limit_reach_the_supplier_listing(self):
+        urls = []
+        def fake_fetch(url):
+            urls.append(url)
+            return OPENCART_LISTING if 'laptops' in url else _opencart_product_page('Phone', 1290)
+        with patch('catalog.services_scrape_import.polite_get', side_effect=fake_fetch):
+            res = self.browse({'source': 'potakait', 'category': 'laptops',
+                               'page': '2', 'limit': '18'}, self.owner)
+        self.assertEqual(res.status_code, 200, res.data)
+        self.assertIn('page=2', urls[0])
+        self.assertEqual(res.data['data']['candidates'][0]['selling_price'], 1399)
+
+    def test_invalid_page_is_rejected(self):
+        for page in ('bad', '0', '1001'):
+            with self.subTest(page=page):
+                res = self.browse({'source': 'potakait', 'category': 'laptops',
+                                   'page': page}, self.owner)
+                self.assertEqual(res.status_code, 400)
+                self.assertIn('page', res.data['field_errors'])
+
+    def test_opencart_newest_sort_reaches_supplier_url(self):
+        urls = []
+        def fake_fetch(url):
+            urls.append(url)
+            return OPENCART_LISTING if 'laptops' in url else _opencart_product_page('Phone', 1290)
+        with patch('catalog.services_scrape_import.polite_get', side_effect=fake_fetch):
+            res = self.browse({'source': 'potakait', 'category': 'laptops',
+                               'sort': 'latest'}, self.owner)
+        self.assertEqual(res.status_code, 200, res.data)
+        self.assertIn('sort=p.date_added&order=DESC', urls[0])
+
     def test_non_platform_user_forbidden(self):
         res = self.browse({"source": "potakait", "category": "smart-phone"}, self.staff)
         self.assertEqual(res.status_code, 403)

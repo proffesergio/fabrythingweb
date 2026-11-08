@@ -103,6 +103,35 @@ const selectSource = (label) => {
     fireEvent.click(screen.getByRole('option', { name: label }));
 };
 
+test('fetch count, offers filter, and page navigation use bounded browse requests', async () => {
+    render(<ImportProducts />);
+    await waitFor(() => expect(screen.getByText('Fetch latest').closest('button')).not.toBeDisabled());
+    fireEvent.mouseDown(screen.getByLabelText('Fetch per page'));
+    fireEvent.click(screen.getByRole('option', { name: '12 products' }));
+    fireEvent.mouseDown(screen.getByLabelText('Listing order'));
+    fireEvent.click(screen.getByRole('option', { name: 'Newest first' }));
+    fireEvent.mouseDown(screen.getByLabelText('Category on site'));
+    fireEvent.click(screen.getByText('Laptops'));
+    fireEvent.click(screen.getByText('Fetch latest'));
+    await waitFor(() => expect(screen.getByText('Phone B')).toBeInTheDocument());
+    const first = mockCalls.find((call) => call.url === 'products/admin/import/browse/');
+    expect(first.params).toMatchObject({ page: 1, limit: 12, category: 'laptops', sort: 'latest' });
+    fireEvent.mouseDown(screen.getByLabelText('Show results'));
+    fireEvent.click(screen.getByRole('option', { name: 'Offers only' }));
+    expect(screen.queryByText('Phone A')).not.toBeInTheDocument();
+    expect(screen.getByText('Phone B')).toBeInTheDocument();
+    // A full page means the source may have a next page.
+    mockBrowseResult = { status: 200, data: { data: {
+        candidates, categories: [], listing_product_count: 12, fetch_failures: 0,
+        has_next: true, next_page: 1, next_offset: 12,
+    } } };
+    fireEvent.click(screen.getByText('Fetch latest'));
+    await waitFor(() => expect(screen.getByText('Next page')).not.toBeDisabled());
+    fireEvent.click(screen.getByText('Next page'));
+    await waitFor(() => expect(mockCalls.filter((call) => call.url === 'products/admin/import/browse/').at(-1).params)
+        .toMatchObject({ page: 1, offset: 12 }));
+});
+
 // Sources load asynchronously now (GET products/admin/import/sources/)
 // instead of coming from a hardcoded frontend list -- wait for the fetch to
 // land and the default source to be selected before interacting with

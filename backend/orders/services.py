@@ -12,7 +12,7 @@ from rest_framework.exceptions import ValidationError
 
 from catalog.models import ProductVariant
 from core.email_alerts import send_email_alert_on_commit
-from core.models import StoreConfiguration
+from core.models import INSIDE_DHAKA, OUTSIDE_DHAKA, StoreConfiguration
 from core.whatsapp import send_whatsapp_on_commit
 
 from .models import Order, OrderItem, OrderStatusLog
@@ -22,6 +22,33 @@ from .models import Order, OrderItem, OrderStatusLog
 # name, customer phone, item count, total (with currency).
 STORE_ORDER_ADMIN_TEMPLATE = "store_new_order_admin"
 
+DHAKA_NAMES = frozenset({"dhaka", "ঢাকা"})
+DHAKA_CITY_NAMES = DHAKA_NAMES | {"dhaka city", "ঢাকা শহর"}
+# A city field sometimes contains a Dhaka neighborhood instead of the city.
+# Keep this an explicit set: accepting arbitrary text alongside a Dhaka
+# district would let a contradictory city such as Sylhet pass validation.
+DHAKA_NEIGHBORHOODS = frozenset({
+    "banani", "badda", "bashundhara", "dhanmondi", "gulshan", "jatrabari",
+    "khilgaon", "mirpur", "mohammadpur", "motijheel", "rampura",
+    "tejgaon", "uttara", "wari", "old dhaka",
+    "বনানী", "বাড্ডা", "বসুন্ধরা", "ধানমন্ডি", "গুলশান", "যাত্রাবাড়ী",
+    "খিলগাঁও", "মিরপুর", "মোহাম্মদপুর", "মতিঝিল", "রামপুরা",
+    "তেজগাঁও", "উত্তরা", "ওয়ারী", "পুরান ঢাকা",
+})
+
+
+def _normalise_place(value):
+    return " ".join(str(value or "").casefold().split())
+
+
+def _is_dhaka_city(value):
+    city = _normalise_place(value)
+    if city in DHAKA_CITY_NAMES or city in DHAKA_NEIGHBORHOODS:
+        return True
+    area, comma, suffix = city.partition(",")
+    return bool(comma and area.strip() in DHAKA_NEIGHBORHOODS
+                and suffix.strip() in DHAKA_NAMES)
+
 
 class OutOfStock(ValidationError):
     status_code = 409
@@ -29,7 +56,7 @@ class OutOfStock(ValidationError):
 
 @transaction.atomic
 def place_cod_order(*, customer, items, contact_name, contact_phone,
-                    shipping_address, notes="", client_ip=None):
+                    shipping_address, notes="", client_ip=None, delivery_zone=None):
     """
     Create a Cash-on-Delivery order.
 
@@ -47,6 +74,27 @@ def place_cod_order(*, customer, items, contact_name, contact_phone,
 
     if not items:
         raise ValidationError("Your cart is empty.")
+
+    # New checkout supplies the customer's explicit zone. Older clients may
+    # omit it; only a recognizable Dhaka city or neighborhood with no
+    # contradictory district counts as inside Dhaka. Other legacy addresses
+    # use the outside rate so ambiguous text cannot claim the cheaper zone.
+    if delivery_zone is None:
+        district = _normalise_place(shipping_address.get("state"))
+        delivery_zone = (INSIDE_DHAKA if _is_dhaka_city(shipping_address.get("city"))
+                         and district in ("", *DHAKA_NAMES)
+                         else OUTSIDE_DHAKA)
+    if delivery_zone not in (INSIDE_DHAKA, OUTSIDE_DHAKA):
+        raise ValidationError("Choose a valid delivery zone.")
+    district = _normalise_place(shipping_address.get("state"))
+    if delivery_zone == INSIDE_DHAKA and (
+        not _is_dhaka_city(shipping_address.get("city"))
+        or district not in ("", *DHAKA_NAMES)
+    ):
+        raise ValidationError(
+            "Inside Dhaka delivery requires Dhaka or a Dhaka neighborhood as the city, and Dhaka as the district if provided."
+        )
+    shipping_address = {**shipping_address, "delivery_zone": delivery_zone}
 
     # Aggregate requested quantity per variant (guards against duplicate lines).
     requested = {}
@@ -102,7 +150,9 @@ def place_cod_order(*, customer, items, contact_name, contact_phone,
     # over all of it).
     product_shipping_fees = [variant.product.shipping_fee for variant, _, _, _ in order_items]
     free_shipping_flags = [variant.product.free_shipping for variant, _, _, _ in order_items]
-    shipping = config.shipping_for(subtotal, product_shipping_fees, free_shipping_flags)
+    shipping = config.shipping_for(
+        subtotal, product_shipping_fees, free_shipping_flags, delivery_zone=delivery_zone
+    )
     total = subtotal + shipping
 
     order = Order.objects.create(

@@ -28,6 +28,9 @@ export default function ProductDetail() {
     const [selectedImage, setSelectedImage] = useState(0);
     const [selectedSize, setSelectedSize] = useState('');
     const [quantity, setQuantity] = useState(1);
+    const [added, setAdded] = useState(false);
+    const [fetchFailed, setFetchFailed] = useState(false);
+    const [retry, setRetry] = useState(0);
     const [tab, setTab] = useState(0);
     const [sizeChartOpen, setSizeChartOpen] = useState(false);
     const [sizeChartUnit, setSizeChartUnit] = useState('inch');
@@ -38,6 +41,8 @@ export default function ProductDetail() {
     useEffect(() => {
         let cancelled = false;
         setProduct(null);
+        setFetchFailed(false);
+        setAdded(false);
         setSelectedImage(0);
         setSelectedSize('');
         setQuantity(1);
@@ -61,13 +66,24 @@ export default function ProductDetail() {
                     const sizes = res.data.data.available_sizes;
                     if (Array.isArray(sizes) && sizes.length > 0) setSelectedSize(sizes[0]);
                 }
+            } else if (!cancelled) {
+                setFetchFailed(true);
             }
         };
         fetchProduct();
         window.scrollTo(0, 0);
         return () => { cancelled = true; };
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [slug]);
+    }, [slug, retry]);
+
+    if (fetchFailed && !loading) {
+        return <Container maxWidth="lg" sx={{ py: 6 }}>
+            <Alert severity="warning" action={<Button onClick={() => setRetry(n => n + 1)}>Retry</Button>}>
+                We couldn’t load this product. Please try again.
+            </Alert>
+            <Button component={Link} to="/shop" sx={{ mt: 2 }}>Back to shop</Button>
+        </Container>;
+    }
 
     if (loading || !product) {
         // Skeletons alone read as a broken page during a ~50s cold start; the
@@ -135,18 +151,12 @@ export default function ProductDetail() {
     // CM is a straight unit conversion computed here rather than sourced
     // separately, so it can never drift out of sync with the inch values.
     const inchToCm = (value) => Math.round(value * 2.54 * 10) / 10;
-    // `effective_shipping_fee` is always a number from the storefront API --
-    // this product's own override, or the store's flat rate when it has none
-    // -- so the customer is never shown nothing here. `free_shipping` is the
-    // separate, explicit promo flag (distinct from shipping_fee == 0, see
-    // docs/SHIPPING_FEES.md); either one flips this box into its "Free
-    // delivery" state, which always takes precedence over the "Delivery: ৳X"
-    // text -- the two never show together, since it's the same box.
-    const shippingFee = product.effective_shipping_fee;
-    const freeDelivery = !!product.free_shipping || shippingFee === 0;
+    const freeDelivery = !!product.free_shipping;
+    const maxQuantity = Math.max(0, Number(selectedVariant?.stock_quantity) || 0);
+    const cartQuantity = Math.min(quantity, maxQuantity);
 
     const handleAddToCart = () => {
-        if (!selectedVariant || !inStock) return;
+        if (!selectedVariant || !inStock || cartQuantity < 1) return;
         const firstImage = Array.isArray(product.image) && product.image.length ? product.image[0] : '';
         dispatch(addToCart({
             variantId: selectedVariant.id,
@@ -159,285 +169,148 @@ export default function ProductDetail() {
             color: selectedVariant.color,
             price: Number(selectedVariant.effective_price),
             stock: selectedVariant.stock_quantity,
-            quantity,
+            shipping_fee: product.shipping_fee,
+            free_shipping: !!product.free_shipping,
+            quantity: cartQuantity,
         }));
+        setAdded(true);
         // GA4 add_to_cart (also mirrors to Pixel AddToCart + backend).
         trackAddToCart({
             id: selectedVariant.id, name: product.name,
-            price: Number(selectedVariant.effective_price), quantity,
+            price: Number(selectedVariant.effective_price), quantity: cartQuantity,
         });
     };
 
     return (
         <Container maxWidth="lg" sx={{ py: 3 }}>
             {/* Breadcrumbs */}
-            <Breadcrumbs separator={<NavigateNext fontSize="small" />} sx={{ mb: 2 }}>
+            <Breadcrumbs aria-label="Breadcrumb" separator={<NavigateNext fontSize="small" />} sx={{ mb: 2 }}>
                 <Typography component={Link} to="/" color="inherit" sx={{ textDecoration: 'none' }}>Home</Typography>
                 <Typography component={Link} to="/shop" color="inherit" sx={{ textDecoration: 'none' }}>Shop</Typography>
                 <Typography color="text.primary">{product.name}</Typography>
             </Breadcrumbs>
 
-            <Grid container spacing={4}>
-                {/* Images */}
-                <Grid item xs={12} md={6}>
-                    <Box sx={{ position: 'sticky', top: 80 }}>
-                        {/* Partner photos have inconsistent aspect ratios and tight crops --
-                            padding + object-fit: contain shows the whole product instead of
-                            edge-cropping it (matches ProductCard's treatment). Explicit white,
-                            not a theme surface token: the photos are shot on white, so a white
-                            tile is what makes them read correctly, even in dark mode (a dark
-                            tile would show an obvious white rectangle around the photo). */}
-                        <Paper
-                            variant="outlined"
-                            sx={{
-                                width: '100%', maxWidth: '100%', height: { xs: 400, md: 500 },
-                                // boxSizing must be explicit here: this Box has both a
-                                // percentage width AND padding, and the storefront route is
-                                // never wrapped in <CssBaseline /> (only the admin/food shells
-                                // are), so it does not inherit the browser-default-defeating
-                                // `border-box` reset. Under the browser's real default
-                                // (content-box), the padding below is added ON TOP of the
-                                // 100% width, so this tile silently renders wider than its
-                                // Grid column and its opaque #fff background paints over the
-                                // start of the details column's text -- that was the reported
-                                // "image overlapping the product details" bug (brand/title/
-                                // price clipped on the left edge). Do not remove this.
-                                boxSizing: 'border-box',
-                                borderRadius: 2, overflow: 'hidden', bgcolor: '#fff', mb: 1.5,
-                                p: { xs: 2, md: 3 },
-                            }}>
-                            {images.length > 0 ? (
-                                <img
-                                    src={images[selectedImage]}
-                                    alt={product.name}
-                                    loading="eager"
-                                    fetchpriority="high"
-                                    decoding="async"
-                                    style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block' }}
-                                    onError={(e) => { e.target.src = 'https://via.placeholder.com/500x600?text=No+Image'; }}
-                                />
-                            ) : (
-                                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
-                                    <Typography color="text.secondary">No Image</Typography>
-                                </Box>
-                            )}
+            <Grid container spacing={{ xs: 3, md: 4 }} alignItems="flex-start">
+                <Grid item xs={12} md={6} sx={{ minWidth: 0 }}>
+                    <Box sx={{ position: { md: 'sticky' }, top: 96 }}>
+                        <Paper variant="outlined" sx={{
+                            position: 'relative', width: '100%', aspectRatio: '1 / 1',
+                            boxSizing: 'border-box', borderRadius: 2, overflow: 'hidden',
+                            bgcolor: '#fff', p: { xs: 1.5, md: 2 },
+                        }}>
+                            {hasDiscount && <Chip label="Sale" color="secondary" size="small"
+                                sx={{ position: 'absolute', left: 16, top: 16, zIndex: 1, fontWeight: 700 }} />}
+                            {images.length ? <img src={images[selectedImage] || images[0]}
+                                alt={`${product.name}${selectedImage ? ` — view ${selectedImage + 1}` : ''}`}
+                                loading="eager" fetchpriority="high" decoding="async"
+                                style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block' }}
+                                onError={e => { e.currentTarget.onerror = null; e.currentTarget.src = '/placeholder.png'; }}
+                            /> : <Box sx={{ height: '100%', display: 'grid', placeItems: 'center' }}>
+                                <Typography color="text.secondary">No image available</Typography>
+                            </Box>}
                         </Paper>
-                        {images.length > 1 && (
-                            <Box sx={{ display: 'flex', gap: 1, overflowX: 'auto', pb: 0.5 }}>
-                                {images.map((img, i) => (
-                                    <Box
-                                        key={i}
-                                        onClick={() => setSelectedImage(i)}
-                                        sx={{
-                                            width: 64, height: 64, borderRadius: 1, overflow: 'hidden',
-                                            cursor: 'pointer', flexShrink: 0,
-                                            // Same content-box trap as the main image tile above:
-                                            // a fixed width plus padding needs an explicit
-                                            // border-box or it renders larger than 64px.
-                                            boxSizing: 'border-box',
-                                            bgcolor: '#fff', p: 0.5,
-                                            transition: 'border-color 120ms, transform 120ms',
-                                            '&:hover': { transform: 'translateY(-1px)' },
-                                            border: '2px solid',
-                                            borderColor: selectedImage === i ? 'secondary.main' : 'divider',
-                                        }}
-                                    >
-                                        <img src={img} alt="" loading="lazy" decoding="async" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
-                                    </Box>
-                                ))}
-                            </Box>
-                        )}
+                        {images.length > 1 && <Box role="group" aria-label="Product images"
+                            sx={{ display: 'flex', gap: 1, overflowX: 'auto', py: 1.5 }}>
+                            {images.map((img, i) => <Box component="button" key={`${img}-${i}`}
+                                aria-label={`View product image ${i + 1}`} aria-pressed={selectedImage === i}
+                                onClick={() => setSelectedImage(i)} sx={{
+                                    width: 72, height: 72, flexShrink: 0, boxSizing: 'border-box',
+                                    bgcolor: '#fff', border: '2px solid', borderRadius: 1.5, p: 0.5,
+                                    borderColor: selectedImage === i ? 'secondary.main' : 'divider', cursor: 'pointer',
+                                    '&:focus-visible': { outline: '2px solid', outlineColor: 'primary.main', outlineOffset: 2 },
+                                }}><img src={img} alt="" loading="lazy" decoding="async"
+                                    style={{ width: '100%', height: '100%', objectFit: 'contain' }} /></Box>)}
+                        </Box>}
                     </Box>
                 </Grid>
 
-                {/* Product Info */}
-                <Grid item xs={12} md={6}>
-                    {product.brand && (
-                        <Typography
-                            variant="overline"
-                            color="secondary.main"
-                            sx={{ fontWeight: 700, letterSpacing: 1.2, lineHeight: 1.2, display: 'block' }}
-                        >
-                            {product.brand}
+                <Grid item xs={12} md={6} sx={{ minWidth: 0 }}>
+                    <Paper variant="outlined" sx={{ p: { xs: 2, sm: 3 }, borderRadius: 2 }}>
+                        {product.brand && <Typography variant="overline" color="secondary.main"
+                            sx={{ fontWeight: 700, letterSpacing: 1.2 }}>{product.brand}</Typography>}
+                        <Typography variant="h4" component="h1" sx={{ fontWeight: 800, mb: 2,
+                            fontSize: { xs: '1.5rem', md: '1.85rem' }, lineHeight: 1.25, letterSpacing: '-0.02em' }}>
+                            {product.name}
                         </Typography>
-                    )}
-                    <Typography
-                        variant="h4"
-                        component="h1"
-                        sx={{ fontWeight: 700, mb: 1, fontSize: { xs: '1.5rem', sm: '1.75rem', md: '2rem' }, lineHeight: 1.25 }}
-                    >
-                        {product.name}
-                    </Typography>
-
-                    {/* Rating */}
-                    {product.average_rating > 0 && (
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
-                            <Rating value={product.average_rating} precision={0.5} readOnly />
-                            <Typography variant="body2" color="text.secondary">
-                                {product.average_rating} ({product.review_count} reviews)
-                            </Typography>
+                        {product.average_rating > 0 && <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', mb: 2 }}>
+                            <Rating value={product.average_rating} precision={0.5} size="small" readOnly />
+                            <Typography variant="body2" color="text.secondary">{product.average_rating} ({product.review_count} reviews)</Typography>
+                        </Box>}
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flexWrap: 'wrap', mb: 2.5 }}>
+                            <Typography variant="h4" sx={{ fontWeight: 800 }}>{taka(price)}</Typography>
+                            {hasDiscount && <>
+                                <Typography sx={{ textDecoration: 'line-through', color: 'text.secondary' }}>{taka(product.initial_selling_price)}</Typography>
+                                <Chip label={`${product.discount_percentage}% off`} color="secondary" size="small" />
+                            </>}
                         </Box>
-                    )}
-
-                    {/* Price */}
-                    <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 2, mb: 3, flexWrap: 'wrap' }}>
-                        <Typography
-                            variant="h4"
-                            sx={{ fontWeight: 800, fontSize: { xs: '1.6rem', md: '2rem' }, color: hasDiscount ? 'secondary.main' : 'text.primary' }}
-                        >
-                            {taka(price)}
-                        </Typography>
-                        {hasDiscount && (
-                            <>
-                                <Typography variant="h6" sx={{ textDecoration: 'line-through', color: 'text.secondary' }}>
-                                    {taka(product.initial_selling_price)}
-                                </Typography>
-                                <Chip label={`-${product.discount_percentage}%`} color="secondary" size="small" />
-                            </>
-                        )}
-                    </Box>
-
-                    {/* Delivery fee -- more prominent than the card's quiet caption, and
-                        always shown (falls back to the store's flat rate) so the customer
-                        knows the shipping cost before they add to cart. */}
-                    {(shippingFee != null || freeDelivery) && (
-                        <Box sx={{
-                            display: 'flex', alignItems: 'center', gap: 1, mb: 2,
-                            px: 1.5, py: 1, borderRadius: 1,
-                            bgcolor: freeDelivery ? 'success.main' : 'action.hover',
-                            color: freeDelivery ? 'success.contrastText' : 'text.primary',
-                        }}>
-                            <LocalShipping fontSize="small" />
-                            <Typography variant="body2" fontWeight={600}>
-                                {freeDelivery ? 'Free delivery' : `Delivery: ${taka(shippingFee)}`}
-                            </Typography>
-                        </Box>
-                    )}
-
-                    {/* Material & Color */}
-                    <Box sx={{ display: 'flex', gap: 2, mb: 2, flexWrap: 'wrap' }}>
-                        {product.material && <Chip label={product.material} variant="outlined" size="small" />}
-                        {product.color && <Chip label={product.color} variant="outlined" size="small" />}
-                        {product.gender && <Chip label={product.gender} variant="outlined" size="small" />}
-                    </Box>
-
-                    <Divider sx={{ my: 2 }} />
-
-                    {/* Size Selection */}
-                    {sizes.length > 0 && (
-                        <Box sx={{ mb: 3 }}>
-                            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                        {(product.material || product.color || product.gender) && <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mb: 2 }}>
+                            {[product.material, product.color, product.gender].filter(Boolean).map((label, i) =>
+                                <Chip key={i} label={label} variant="outlined" size="small" />)}
+                        </Box>}
+                        {sizes.length > 0 && <Box sx={{ mb: 2.5 }}>
+                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
                                 <Typography variant="subtitle2" fontWeight={700}>Select Size</Typography>
-                                {hasSizeChart && (
-                                    <Button size="small" onClick={() => setSizeChartOpen(true)}>Size Chart</Button>
-                                )}
+                                {hasSizeChart && <Button size="small" onClick={() => setSizeChartOpen(true)}>Size Chart</Button>}
                             </Box>
-                            <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-                                {sizes.map(size => (
-                                    <Button
-                                        key={size}
+                            <Box role="group" aria-label="Product size" sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                                {sizes.map(size => {
+                                    const variant = variants.find(v => v.size === size);
+                                    return <Button key={size} aria-pressed={selectedSize === size}
                                         variant={selectedSize === size ? 'contained' : 'outlined'}
                                         color={selectedSize === size ? 'primary' : 'inherit'}
-                                        onClick={() => setSelectedSize(size)}
-                                        sx={{ minWidth: 48, height: 40, fontWeight: 600 }}
-                                    >
-                                        {size}
-                                    </Button>
-                                ))}
+                                        disabled={!!variant && !variant.in_stock}
+                                        onClick={() => { setSelectedSize(size); setQuantity(1); setAdded(false); }}
+                                        sx={{ minWidth: 52, height: 44, px: 1.5, fontWeight: 600 }}>{size}</Button>;
+                                })}
                             </Box>
-                        </Box>
-                    )}
-
-                    {/* Quantity */}
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
-                        <Typography variant="subtitle2" fontWeight={700}>Quantity</Typography>
-                        <Box sx={{
-                            display: 'flex', alignItems: 'center', border: '1px solid',
-                            borderColor: 'divider', borderRadius: 1.5, overflow: 'hidden',
-                        }}>
-                            <IconButton
-                                size="small" onClick={() => setQuantity(q => Math.max(1, q - 1))}
-                                disabled={quantity <= 1}
-                                sx={{ borderRadius: 0 }}
-                            ><Remove fontSize="small" /></IconButton>
-                            <Typography sx={{ px: 2.5, minWidth: 32, textAlign: 'center', fontWeight: 600 }}>{quantity}</Typography>
-                            <IconButton size="small" onClick={() => setQuantity(q => q + 1)} sx={{ borderRadius: 0 }}>
-                                <Add fontSize="small" />
-                            </IconButton>
-                        </Box>
-                    </Box>
-
-                    {/* Stock status */}
-                    <Box sx={{ mb: 1 }}>
-                        {selectedVariant ? (
-                            inStock ? (
-                                <Chip
-                                    size="small" color="success" variant="outlined"
-                                    label={selectedVariant.stock_quantity <= 5
-                                        ? `Only ${selectedVariant.stock_quantity} left`
-                                        : 'In stock'}
-                                />
-                            ) : (
-                                <Chip size="small" color="error" variant="outlined" label="Out of stock" />
-                            )
-                        ) : (
-                            <Chip size="small" color="warning" variant="outlined" label="Unavailable" />
-                        )}
-                    </Box>
-
-                    {/* A prescription-only medicine cannot be checked out while
-                        StoreConfiguration.rx_sales_enabled is off (no DGDA
-                        licence). Saying so here beats letting the customer fill
-                        a cart and discover it at the payment step. */}
-                    {product.requires_prescription && (
-                        <Alert severity="info" icon={<MedicalInformation />} sx={{ mb: 2 }}>
-                            <Typography variant="subtitle2" fontWeight={700}>
-                                Prescription medicine
-                            </Typography>
-                            <Typography variant="body2">
-                                This item needs a valid prescription. Online sale is not open yet —
-                                call us on {SUPPORT.whatsapp} to order it.
-                            </Typography>
-                        </Alert>
-                    )}
-
-                    {/* Add to Cart */}
-                    <Button
-                        variant="contained"
-                        color="secondary"
-                        size="large"
-                        fullWidth
-                        disabled={!inStock || product.requires_prescription}
-                        startIcon={<ShoppingCart />}
-                        onClick={handleAddToCart}
-                        sx={{ py: 1.5, mb: 2, fontSize: '1.1rem' }}
-                    >
-                        {product.requires_prescription
-                            ? 'Prescription required'
-                            : inStock ? `Add to Cart - ${taka(price * quantity)}` : 'Out of Stock'}
-                    </Button>
-
-                    {/* Description */}
-                    {product.description && (
+                        </Box>}
                         <Box sx={{ mb: 2 }}>
+                            <Typography variant="body2" color={inStock ? 'success.main' : 'text.secondary'} fontWeight={600}>
+                                {selectedVariant ? (inStock ? (maxQuantity <= 5 ? `Only ${maxQuantity} left` : 'In stock') : 'Out of stock') : 'Unavailable'}
+                            </Typography>
+                        </Box>
+                        {product.requires_prescription && <Alert severity="info" icon={<MedicalInformation />} sx={{ mb: 2 }}>
+                            <Typography variant="subtitle2" fontWeight={700}>Prescription medicine</Typography>
+                            <Typography variant="body2">This item needs a valid prescription. Online sale is not open yet — call us on {SUPPORT.whatsapp} to order it.</Typography>
+                        </Alert>}
+                        <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 1 }}>Quantity</Typography>
+                        <Box sx={{ display: 'flex', alignItems: 'stretch', flexWrap: { xs: 'wrap', sm: 'nowrap' }, gap: 1.5, mb: 2 }}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', border: '1px solid', borderColor: 'divider', borderRadius: 1.5, overflow: 'hidden', flexShrink: 0 }}>
+                                <IconButton aria-label="Decrease quantity" disabled={quantity <= 1 || !inStock}
+                                    onClick={() => { setQuantity(q => Math.max(1, q - 1)); setAdded(false); }} sx={{ borderRadius: 0, width: 44, height: 48 }}><Remove fontSize="small" /></IconButton>
+                                <Typography aria-live="polite" sx={{ width: 32, textAlign: 'center', fontWeight: 700 }}>{quantity}</Typography>
+                                <IconButton aria-label="Increase quantity" disabled={!inStock || quantity >= maxQuantity}
+                                    onClick={() => { setQuantity(q => Math.min(maxQuantity, q + 1)); setAdded(false); }} sx={{ borderRadius: 0, width: 44, height: 48 }}><Add fontSize="small" /></IconButton>
+                            </Box>
+                            <Button variant="contained" color="secondary" size="large"
+                                disabled={!inStock || !maxQuantity || product.requires_prescription}
+                                startIcon={<ShoppingCart />} onClick={handleAddToCart}
+                                sx={{ flex: '1 1 auto', minHeight: 48, px: 2, fontSize: '0.95rem' }}>
+                                {product.requires_prescription ? 'Prescription required' : inStock ? `Add to Cart - ${taka(price * quantity)}` : 'Out of Stock'}
+                            </Button>
+                        </Box>
+                        {added && <Alert severity="success" sx={{ mb: 2 }}>Added to your cart. <Link to="/cart">View cart</Link></Alert>}
+                        <Box component="section" aria-label="Delivery information" sx={{ bgcolor: 'action.hover', border: '1px solid', borderColor: 'divider', borderRadius: 1.5, p: 2, mt: 2.5 }}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                                <LocalShipping fontSize="small" color="action" />
+                                <Typography variant="subtitle2" fontWeight={700}>Delivery</Typography>
+                            </Box>
+                            {freeDelivery ? <Typography variant="body2" color="success.main" fontWeight={700}>Free delivery</Typography> : <>
+                                <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 2 }}><Typography variant="body2">Inside Dhaka</Typography><Typography variant="body2" fontWeight={700}>BDT 70</Typography></Box>
+                                <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 2, mt: 0.75 }}><Typography variant="body2">Outside Dhaka</Typography><Typography variant="body2" fontWeight={700}>BDT 120</Typography></Box>
+                                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>Delivery is added at checkout. Product-specific charges, if any, are shown there.</Typography>
+                            </>}
+                        </Box>
+                        {(product.description || highlights.length > 0) && <Divider sx={{ my: 3 }} />}
+                        {product.description && <Box sx={{ mb: 2 }}>
                             <Typography variant="subtitle2" fontWeight={700} gutterBottom>Description</Typography>
-                            <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.7 }}>
-                                {product.description}
-                            </Typography>
-                        </Box>
-                    )}
-
-                    {/* Highlights */}
-                    {highlights.length > 0 && (
-                        <Box sx={{ mb: 2 }}>
+                            <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.8, whiteSpace: 'pre-line' }}>{product.description}</Typography>
+                        </Box>}
+                        {highlights.length > 0 && <Box>
                             <Typography variant="subtitle2" fontWeight={700} gutterBottom>Highlights</Typography>
-                            <Box component="ul" sx={{ m: 0, pl: 2 }}>
-                                {highlights.map((h, i) => (
-                                    <Typography component="li" variant="body2" key={i} color="text.secondary">{h}</Typography>
-                                ))}
-                            </Box>
-                        </Box>
-                    )}
+                            <Box component="ul" sx={{ m: 0, pl: 2.5 }}>{highlights.map((h, i) => <Typography component="li" variant="body2" key={i} color="text.secondary" sx={{ mb: 0.5, lineHeight: 1.7 }}>{h}</Typography>)}</Box>
+                        </Box>}
+                    </Paper>
                 </Grid>
             </Grid>
 
@@ -459,7 +332,7 @@ export default function ProductDetail() {
                 <Box sx={{ p: { xs: 2, sm: 3 } }}>
                     {tab === 0 && (
                         Object.keys(specs).length > 0 ? (
-                            <Table size="small">
+                            <Table size="small" sx={{ tableLayout: 'fixed', overflowWrap: 'anywhere' }}>
                                 <TableBody>
                                     {Object.entries(specs).map(([key, val]) => (
                                         <TableRow
@@ -545,7 +418,7 @@ export default function ProductDetail() {
                             In {sizeChartUnit === 'cm' ? 'centimeters' : 'inches'} (Expected Deviation &lt; 3%)
                         </Typography>
                     </DialogTitle>
-                    <DialogContent>
+                    <DialogContent sx={{ overflowX: 'auto' }}>
                         <Tabs
                             value={sizeChartUnit}
                             onChange={(_, v) => setSizeChartUnit(v)}
@@ -554,7 +427,7 @@ export default function ProductDetail() {
                             <Tab value="inch" label="INCH" sx={{ minHeight: 36, py: 0.5 }} />
                             <Tab value="cm" label="CM" sx={{ minHeight: 36, py: 0.5 }} />
                         </Tabs>
-                        <Table size="small">
+                        <Table size="small" sx={{ minWidth: 280 }}>
                             <TableHead>
                                 <TableRow>
                                     <TableCell sx={{ fontWeight: 700 }}>Size</TableCell>

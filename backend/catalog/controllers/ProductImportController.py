@@ -18,7 +18,7 @@ from rest_framework_simplejwt.authentication import JWTAuthentication
 
 from catalog.models import Categories, ImportRun, ImportSource
 from catalog.services_scrape_import import (
-    BROWSE_LIMIT,
+    DEFAULT_BROWSE_LIMIT,
     IMPORT_LIMIT,
     DisabledSourceError,
     SourceFetchError,
@@ -74,9 +74,19 @@ class AdminBrowseImportCandidatesView(APIView):
                 message='Validation error', status=400)
 
         try:
-            limit = int(request.query_params.get('limit', BROWSE_LIMIT))
+            limit = int(request.query_params.get('limit', DEFAULT_BROWSE_LIMIT))
         except (TypeError, ValueError):
-            limit = BROWSE_LIMIT
+            limit = DEFAULT_BROWSE_LIMIT
+        try:
+            page = int(request.query_params.get('page', 1))
+        except (TypeError, ValueError):
+            return renderResponse(data={'page': ['Page must be between 1 and 1000.']},
+                                  message='Validation error', status=400)
+        try:
+            offset = int(request.query_params.get('offset', 0))
+        except (TypeError, ValueError):
+            return renderResponse(data={'offset': ['Offset must be between 0 and 1000.']},
+                                  message='Validation error', status=400)
 
         # `detail` drives whether each product page is opened. It is the
         # difference between one request for a whole category and one request
@@ -85,10 +95,11 @@ class AdminBrowseImportCandidatesView(APIView):
         # explicit "false" means detailed: guessing wrong towards "fast" would
         # silently report every medicine's Rx status as unknown.
         detail = str(request.query_params.get('detail', 'true')).strip().lower() != 'false'
+        sort = request.query_params.get('sort', 'source')
 
         try:
             result = browse_candidates(source.slug, category_path=category_path, query=query,
-                                       limit=limit, detail=detail)
+                                       limit=limit, detail=detail, page=page, offset=offset, sort=sort)
         except SourceFetchError as e:
             return renderResponse(data=str(e), message='Could not fetch that listing', status=502)
         except UnsupportedSearchError as e:
@@ -101,7 +112,10 @@ class AdminBrowseImportCandidatesView(APIView):
             # genuine zero-result search.
             return renderResponse(data={'q': [str(e)]}, message='Validation error', status=400)
         except (ValueError, DisabledSourceError) as e:
-            return renderResponse(data={'category': [str(e)]}, message='Validation error', status=400)
+            field = ('page' if 'Page must be' in str(e) else
+                     'offset' if 'Offset must be' in str(e) else
+                     'sort' if 'sort' in str(e).lower() else 'category')
+            return renderResponse(data={field: [str(e)]}, message='Validation error', status=400)
 
         return renderResponse(data=result, message='Candidates fetched')
 

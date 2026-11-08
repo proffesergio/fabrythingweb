@@ -45,18 +45,18 @@ class MarkupRuleTests(TestCase):
         # 3% of 99 is ~2.97 -- far below a floor worth having. The floor
         # must win here or a 99 BDT item earns the platform almost nothing.
         self.assertEqual(markup_for(Decimal("99")), Decimal("50.00"))
-        self.assertEqual(apply_markup(Decimal("99")), 150)
+        self.assertEqual(apply_markup(Decimal("99")), 149)
 
     def test_the_percentage_takes_over_on_an_expensive_item(self):
         # 3% of 989,900 is 29,697 -- far above the floor.
         self.assertEqual(markup_for(Decimal("989900")), Decimal("29697.00"))
-        self.assertEqual(apply_markup(Decimal("989900")), 1019599)
+        self.assertEqual(apply_markup(Decimal("989900")), 1019597)
 
     def test_the_median_product_earns_the_documented_margin(self):
         # The report's worked example: 3% of 3,200 is 96, comfortably above
         # the 50 BDT floor.
         self.assertEqual(markup_for(Decimal("3200")), Decimal("96.00"))
-        self.assertEqual(apply_markup(Decimal("3200")), 3299)
+        self.assertEqual(apply_markup(Decimal("3200")), 3296)
 
     def test_a_none_base_price_has_no_markup(self):
         self.assertIsNone(markup_for(None))
@@ -67,8 +67,17 @@ class MarkupRuleTests(TestCase):
                         1499)
 
     def test_rounding_is_applied_after_markup(self):
-        self.assertEqual(apply_markup('750', floor='50', percentage='0'), Decimal('799'))
+        self.assertEqual(apply_markup('750', floor='50', percentage='0'), Decimal('800'))
         self.assertIsInstance(apply_markup('750'), Decimal)
+
+    def test_configured_floor_survives_attractive_rounding(self):
+        for cost in ('449', '450', '750', '1290', '1349', '1350'):
+            with self.subTest(cost=cost):
+                selling = apply_markup(cost)
+                self.assertLessEqual(selling, Decimal(cost) + markup_for(cost))
+                self.assertGreaterEqual(selling - Decimal(cost), Decimal('50'))
+        self.assertEqual(apply_markup('1290'), Decimal('1340'))
+        self.assertEqual(quote_supplier_price('1290', {})['selling_price'], Decimal('1340'))
 
     def test_foreign_store_currency_preserves_fractional_markup(self):
         cfg = StoreConfiguration.get_solo()

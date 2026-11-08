@@ -247,6 +247,12 @@ class CartItemSerializer(serializers.Serializer):
     unit_price = serializers.DecimalField(source='variant.effective_price', max_digits=10, decimal_places=2)
     stock_quantity = serializers.IntegerField(source='variant.stock_quantity')
     quantity = serializers.IntegerField()
+    shipping_fee = serializers.SerializerMethodField()
+    free_shipping = serializers.BooleanField(source='variant.product.free_shipping')
+
+    def get_shipping_fee(self, obj):
+        fee = obj.variant.product.shipping_fee
+        return float(fee) if fee is not None else None
 
 
 # ─── COD Orders ─────────────────────────────────────────────────────────────
@@ -274,6 +280,9 @@ class PlaceOrderSerializer(serializers.Serializer):
     # Logged-in users pass a saved address id; guests pass an inline address.
     shipping_address_id = serializers.IntegerField(required=False, allow_null=True)
     shipping_address = InlineShippingAddressSerializer(required=False)
+    delivery_zone = serializers.ChoiceField(
+        choices=['inside_dhaka', 'outside_dhaka'], required=False
+    )
     contact_name = serializers.CharField(max_length=120)
     contact_phone = serializers.CharField(max_length=20)
     notes = serializers.CharField(required=False, allow_blank=True, default='')

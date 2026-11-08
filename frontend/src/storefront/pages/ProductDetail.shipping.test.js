@@ -1,7 +1,4 @@
-/* Shipping fee is shown more prominently on the product detail page than
- * the card's quiet caption -- a labeled delivery box near the price, always
- * present (falls back to the store's flat rate), per docs/SHIPPING_FEES.md.
- */
+/* Detail delivery declarations must match regional checkout rates and explicit free promos. */
 import { render, screen, waitFor } from '@testing-library/react';
 import { Provider } from 'react-redux';
 import { configureStore } from '@reduxjs/toolkit';
@@ -36,22 +33,28 @@ const renderDetail = () => {
   );
 };
 
-test('shows a prominent "Free delivery" box when effective_shipping_fee is 0', async () => {
+test('a zero product fee still declares regional delivery without a free promo', async () => {
   mockProduct = { ...baseProduct, effective_shipping_fee: 0 };
   renderDetail();
-  expect(await screen.findByText('Free delivery')).toBeInTheDocument();
+  expect(await screen.findByText('Inside Dhaka')).toBeInTheDocument();
+  expect(screen.queryByText('Free delivery')).not.toBeInTheDocument();
 });
 
-test('shows the resolved delivery fee (own override or store flat rate)', async () => {
+test('declares regional rates instead of a legacy flat fee', async () => {
   mockProduct = { ...baseProduct, effective_shipping_fee: 250 };
   renderDetail();
-  expect(await screen.findByText('Delivery: ৳250')).toBeInTheDocument();
+  expect(await screen.findByText('Inside Dhaka')).toBeInTheDocument();
+  expect(screen.getByText('BDT 70')).toBeInTheDocument();
+  expect(screen.getByText('Outside Dhaka')).toBeInTheDocument();
+  expect(screen.getByText('BDT 120')).toBeInTheDocument();
+  expect(screen.getByText(/Product-specific charges/)).toBeInTheDocument();
 });
 
-test('falls back to showing the store rate rather than nothing when unset', async () => {
+test('does not advertise the old flat 60 taka delivery rate', async () => {
   mockProduct = { ...baseProduct, effective_shipping_fee: 60 };
   renderDetail();
-  expect(await screen.findByText('Delivery: ৳60')).toBeInTheDocument();
+  expect(await screen.findByText('Inside Dhaka')).toBeInTheDocument();
+  expect(screen.queryByText('Delivery: ৳60')).not.toBeInTheDocument();
 });
 
 // free_shipping is the explicit per-product promo flag (distinct from

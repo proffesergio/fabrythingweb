@@ -10,9 +10,37 @@ Free-shipping-threshold, when it applies, wins over all of this.
 """
 from decimal import Decimal
 
+from django.core.cache import cache
 from django.test import TestCase
 
 from core.models import StoreConfiguration
+from core.models import INSIDE_DHAKA, OUTSIDE_DHAKA
+
+
+class RegionalShippingRateTests(TestCase):
+    def setUp(self):
+        cache.clear()
+
+    def test_default_rates(self):
+        cfg = StoreConfiguration.get_solo()
+        self.assertEqual(cfg.fixed_shipping_rate, Decimal("70.00"))
+        self.assertEqual(cfg.outside_dhaka_shipping_rate, Decimal("120.00"))
+
+    def test_outside_rate_is_floor_for_product_override(self):
+        cfg = StoreConfiguration.get_solo()
+        self.assertEqual(cfg.shipping_for(200, [Decimal("90")], delivery_zone=INSIDE_DHAKA), Decimal("90"))
+        self.assertEqual(cfg.shipping_for(200, [Decimal("90")], delivery_zone=OUTSIDE_DHAKA), Decimal("120"))
+
+    def test_outside_rate_respects_all_free_promo(self):
+        cfg = StoreConfiguration.get_solo()
+        self.assertEqual(cfg.shipping_for(200, [None], [True], OUTSIDE_DHAKA), Decimal("0.00"))
+
+    def test_invalid_zone_is_rejected_even_when_shipping_is_free(self):
+        cfg = StoreConfiguration.get_solo()
+        cfg.free_shipping_threshold = Decimal("100")
+        cfg.save()
+        with self.assertRaises(ValueError):
+            cfg.shipping_for(200, [None], [True], "invalid")
 
 
 class ShippingForBaselineTests(TestCase):

@@ -1,5 +1,7 @@
 # Admin product import
 
+Current pricing floor, batch controls, pagination, and repair procedure: [2026-11-09 update](PRODUCT_PRICING_AND_DETAILS_2026-11-09.md). Those changes supersede older batch limits and rounding examples below.
+
 A screen under **Products → Import Products** (`/admin/manage/product-import`)
 that lets an admin pull the latest listings from a reference site, pick the
 ones worth stocking, and add them straight into our catalog — without anyone

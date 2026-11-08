@@ -91,6 +91,12 @@ const ImportProducts = () => {
 
     const [categoryPath, setCategoryPath] = useState("");
     const [query, setQuery] = useState("");
+    const [page, setPage] = useState(1);
+    const [offset, setOffset] = useState(0);
+    const [cursorHistory, setCursorHistory] = useState([]);
+    const [fetchLimit, setFetchLimit] = useState(12);
+    const [listingSort, setListingSort] = useState("source");
+    const [candidateFilter, setCandidateFilter] = useState("all");
     const [candidates, setCandidates] = useState([]);
     // The API's own category list for the selected source (from
     // ImportSourceCategory) -- a live browse response can extend/replace it
@@ -103,7 +109,7 @@ const ImportProducts = () => {
     // empty result grid can say *why* it's empty instead of always reading
     // "no products found" -- see catalog.services_scrape_import.browse_
     // candidates on the backend for the full reasoning.
-    const [browseMeta, setBrowseMeta] = useState({ listingProductCount: 0, fetchFailures: 0 });
+    const [browseMeta, setBrowseMeta] = useState({ listingProductCount: 0, fetchFailures: 0, hasNext: false });
 
     // Changing the source on a per-source route moves the URL with it, so the
     // address bar never claims a source the picker is not showing (and a
@@ -115,6 +121,11 @@ const ImportProducts = () => {
         setBrowsed(false);
         setBrowseError("");
         setCategoryPath("");
+        setTargetCategory("");
+        setPage(1);
+        setOffset(0);
+        setCursorHistory([]);
+        setListingSort("source");
         if (sourceSlug && slug && slug !== sourceSlug) {
             navigate(`/admin/manage/import/${slug}`);
         }
@@ -148,6 +159,18 @@ const ImportProducts = () => {
 
     const flatOurCategories = useMemo(() => flattenCategories(ourCategories), [ourCategories]);
 
+    const clearBrowseResults = () => {
+        setCandidates([]);
+        setSelected(new Set());
+        setBrowsed(false);
+        setBrowseError("");
+        setBrowseMeta({ listingProductCount: 0, fetchFailures: 0, hasNext: false });
+        setResults(null);
+        setPage(1);
+        setOffset(0);
+        setCursorHistory([]);
+    };
+
     // Bootstrap: source list + our own taxonomy, once.
     useEffect(() => {
         (async () => {
@@ -173,6 +196,11 @@ const ImportProducts = () => {
     useEffect(() => {
         setCategoryPath("");
         setQuery("");
+        setTargetCategory("");
+        setPage(1);
+        setOffset(0);
+        setCursorHistory([]);
+        setListingSort("source");
         setCandidates([]);
         setSelected(new Set());
         setResults(null);
@@ -181,7 +209,7 @@ const ImportProducts = () => {
         setBrowseCategories(null);
     }, [source]);
 
-    const handleBrowse = useCallback(async () => {
+    const handleBrowse = useCallback(async (requestedPage = page, requestedOffset = offset, historyAction = "reset") => {
         if (!activeSource) {
             setBrowseError("Pick a source first.");
             return;
@@ -199,6 +227,7 @@ const ImportProducts = () => {
             url: "products/admin/import/browse/", method: "GET", rawError: true,
             params: {
                 source, category: categoryPath || undefined, q: trimmedQuery || undefined,
+                limit: fetchLimit, page: requestedPage, offset: requestedOffset, sort: listingSort,
                 // The backend defaults detail=true; only a medicine source is
                 // given the choice, and only there does it change the answer.
                 detail: isMedicineSource ? String(withRxStatus) : undefined,
@@ -207,23 +236,31 @@ const ImportProducts = () => {
         if (res?.status === 200) {
             const data = res.data.data;
             setCandidates(data.candidates || []);
+            setPage(requestedPage);
+            setOffset(requestedOffset);
+            setCursorHistory((previous) => historyAction === "next"
+                ? [...previous, { page, offset }]
+                : historyAction === "back" ? previous.slice(0, -1) : []);
             if (data.categories?.length) setBrowseCategories(data.categories);
             setBrowseMeta({
                 listingProductCount: data.listing_product_count ?? 0,
                 fetchFailures: data.fetch_failures ?? 0,
+                hasNext: data.has_next ?? (data.listing_product_count ?? 0) >= fetchLimit,
+                nextPage: data.next_page ?? requestedPage + 1,
+                nextOffset: data.next_offset ?? 0,
             });
             setSelected(new Set());
             setBrowsed(true);
         } else {
             setCandidates([]);
-            setBrowseMeta({ listingProductCount: 0, fetchFailures: 0 });
+            setBrowseMeta({ listingProductCount: 0, fetchFailures: 0, hasNext: false });
             setBrowsed(true);
             // Field-specific errors (e.g. `q` for an unsupported search) land
             // in field_errors -- fall back to the flat message otherwise.
             const fieldMessage = firstFieldError(res?.data?.field_errors);
             setBrowseError(fieldMessage || res?.data?.message || "Could not fetch that listing.");
         }
-    }, [source, activeSource, categoryPath, query, searchSupported, isMedicineSource, withRxStatus]); // eslint-disable-line react-hooks/exhaustive-deps
+    }, [source, activeSource, categoryPath, query, searchSupported, isMedicineSource, withRxStatus, fetchLimit, page, offset, listingSort]); // eslint-disable-line react-hooks/exhaustive-deps
 
     const toggleSelected = (url) => {
         setSelected((prev) => {
@@ -233,7 +270,13 @@ const ImportProducts = () => {
         });
     };
 
-    const IMPORT_CAP = 12;
+    const IMPORT_CAP = 18;
+    const visibleCandidates = candidates.filter((candidate) => {
+        if (candidateFilter === "new") return !candidate.already_have;
+        if (candidateFilter === "offers") return candidate.discount_price != null &&
+            Number(candidate.discount_price) < Number(candidate.price);
+        return true;
+    });
 
     // What the owner is about to import, medicine-wise. Counted from the
     // candidates actually ticked, not the whole page.
@@ -433,7 +476,12 @@ const ImportProducts = () => {
                                     options={displayedCategories}
                                     getOptionLabel={(o) => (typeof o === "string" ? o : o.label || o.path)}
                                     value={displayedCategories.find((c) => c.path === categoryPath) || null}
-                                    onChange={(_, v) => setCategoryPath(v ? v.path : "")}
+                                    onChange={(_, v) => {
+                                        setCategoryPath(v ? v.path : "");
+                                        clearBrowseResults();
+                                        const mapped = flatOurCategories.find((cat) => cat.slug === v?.our_category);
+                                        setTargetCategory(mapped?.id || "");
+                                    }}
                                     renderInput={(params) => <TextField {...params} label="Category on site" />}
                                 />
                             </Grid>
@@ -441,7 +489,9 @@ const ImportProducts = () => {
                                 {searchSupported ? (
                                     <TextField
                                         fullWidth size="small" label="...or search term"
-                                        value={query} onChange={(e) => setQuery(e.target.value)}
+                                        value={query} onChange={(e) => {
+                                            setQuery(e.target.value); clearBrowseResults();
+                                        }}
                                         placeholder="e.g. hoodie"
                                     />
                                 ) : (
@@ -454,12 +504,39 @@ const ImportProducts = () => {
                             <Grid item xs={12} sm={3}>
                                 <Button
                                     fullWidth variant="contained" startIcon={<CloudDownloadOutlined />}
-                                    disabled={loading || !activeSource} onClick={handleBrowse}
+                                    disabled={loading || !activeSource} onClick={() => handleBrowse(1, 0)}
                                 >
                                     {loading ? "Fetching…" : "Fetch latest"}
                                 </Button>
                             </Grid>
                         </Grid>
+                        <Stack direction={{ xs: "column", sm: "row" }} spacing={2} sx={{ mt: 2 }} alignItems={{ sm: "center" }}>
+                            <TextField select size="small" label="Fetch per page" value={fetchLimit}
+                                onChange={(e) => {
+                                    setFetchLimit(Number(e.target.value)); clearBrowseResults();
+                                }}
+                                sx={{ minWidth: 160 }}>
+                                {[6, 12, 18].map((count) => <MenuItem key={count} value={count}>{count} products</MenuItem>)}
+                            </TextField>
+                            <TextField select size="small" label="Show results" value={candidateFilter}
+                                onChange={(e) => setCandidateFilter(e.target.value)} sx={{ minWidth: 180 }}>
+                                <MenuItem value="all">All products</MenuItem>
+                                <MenuItem value="new">New to store</MenuItem>
+                                <MenuItem value="offers">Offers only</MenuItem>
+                            </TextField>
+                            {activeSource?.adapter_key === "opencart" && (
+                                <TextField select size="small" label="Listing order" value={listingSort}
+                                    onChange={(e) => {
+                                        setListingSort(e.target.value); clearBrowseResults();
+                                    }} sx={{ minWidth: 160 }}>
+                                    <MenuItem value="source">Source order</MenuItem>
+                                    <MenuItem value="latest">Newest first</MenuItem>
+                                </TextField>
+                            )}
+                            <Typography variant="caption" color="text.secondary">
+                                Fetch starts at page 1. Filters apply to the fetched page.
+                            </Typography>
+                        </Stack>
                         {isMedicineSource && (
                             <FormControlLabel
                                 sx={{ mt: 1 }}
@@ -497,10 +574,26 @@ const ImportProducts = () => {
                         )
                     )}
 
-                    {candidates.length > 0 && (
+                    {browsed && !browseError && (
+                        <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 2 }}>
+                            <Button size="small" disabled={loading || cursorHistory.length === 0}
+                                onClick={() => {
+                                    const previous = cursorHistory[cursorHistory.length - 1];
+                                    handleBrowse(previous.page, previous.offset, "back");
+                                }}>Previous page</Button>
+                            <Typography variant="body2">Source page {page}{offset ? ` · from item ${offset + 1}` : ""}</Typography>
+                            <Button size="small" disabled={loading || !browseMeta.hasNext}
+                                onClick={() => handleBrowse(browseMeta.nextPage, browseMeta.nextOffset, "next")}>Next page</Button>
+                            <Typography variant="caption" color="text.secondary">{visibleCandidates.length} shown on this page</Typography>
+                        </Stack>
+                    )}
+                    {candidates.length > 0 && visibleCandidates.length === 0 && (
+                        <Alert severity="info" sx={{ mb: 2 }}>No products match this filter on page {page}.</Alert>
+                    )}
+                    {visibleCandidates.length > 0 && (
                         <>
                             <Grid container spacing={2} sx={{ mb: 2 }}>
-                                {candidates.map((c) => (
+                                {visibleCandidates.map((c) => (
                                     <Grid item xs={12} sm={6} md={4} lg={3} key={c.source_url}>
                                         <Card
                                             variant="outlined"
@@ -619,10 +712,10 @@ const ImportProducts = () => {
                                             <Button
                                                 size="small"
                                                 onClick={() => setSelected(new Set(
-                                                    candidates.filter((c) => !c.already_have)
+                                                    visibleCandidates.filter((c) => !c.already_have)
                                                         .slice(0, IMPORT_CAP).map((c) => c.source_url)))}
                                             >
-                                                Select new ({candidates.filter((c) => !c.already_have).length})
+                                                Select new ({visibleCandidates.filter((c) => !c.already_have).length})
                                             </Button>
                                             <Button size="small" onClick={() => setSelected(new Set())}>
                                                 Clear
@@ -638,6 +731,7 @@ const ImportProducts = () => {
                                         <TextField
                                             select fullWidth size="small" label="Import into category"
                                             value={targetCategory} onChange={(e) => setTargetCategory(e.target.value)}
+                                            helperText="Suggested from the source category; change it if needed."
                                         >
                                             <MenuItem value="">Choose a category…</MenuItem>
                                             {flatOurCategories.map((c) => (

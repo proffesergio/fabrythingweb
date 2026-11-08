@@ -66,11 +66,11 @@ def polite_get(url):
 # needs a listing fetch *plus* one product-detail fetch per candidate, since
 # neither OpenCart theme's listing card carries price/images -- only
 # scrape_parsers.parse_opencart_product does, see the module docstring in
-# catalog/scrape_parsers.py). Keeping both comfortably below ~15s means
-# staying comfortably below a typical gateway timeout, and never firing an
-# unbounded run at a partner's site. See docs/PRODUCT_IMPORT.md.
-BROWSE_LIMIT = 12
-IMPORT_LIMIT = 12
+# catalog/scrape_parsers.py). Page through larger catalogs while keeping each
+# request bounded. See docs/PRODUCT_IMPORT.md.
+BROWSE_LIMIT = 18
+DEFAULT_BROWSE_LIMIT = 12
+IMPORT_LIMIT = 18
 
 # Listing-only browse (browse_candidates(detail=False), the affiliate
 # picker's cheap path -- see that function's docstring) skips the
@@ -199,17 +199,18 @@ def _fabrilife_search(cats=None, query=None, hits_per_page=BROWSE_LIMIT, page=1)
     return r.text
 
 
-def _opencart_listing_url(source, category_path=None, query=None, page=1):
+def _opencart_listing_url(source, category_path=None, query=None, page=1, sort='source'):
     base = source.base_url
     if category_path:
         relative = _as_relative_path(category_path, base)
-        return base + relative + (('&' if '?' in relative else '?') + f'page={page}' if page > 1 else '')
+        url = base + relative + (('&' if '?' in relative else '?') + f'page={page}' if page > 1 else '')
+        return url + (('&' if '?' in url else '?') + 'sort=p.date_added&order=DESC' if sort == 'latest' else '')
     # Best-effort classic OpenCart search route. The exact scheme cannot be
     # verified against the live theme from this environment; a wrong scheme
     # degrades to "0 candidates" (parse_opencart_listing finds no cards),
     # not a crash, and an admin can always fall back to a category path.
     return base + f"index.php?route=product/search&search={quote(query or '')}&description=1" + (
-        f'&page={page}' if page > 1 else '')
+        f'&page={page}' if page > 1 else '') + ('&sort=p.date_added&order=DESC' if sort == 'latest' else '')
 
 
 def _arogga_listing_url(source, category_path=None, query=None, page=1):
@@ -276,7 +277,7 @@ def _selling_prices(price, discount_price=None):
     reimplement `max(floor, price * pct%)` and drift from what the import
     actually stores.
     """
-    return apply_markup(price), apply_markup(discount_price) if discount_price else None
+    return apply_markup(price, currency='BDT'), apply_markup(discount_price, currency='BDT') if discount_price else None
 
 
 def _candidate_from_product(url, parsed):
@@ -323,8 +324,36 @@ def _candidate_from_card(card):
     }
 
 
-def browse_candidates(source_slug, *, category_path=None, query=None, limit=BROWSE_LIMIT, fetch=None,
-                       detail=True, page=1):
+def _listing_window(items, *, page, offset, limit, paged_by_limit=False):
+    """Return a bounded batch and its next cursor without dropping listing rows.
+
+    Algolia's hitsPerPage is our requested limit, so its page advances after
+    every batch. HTML suppliers choose their own page sizes; an offset within
+    that page consumes all cards before the next source page is requested.
+    """
+    if paged_by_limit:
+        batch = items[:limit]
+        return batch, {
+            'has_next': len(batch) == limit,
+            'next_page': page + 1,
+            'next_offset': 0,
+        }
+    batch = items[offset:offset + limit]
+    remaining = offset + limit < len(items)
+    # Source pagination is not reported consistently, and its native page
+    # size can be smaller OR larger than our limit. Offer the next source page
+    # after any nonempty batch; an extra empty-page fetch is harmless, while
+    # guessing the page size would silently drop products.
+    may_have_next_page = bool(batch)
+    return batch, {
+        'has_next': remaining or may_have_next_page,
+        'next_page': page if remaining else page + 1,
+        'next_offset': offset + limit if remaining else 0,
+    }
+
+
+def browse_candidates(source_slug, *, category_path=None, query=None, limit=DEFAULT_BROWSE_LIMIT, fetch=None,
+                       detail=True, page=1, offset=0, sort='source'):
     """Fetch a listing (or search) for the ImportSource identified by
     ``source_slug`` and return candidate products with enough detail to
     render a picker: name, price, discount_price, image URL(s), source URL,
@@ -384,6 +413,14 @@ def browse_candidates(source_slug, *, category_path=None, query=None, limit=BROW
         raise ValueError('Search term is invalid or too long.')
     if not 1 <= page <= 1000:
         raise ValueError('Page must be between 1 and 1000.')
+    if not 0 <= offset <= 1000:
+        raise ValueError('Offset must be between 0 and 1000.')
+    if offset and source.adapter_key == 'fabrilife':
+        raise ValueError('Offset must be zero for Fabrilife listings.')
+    if sort not in ('source', 'latest'):
+        raise ValueError('Sort must be source or latest.')
+    if sort == 'latest' and source.adapter_key != 'opencart':
+        raise ValueError('Latest sort is available only for OpenCart sources.')
     fetch = fetch or polite_get
 
     if source.adapter_key == "fabrilife":
@@ -392,7 +429,22 @@ def browse_candidates(source_slug, *, category_path=None, query=None, limit=BROW
             listing_json = _fabrilife_search(cats=cats, query=query, hits_per_page=limit, page=page)
         except Exception as e:  # noqa: BLE001
             raise SourceFetchError(str(e)) from e
-        product_urls = parse_fabrilife_listing(listing_json, source.base_url or FABRILIFE_BASE_URL)[:limit]
+        listing_urls = parse_fabrilife_listing(listing_json, source.base_url or FABRILIFE_BASE_URL)
+        product_urls, navigation = _listing_window(listing_urls, page=page, offset=0,
+                                                   limit=limit, paged_by_limit=True)
+        try:
+            listing_data = json.loads(listing_json)
+        except (TypeError, ValueError):
+            listing_data = {}
+        if isinstance(listing_data, dict):
+            total_pages = listing_data.get('nbPages')
+            if isinstance(total_pages, int) and total_pages >= 0:
+                navigation['has_next'] = page < total_pages
+            else:
+                # An invalid hit may lack id/slug and disappear from the
+                # parsed URL list. Count raw hits before deciding there are
+                # no more Algolia pages.
+                navigation['has_next'] = len(listing_data.get('hits') or []) >= limit
         parser = parse_fabrilife_product
     elif source.adapter_key == "arogga":
         listing_url = _arogga_listing_url(source, category_path, query, page=page)
@@ -405,14 +457,17 @@ def browse_candidates(source_slug, *, category_path=None, query=None, limit=BROW
             # for every card, so the whole picker is one request. It cannot
             # carry the prescription flag -- that marker only exists on the
             # product page -- which is exactly what `detail` buys.
-            cards = parse_arogga_listing_cards(listing_html, listing_url)[:limit]
+            listing_cards = parse_arogga_listing_cards(listing_html, listing_url)
+            cards, navigation = _listing_window(listing_cards, page=page, offset=offset, limit=limit)
             return {
                 "candidates": [_candidate_from_card(c) for c in cards],
                 "categories": _source_categories(source),
                 "listing_product_count": len(cards),
                 "fetch_failures": 0,
+                **navigation,
             }
-        product_urls = parse_arogga_listing(listing_html, listing_url)[:limit]
+        listing_urls = parse_arogga_listing(listing_html, listing_url)
+        product_urls, navigation = _listing_window(listing_urls, page=page, offset=offset, limit=limit)
         parser = parse_arogga_product
     elif source.adapter_key == "rokomari":
         listing_url = _rokomari_listing_url(source, category_path, query, page=page)
@@ -427,22 +482,26 @@ def browse_candidates(source_slug, *, category_path=None, query=None, limit=BROW
         except Exception as e:  # noqa: BLE001 -- one bad listing must surface, not crash the process
             raise SourceFetchError(str(e)) from e
         if not detail:
-            cards = parse_rokomari_listing_cards(listing_html, listing_url)[:limit]
+            listing_cards = parse_rokomari_listing_cards(listing_html, listing_url)
+            cards, navigation = _listing_window(listing_cards, page=page, offset=offset, limit=limit)
             return {
                 "candidates": [_candidate_from_card(c) for c in cards],
                 "categories": _source_categories(source),
                 "listing_product_count": len(cards),
                 "fetch_failures": 0,
+                **navigation,
             }
-        product_urls = parse_rokomari_listing(listing_html, listing_url)[:limit]
+        listing_urls = parse_rokomari_listing(listing_html, listing_url)
+        product_urls, navigation = _listing_window(listing_urls, page=page, offset=offset, limit=limit)
         parser = parse_rokomari_product
     else:
-        listing_url = _opencart_listing_url(source, category_path, query, page=page)
+        listing_url = _opencart_listing_url(source, category_path, query, page=page, sort=sort)
         try:
             listing_html = fetch(listing_url)
         except Exception as e:  # noqa: BLE001 -- one bad listing must surface, not crash the process
             raise SourceFetchError(str(e)) from e
-        product_urls = parse_opencart_listing(listing_html, listing_url)[:limit]
+        listing_urls = parse_opencart_listing(listing_html, listing_url)
+        product_urls, navigation = _listing_window(listing_urls, page=page, offset=offset, limit=limit)
         parser = parse_opencart_product
 
     categories = _source_categories(source)
@@ -467,6 +526,7 @@ def browse_candidates(source_slug, *, category_path=None, query=None, limit=BROW
         "categories": categories,
         "listing_product_count": len(product_urls),
         "fetch_failures": fetch_failures,
+        **navigation,
     }
 
 

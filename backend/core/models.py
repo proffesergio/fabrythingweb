@@ -5,20 +5,26 @@ from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 
 CACHE_KEY = "store_config"
+INSIDE_DHAKA = "inside_dhaka"
+OUTSIDE_DHAKA = "outside_dhaka"
 
 
 class StoreConfiguration(models.Model):
     """
     Global, single-row store configuration.
 
-    Holds the fixed COD shipping rate that is applied dynamically at order
+    Holds the regional COD base rates applied dynamically at order
     creation, plus store-wide toggles. Always stored at pk=1 (singleton) and
     read through ``get_solo()`` which caches the row.
     """
 
     fixed_shipping_rate = models.DecimalField(
-        max_digits=8, decimal_places=2, default=Decimal("60.00"),
-        help_text="Flat shipping charge applied to every order.",
+        max_digits=8, decimal_places=2, default=Decimal("70.00"),
+        help_text="Base shipping charge for deliveries inside Dhaka.",
+    )
+    outside_dhaka_shipping_rate = models.DecimalField(
+        max_digits=8, decimal_places=2, default=Decimal("120.00"),
+        help_text="Base shipping charge for deliveries outside Dhaka.",
     )
     free_shipping_threshold = models.DecimalField(
         max_digits=10, decimal_places=2, null=True, blank=True,
@@ -134,7 +140,8 @@ class StoreConfiguration(models.Model):
             cache.set(CACHE_KEY, obj, timeout=300)
         return obj
 
-    def shipping_for(self, subtotal, product_shipping_fees=None, free_shipping_flags=None) -> Decimal:
+    def shipping_for(self, subtotal, product_shipping_fees=None, free_shipping_flags=None,
+                     delivery_zone=INSIDE_DHAKA) -> Decimal:
         """Resolve the shipping charge for a given order subtotal.
 
         ``product_shipping_fees`` is an optional iterable with one entry per
@@ -151,14 +158,16 @@ class StoreConfiguration(models.Model):
         1. Free-shipping-threshold, when the subtotal qualifies, wins over
            everything below and returns 0 immediately.
         2. If every cart line is a ``free_shipping`` promo item, shipping is 0.
-        3. Otherwise shipping = max(fixed_shipping_rate, every non-null
+        3. Otherwise shipping = max(the selected regional base rate, every non-null
            per-product fee among the *non-promo* lines) -- it's one delivery
            trip, so the bulkiest/costliest non-promo item sets the price, the
-           flat rate is always the floor, and promo lines are excluded from
+           regional rate is always the floor, and promo lines are excluded from
            the max() entirely: a free-shipping shirt must not make an
            expensive item ship free, and must not undercut the flat rate
            either. See the worked examples in docs/SHIPPING_FEES.md.
         """
+        if delivery_zone not in (INSIDE_DHAKA, OUTSIDE_DHAKA):
+            raise ValueError("Invalid delivery zone")
         subtotal = Decimal(str(subtotal))
         if self.free_shipping_threshold is not None and subtotal >= self.free_shipping_threshold:
             return Decimal("0.00")
@@ -171,7 +180,9 @@ class StoreConfiguration(models.Model):
         if product_shipping_fees and all(free_shipping_flags):
             return Decimal("0.00")
 
-        candidates = [self.fixed_shipping_rate]
+        base_rate = (self.fixed_shipping_rate if delivery_zone == INSIDE_DHAKA
+                     else self.outside_dhaka_shipping_rate)
+        candidates = [base_rate]
         for fee, is_promo in zip(product_shipping_fees, free_shipping_flags):
             if is_promo:
                 continue
