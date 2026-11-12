@@ -15,7 +15,7 @@ import './style/style.css';
 import { ThemeProvider } from '@mui/material/styles';
 import { getStorefrontTheme } from './storefront/theme';
 import StorefrontLayout from './storefront/layout/StorefrontLayout';
-import { PRIVACY, SHIPPING, TERMS } from './storefront/pages/legal/content';
+import { PRIVACY, SHIPPING, TERMS, CONTACT, DISCLOSURE } from './storefront/pages/legal/content';
 import { useMemo, useState } from 'react';
 import CircularProgress from '@mui/material/CircularProgress';
 import AppSplash from './storefront/components/AppSplash';
@@ -199,6 +199,8 @@ function App() {
           {path:"deals",element:<DealsPage/>},
           // Public, login-free URLs — both app stores require a reachable
           // privacy policy link, and it must not sit behind auth.
+          {path:"contact",element:<LegalPage doc={CONTACT}/>},
+          {path:"disclosure",element:<LegalPage doc={DISCLOSURE}/>},
           {path:"privacy",element:<LegalPage doc={PRIVACY}/>},
           {path:"terms",element:<LegalPage doc={TERMS}/>},
           {path:"shipping",element:<LegalPage doc={SHIPPING}/>},

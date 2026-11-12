@@ -170,6 +170,8 @@ class Article(models.Model):
         return f"{site_url.rstrip('/')}/nobleseek/{quote(self.slug, safe='')}"
 
     def get_json_ld(self, site_url=None) -> dict:
+        if self.content_type == self.ContentType.BLOG:
+            site_url = 'https://www.fabrything.com'
         site_url = site_url or PublishingSettings.current().news_site_url
         return {
             "@context": "https://schema.org",
@@ -179,9 +181,9 @@ class Article(models.Model):
             "image": [self.hero_image] if self.hero_image else [],
             "datePublished": self.published_at.isoformat() if self.published_at else None,
             "dateModified": self.updated_at.isoformat() if self.updated_at else None,
-            "author": {"@type": "Organization", "name": "NobleSeek",
+            "author": {"@type": "Organization", "name": "Fabrything Editorial" if self.content_type == self.ContentType.BLOG else "NobleSeek",
                        "url": site_url},
-            "publisher": {"@type": "Organization", "name": "NobleSeek",
+            "publisher": {"@type": "Organization", "name": "Fabrything" if self.content_type == self.ContentType.BLOG else "NobleSeek",
                           "logo": {"@type": "ImageObject",
                                    "url": f"{site_url.rstrip('/')}/logo192.png"}},
             "mainEntityOfPage": {"@type": "WebPage",

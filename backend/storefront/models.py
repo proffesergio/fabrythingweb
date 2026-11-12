@@ -1,6 +1,9 @@
 from django.conf import settings
 from django.core.cache import cache
 from django.db import models
+
+# Register the journal extension models without changing existing store tables.
+from .journal_models import TopicCluster, JournalArticle  # noqa: F401
 from django.utils import timezone
 
 AFFILIATE_CONFIG_CACHE_KEY = "affiliate_config"

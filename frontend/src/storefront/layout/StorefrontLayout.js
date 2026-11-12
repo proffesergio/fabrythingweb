@@ -131,7 +131,7 @@ function StorefrontLayoutInner({ toggleDarkMode, darkMode }) {
         '/shipping': ['Delivery & Shipping Conditions — Fabrything', 'Find Fabrything delivery areas, shipping fees and order conditions.'],
     }[location.pathname] || ['Fabrything', 'Shop fashion, electronics and everyday essentials online in Bangladesh at Fabrything.'];
     useSeo({
-        title: /^\/(product|blog)(\/|$)/.test(location.pathname) ? null : routeSeo[0],
+        title: /^\/(product|blog|privacy|terms|shipping|contact|disclosure)(\/|$)/.test(location.pathname) ? null : routeSeo[0],
         description: routeSeo[1],
         path: location.pathname,
         noindex: /^\/(cart|checkout|account|auth|admin)(\/|$)/.test(location.pathname),
@@ -521,6 +521,8 @@ function StorefrontLayoutInner({ toggleDarkMode, darkMode }) {
                                     {[
                                         { label: 'About Us', to: '/about' },
                                         { label: 'Product Journal', to: '/blog' },
+                                        { label: 'Contact', to: '/contact' },
+                                        { label: 'Affiliate disclosure', to: '/disclosure' },
                                         { label: 'NobleSeek', to: 'https://nobleseek.fabrything.com' },
                                         { label: 'Custom Printing', to: '/custom-printing' },
                                         { label: 'Deals', to: '/deals' },

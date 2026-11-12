@@ -15,7 +15,7 @@ def sanitize_article_html(value):
     allowed = {"p", "br", "h2", "h3", "h4", "strong", "b", "em", "i", "u",
                "s", "blockquote", "ul", "ol", "li", "a", "img", "figure",
                "figcaption", "pre", "code", "hr", "table", "thead", "tbody",
-               "tr", "th", "td"}
+               "tr", "th", "td", "caption", "aside"}
     for tag in soup.find_all(True):
         if tag.name not in allowed:
             tag.unwrap()
@@ -24,6 +24,28 @@ def sanitize_article_html(value):
         for key in ("alt", "title"):
             if key in tag.attrs:
                 attrs[key] = tag.attrs[key]
+        if re.fullmatch(r'section-\d+', str(tag.get('id', ''))):
+            attrs['id'] = tag['id']
+        if tag.name in {'th', 'td'} and tag.get('scope') in {'row', 'col'}:
+            attrs['scope'] = tag['scope']
+        if tag.name in {'th', 'td'} and str(tag.get('colspan', '')).isdigit() and 1 <= int(tag['colspan']) <= 12:
+            attrs['colspan'] = str(tag['colspan'])
+        if tag.name == 'a':
+            rel = tag.get('rel', [])
+            if isinstance(rel, str):
+                rel = rel.split()
+            attrs['rel'] = ' '.join(sorted(set(rel) & {'nofollow', 'sponsored', 'noopener', 'noreferrer'} | {'noopener'}))
+        if tag.name == 'img':
+            srcset = str(tag.get('srcset', ''))
+            if srcset and len(srcset) <= 8500 and all(re.fullmatch(r'https://[^\s,]+\s[1-4]?\d{2,3}w', x.strip()) for x in srcset.split(',')):
+                attrs['srcset'] = srcset
+                attrs['sizes'] = '(max-width: 800px) 100vw, 800px'
+            for key in ('width', 'height'):
+                if str(tag.get(key, '')).isdigit() and 1 <= int(tag[key]) <= 4000:
+                    attrs[key] = str(tag[key])
+            if tag.get('loading') in ('lazy', 'eager'):
+                attrs['loading'] = tag['loading']
+            attrs['decoding'] = 'async'
         url_attr = "href" if tag.name == "a" else "src" if tag.name == "img" else None
         if url_attr and isinstance(tag.get(url_attr), str):
             url = tag[url_attr].strip()

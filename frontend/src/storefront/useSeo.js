@@ -22,6 +22,10 @@ export default function useSeo({ title, description, path, noindex = false, imag
         meta('property', 'og:type', type);
         if (image) meta('property', 'og:image', image);
         meta('name', 'twitter:card', image ? 'summary_large_image' : 'summary');
+        meta('name', 'twitter:title', title);
+        meta('name', 'twitter:description', description);
+        meta('name', 'twitter:url', url);
+        if (image) meta('name', 'twitter:image', image);
         let schema;
         if (jsonLd) {
             schema = document.createElement('script');
@@ -39,6 +43,7 @@ export default function useSeo({ title, description, path, noindex = false, imag
         return () => {
             meta('name', 'robots', 'index,follow');
             if (image) document.querySelector('meta[property="og:image"]')?.remove();
+            if (image) document.querySelector('meta[name="twitter:image"]')?.remove();
             schema?.remove();
         };
     }, [title, description, path, noindex, image, jsonLd, type]);

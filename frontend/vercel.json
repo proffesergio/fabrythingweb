@@ -50,7 +50,7 @@
     },
     {
       "source": "/robots.txt",
-      "destination": "/storefront-robots.txt"
+      "destination": "https://fabrythingapi.vercel.app/api/store/robots.txt"
     },
     {
       "source": "/sitemap.xml",
@@ -73,6 +73,10 @@
     {
       "source": "/api/:path*",
       "destination": "https://fabrythingapi.vercel.app/api/:path*"
+    },
+    {
+      "source": "/blog/:slug",
+      "destination": "https://fabrythingapi.vercel.app/api/store/journal/document/:slug/"
     },
     {
       "source": "/(.*)",

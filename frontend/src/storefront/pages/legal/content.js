@@ -242,4 +242,17 @@ export const SHIPPING = {
   ],
 };
 
-export const LEGAL_PAGES = [PRIVACY, TERMS, SHIPPING];
+export const CONTACT = {
+  slug: 'contact', title: 'Contact Fabrything',
+  intro: 'Questions about a product, an order or a journal guide? Contact our support team using the details below. Include the order number or article URL so we can help.',
+  sections: [{ h: 'Product and order support', body: ['For availability, compatibility, delivery or returns, contact the support team. Check the product website for the current price before ordering.'] },
+    { h: 'Editorial corrections and commercial enquiries', body: ['Send the article URL, the passage in question and a reliable source to our support email. We review reported errors and update the guide when a correction is warranted. Commercial enquiries do not buy a favourable editorial recommendation.'] }],
+};
+export const DISCLOSURE = {
+  slug: 'disclosure', title: 'Affiliate & Advertising Disclosure',
+  intro: 'Fabrything sells its own store products and may earn commission from clearly labelled links to external merchants. Advertising and affiliate links help support the site.',
+  sections: [{ h: 'Store products and affiliate destinations', body: ['Fabrything store links lead to products sold through our shop. Affiliate links may lead to Amazon, Alibaba or another named merchant when a participating programme is configured. An external purchase is governed by that merchant’s terms, availability, price and returns policy.', 'Affiliate links are labelled near the recommendation and use sponsored link attributes. Check the destination website for its current price. We do not promise that a listed offer or specification will remain unchanged.'] },
+    { h: 'How we prepare guides', body: ['Guides should explain a practical problem, supported choices and relevant limitations. Product specifications and references are attributed. AI assistance and an internal model review do not constitute independent product testing. We do not describe a product as tested unless a documented test supports that statement. Report an error through our Contact page.'] },
+    { h: 'Advertising and privacy', body: ['Advertisements are labelled and separated from editorial links. If Google advertising is enabled, Google and its partners may use cookies or similar technologies according to their policies and your consent choices where required. See our Privacy Policy for the site’s data practices. Advertising does not guarantee a favourable recommendation.'] }],
+};
+export const LEGAL_PAGES = [PRIVACY, TERMS, SHIPPING, CONTACT, DISCLOSURE];

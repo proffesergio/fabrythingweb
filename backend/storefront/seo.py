@@ -12,7 +12,9 @@ def sitemap(request):
     root = Element('urlset', xmlns='http://www.sitemaps.org/schemas/sitemap/0.9')
     paths = ['/', '/shop', '/deals', '/custom-printing', '/food',
              '/food/restaurants', '/food/partner', '/about', '/privacy',
-             '/terms', '/shipping', '/blog']
+             '/terms', '/shipping', '/blog', '/contact', '/disclosure']
+    from .journal_models import TopicCluster
+    paths.extend('/blog/topic/' + slug for slug in TopicCluster.objects.filter(active=True).values_list('slug', flat=True))
     paths.extend('/product/' + quote(slug, safe='') for slug in
                  Products.objects.filter(status='ACTIVE').exclude(slug='').values_list('slug', flat=True))
     for path in paths:
@@ -22,8 +24,10 @@ def sitemap(request):
                  '/nobleseek/privacy', '/nobleseek/disclaimer', '/nobleseek/ethics'):
         SubElement(SubElement(root, 'url'), 'loc').text = news_base + path
     for article in Article.objects.filter(status=Article.Status.PUBLISHED,
-                                           published_at__lte=timezone.now()).only('slug', 'content_type'):
-        SubElement(SubElement(root, 'url'), 'loc').text = article.get_canonical_url(news_base)
+                                           published_at__lte=timezone.now()).only('slug', 'content_type', 'updated_at'):
+        item = SubElement(root, 'url')
+        SubElement(item, 'loc').text = article.get_canonical_url(news_base)
+        SubElement(item, 'lastmod').text = article.updated_at.date().isoformat()
     response = HttpResponse(tostring(root, encoding='utf-8', xml_declaration=True), content_type='application/xml')
     response['Cache-Control'] = 'public, max-age=0, s-maxage=300, stale-while-revalidate=60'
     return response

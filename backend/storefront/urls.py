@@ -1,5 +1,7 @@
 from django.urls import path
 from .seo import sitemap
+from .journal_bridge import JournalBridgeView
+from .journal_views import JournalTopicsView, JournalRelatedView, journal_document, journal_robots
 
 from .views import (
     # Public
@@ -135,3 +137,10 @@ urlpatterns = [
 # these two lines decides what `go_url` looks like.
 urlpatterns += affiliate_routes('affiliate', 'go', 'affiliate', suffix='_legacy')
 urlpatterns += affiliate_routes('partner-picks', 'r', 'partner-picks')
+urlpatterns += [
+    path('journal/publish/', JournalBridgeView.as_view(), name='journal-publish'),
+    path('journal/topics/', JournalTopicsView.as_view(), name='journal-topics'),
+    path('journal/related/<str:slug>/', JournalRelatedView.as_view(), name='journal-related'),
+    path('journal/document/<str:slug>/', journal_document, name='journal-document'),
+    path('robots.txt', journal_robots, name='store-robots'),
+]

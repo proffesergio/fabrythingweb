@@ -52,6 +52,7 @@ class ArticleListSerializer(serializers.ModelSerializer):
 
 
 class ArticleDetailSerializer(serializers.ModelSerializer):
+    journal = serializers.SerializerMethodField()
     category_name = serializers.CharField(source="category.name", read_only=True, default="")
     category_slug = serializers.SlugField(source="category.slug", read_only=True, default="")
     json_ld = serializers.SerializerMethodField()
@@ -65,12 +66,22 @@ class ArticleDetailSerializer(serializers.ModelSerializer):
                   "source_url", "category", "category_name", "category_slug",
                   "tags", "related_product_ids", "seo_title", "seo_description",
                   "seo_keywords", "is_featured", "is_breaking", "view_count",
-                  "read_time_minutes", "published_at", "updated_at", "json_ld", "canonical_url"]
+                  "read_time_minutes", "published_at", "updated_at", "json_ld", "canonical_url", "journal"]
+
+    def get_journal(self, obj):
+        if obj.content_type != Article.ContentType.BLOG:
+            return None
+        from storefront.journal import journal_data
+        return journal_data(obj)
 
     def get_canonical_url(self, obj):
         return obj.get_canonical_url()
 
     def get_json_ld(self, obj):
+        if obj.content_type == Article.ContentType.BLOG:
+            from storefront.journal import journal_json_ld, journal_data
+            if journal_data(obj):
+                return journal_json_ld(obj)
         data = obj.get_json_ld()
         data["image"] = [absolute_hero(obj, self.context)] if obj.hero_image else []
         return data

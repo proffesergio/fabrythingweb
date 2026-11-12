@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import { Box, Container, Divider, Link as MuiLink, Typography } from '@mui/material';
 import { Link } from 'react-router-dom';
 import { LAST_UPDATED, LEGAL_PAGES, SUPPORT } from './content';
+import useSeo from '../../useSeo';
 
 /**
  * One layout for every policy page. The content lives in ./content.js so the
@@ -13,6 +14,7 @@ import { LAST_UPDATED, LEGAL_PAGES, SUPPORT } from './content';
  * publicly reachable privacy policy URL, and it must not be behind a login.
  */
 export default function LegalPage({ doc }) {
+    useSeo({ title: `${doc.title} — Fabrything`, description: doc.intro, path: `/${doc.slug}` });
     useEffect(() => {
         document.title = `${doc.title} — Fabrything`;
     }, [doc.title]);

@@ -95,6 +95,24 @@ class ArticleDetailView(APIView):
 class BlogListView(ArticleListView):
     content_type = Article.ContentType.BLOG
 
+    def get_queryset(self):
+        qs = super().get_queryset()
+        topic = self.request.query_params.get('topic')
+        if topic:
+            from storefront.journal_models import TopicCluster
+            cluster = TopicCluster.objects.filter(slug=topic, active=True).first()
+            if not cluster:
+                return qs.none()
+            ids, frontier = [cluster.pk], [cluster.pk]
+            for _ in range(4):
+                frontier = list(TopicCluster.objects.filter(parent_id__in=frontier, active=True).values_list('id', flat=True))
+                ids.extend(frontier)
+            qs = qs.filter(journal__cluster_id__in=ids)
+        intent = self.request.query_params.get('intent')
+        if intent:
+            qs = qs.filter(journal__intent=intent)
+        return qs
+
 
 class BlogDetailView(ArticleDetailView):
     content_type = Article.ContentType.BLOG
