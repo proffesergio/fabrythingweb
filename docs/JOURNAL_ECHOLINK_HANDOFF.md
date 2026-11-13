@@ -1,6 +1,6 @@
 # Fabrything journal — approved release handoff
 
-Designs approved November13. The article/topic UI, reusable blocks, signed publishing bridge and SEO routes are implemented and locally verified. The owner authorized main pushes through CI/CD; no existing live process was restarted or killed. No synthetic production publication or manual live migration was submitted.
+Designs approved November13. The article/topic UI, reusable blocks, signed publishing bridge and SEO routes are implemented and locally verified. Source31a5af9 is pushed to main; frontend and backend Vercel deployments succeeded. Live /blog and topic API return200; no existing live process was restarted or killed. No synthetic production publication or manual live migration was submitted.
 
 Full cross-repository scope, verification limits and exact manifests: EchoLink `docs/LOCAL_COMMERCE_JOURNAL_REVIEW.md`.
 
@@ -47,9 +47,9 @@ reuse the same legal-page template. Policy wording still needs owner/legal revie
   a signed reviewed payload and ordinary shared ingestion/capacity gates. Journal
   opt-in does not disable NobleSeek's separate automated-news review setting.
 
-## Owner activation checklist — not performed
+## Owner configuration and activation checklist
 
-1. Approved UI and320/390/768/1440px browser QA are complete. Observe CI/CD deployment receipts after the main push.
+1. Approved UI and320/390/768/1440px browser QA are complete. Frontend67jVYtawZKyBywAAuKagePx9718a and backendAVjh6xyjiz6pAfspjSFBpYvCnaxi succeeded from source31a5af9. The live public topic query succeeds, confirming the deployed journal schema is available.
 2. Review migration `backend/storefront/migrations/0005_topiccluster_journalarticle.py`
    and apply it to the intended database only during the owner's release process.
    Tests used isolated in-memory SQLite. The existing production Vercel release hook runs migrations during deployment; none were manually applied by this task.
@@ -136,6 +136,7 @@ Only the existing confirmed price-policy test expectations changed; production p
 
 ### Fabrything
 
+- `docs/project-memory/CURRENT.md`
 - `.gitignore`
 - `README.md`
 - `backend/.env.example`

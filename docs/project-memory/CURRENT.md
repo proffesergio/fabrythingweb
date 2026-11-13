@@ -1,3 +1,13 @@
+# Journal and EchoLink release — 2026-11-13
+
+- Approved journal buyer-guide/topic interfaces and signed EchoLink bridge are implemented and pushed in31a5af9. Frontend67jVYtawZKyBywAAuKagePx9718a and backendAVjh6xyjiz6pAfspjSFBpYvCnaxi deployed successfully through the existing Vercel Git integration.
+- Full canonical articles/archives render server-side with real Fabrything branding, typed blocks, disclosures, sources and metadata. Live /blog, /journal.css and topic API return200. Empty/review/future topics stay out of navigation and sitemap.
+- 1,187 backend tests;18 journal/legal React tests; migration/system checks and isolated build pass. Full frontend lint retains166 baseline errors/234 warnings, zero new errors. Responsive browser QA320/390/768/1440 passes without real website writes or model calls.
+- Signing secret/tenant allowlist, topic plan, real evidence/licensed images, affiliate/account verification and AdSense/consent configuration remain owner work. External EchoLink worker SQL017–020 and graceful activation are separate; no existing live process was interrupted.
+- Complete scope, migration/delivery contract and exact manifests: [journal handoff](../JOURNAL_ECHOLINK_HANDOFF.md). Historical checkpoints below remain history.
+
+---
+
 # Newspaper UI completion — 2026-11-07
 
 - Approved NobleSeek newspaper design is implemented; recovered alignment kits
