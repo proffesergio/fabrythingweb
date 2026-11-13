@@ -13,8 +13,8 @@ def sitemap(request):
     paths = ['/', '/shop', '/deals', '/custom-printing', '/food',
              '/food/restaurants', '/food/partner', '/about', '/privacy',
              '/terms', '/shipping', '/blog', '/contact', '/disclosure']
-    from .journal_models import TopicCluster
-    paths.extend('/blog/topic/' + slug for slug in TopicCluster.objects.filter(active=True).values_list('slug', flat=True))
+    from .journal_views import public_topics
+    paths.extend('/blog/topic/' + t.slug for t in public_topics())
     paths.extend('/product/' + quote(slug, safe='') for slug in
                  Products.objects.filter(status='ACTIVE').exclude(slug='').values_list('slug', flat=True))
     for path in paths:

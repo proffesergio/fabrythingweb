@@ -58,7 +58,7 @@ class PriceSyncTests(TestCase):
         changes = sync_source_prices(fetcher=fake_fetcher)
         self.p.refresh_from_db()
         self.assertEqual(self.p.base_price, 46000.0)
-        self.assertEqual(self.p.initial_selling_price, 47399)
+        self.assertEqual(self.p.initial_selling_price, 47380)
         self.assertEqual(self.p.discount_price, 45799)
         self.assertEqual(self.p.source_price, 46000.0)
         self.assertIsNotNone(self.p.price_synced_at)
@@ -71,7 +71,7 @@ class PriceSyncTests(TestCase):
         # stale seed-time variant price -- shown one price, charged another.
         sync_source_prices(fetcher=fake_fetcher)
         self.variant.refresh_from_db()
-        self.assertEqual(self.variant.price, 47399)
+        self.assertEqual(self.variant.price, 47380)
         self.assertEqual(self.variant.discount_price, 45799)
         self.assertEqual(self.variant.effective_price, 45799)
 

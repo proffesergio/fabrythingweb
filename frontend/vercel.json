@@ -75,6 +75,14 @@
       "destination": "https://fabrythingapi.vercel.app/api/:path*"
     },
     {
+      "source": "/blog",
+      "destination": "https://fabrythingapi.vercel.app/api/store/journal/archive/"
+    },
+    {
+      "source": "/blog/topic/:topic",
+      "destination": "https://fabrythingapi.vercel.app/api/store/journal/archive/:topic/"
+    },
+    {
       "source": "/blog/:slug",
       "destination": "https://fabrythingapi.vercel.app/api/store/journal/document/:slug/"
     },

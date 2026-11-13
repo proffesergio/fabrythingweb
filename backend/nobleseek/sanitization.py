@@ -15,7 +15,7 @@ def sanitize_article_html(value):
     allowed = {"p", "br", "h2", "h3", "h4", "strong", "b", "em", "i", "u",
                "s", "blockquote", "ul", "ol", "li", "a", "img", "figure",
                "figcaption", "pre", "code", "hr", "table", "thead", "tbody",
-               "tr", "th", "td", "caption", "aside"}
+               "tr", "th", "td", "caption", "aside", "section", "article", "div", "span", "dl", "dt", "dd", "cite", "details", "summary"}
     for tag in soup.find_all(True):
         if tag.name not in allowed:
             tag.unwrap()
@@ -24,6 +24,13 @@ def sanitize_article_html(value):
         for key in ("alt", "title"):
             if key in tag.attrs:
                 attrs[key] = tag.attrs[key]
+        classes = tag.get('class', [])
+        safe_classes = {'journal-verdict', 'journal-eyebrow', 'journal-tradeoffs', 'journal-faq', 'journal-image', 'journal-image-plan', 'journal-products', 'journal-product-card', 'journal-cta', 'journal-caption', 'journal-table-wrap'}
+        kept = [c for c in classes if c in safe_classes]
+        if kept:
+            attrs['class'] = ' '.join(kept)
+        if tag.name == 'div' and tag.get('role') == 'region' and tag.get('aria-label') == 'Product comparison':
+            attrs.update({'role': 'region', 'aria-label': 'Product comparison', 'tabindex': '0'})
         if re.fullmatch(r'section-\d+', str(tag.get('id', ''))):
             attrs['id'] = tag['id']
         if tag.name in {'th', 'td'} and tag.get('scope') in {'row', 'col'}:
@@ -46,6 +53,8 @@ def sanitize_article_html(value):
             if tag.get('loading') in ('lazy', 'eager'):
                 attrs['loading'] = tag['loading']
             attrs['decoding'] = 'async'
+            if tag.get('fetchpriority') == 'high':
+                attrs['fetchpriority'] = 'high'
         url_attr = "href" if tag.name == "a" else "src" if tag.name == "img" else None
         if url_attr and isinstance(tag.get(url_attr), str):
             url = tag[url_attr].strip()

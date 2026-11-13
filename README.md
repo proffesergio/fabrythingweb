@@ -1,68 +1,27 @@
 # Fabrything
 
-Commerce platform for Bangladesh: product storefront, inventory and orders,
-food delivery, printing services, and the NobleSeek news desk.
+A connected commerce platform for Bangladesh, bringing products, local delivery, printing services and useful editorial content into one customer experience.
 
-Production: https://www.fabrything.com. React and Django run on Vercel, with
-Neon PostgreSQL and Cloudflare R2. Store orders use Cash on Delivery.
+[Visit Fabrything](https://www.fabrything.com) · [Explore the Journal](https://www.fabrything.com/blog) · [Contact our team](https://www.fabrything.com/contact)
 
-## Project structure
+## Shop, learn and choose with confidence
 
-```text
-backend/       Django entrypoints, settings, domain apps, migrations and tests
-frontend/      React app, public assets, browser checks and npm configuration
-docs/          Setup, feature guides, production evidence and recovery memory
-tools/         Asset-generation utilities
-.github/       Repository instructions
-```
+Fabrything connects product discovery with practical guidance. Customers can explore the storefront, compare supported product details, find compatible accessories and follow their orders. Store orders support Cash on Delivery in serviceable areas.
 
-Backend domain modules are independent Django apps: accounts, catalog, inventory,
-purchasing, orders, storefront, food, printing, nobleseek, chat, analytics and core.
-Frontend customer, admin, vendor and rider interfaces live under frontend/src/.
+The Fabrything Journal organizes buying guides, how-to articles, troubleshooting and product ecosystems around focused topics. Clear verdicts, comparisons, pros and cons, FAQs and attributable sources help readers understand the choices that matter. Prices and availability can change; customers should check the destination website for the latest information.
 
-## Development
+## A platform for connected businesses
 
-Follow [local setup](docs/SETUP.md) for environment variables, database migrations
-and admin creation. After setup, use separate terminals:
+- Product catalogues, inventory, purchasing and order management.
+- Customer, business administrator, vendor and rider experiences.
+- Local food delivery and custom printing services.
+- NobleSeek news publishing alongside the store’s distinct editorial journal.
+- Optional EchoLink integration for source-backed journal drafting, review and publishing.
 
-```bash
-# API, from the repository root
-cd backend
-source .venv/bin/activate
-python manage.py runserver
+Affiliate links and advertising are disclosed. Structured metadata supports discovery, while editorial oversight remains essential. Search visibility, rich results and advertising approval depend on the relevant platforms and the quality of published content.
 
-# React, from the repository root in another terminal
-cd frontend
-npm ci
-npm start
-```
+## Work with Fabrything
 
-API: http://localhost:8000/api/. Frontend: http://localhost:3000/.
-Admin sign-in: http://localhost:3000/admin/auth.
+Managed onboarding, commercial integrations and deployment arrangements are coordinated with the service owner. This repository supports the platform’s development; this overview does not include installation instructions or operating credentials.
 
-## Verification
-
-```bash
-# From backend/, with its environment active; isolated SQLite
-python manage.py test --settings=config.settings.test --noinput
-python manage.py makemigrations --check --dry-run --settings=config.settings.test
-
-# From frontend/; run separately on low-memory machines
-CI=true NODE_OPTIONS=--max-old-space-size=1024 npm test -- --watchAll=false --runInBand --silent
-NODE_OPTIONS=--max-old-space-size=1536 GENERATE_SOURCEMAP=false REACT_APP_API_URL=/api/ npm run build
-```
-
-## Operations
-
-Vercel project roots are `frontend` for `fabrythingweb` and `backend` for
-`fabrythingapi`. Each service owns its vercel.json. Preserve the frontend API
-rewrites and their trailing-slash behavior.
-
-- [Recovery checkpoint and memory graph](docs/project-memory/CURRENT.md)
-- [Production release](docs/PRODUCTION_RELEASE.md)
-- [Domain configuration](docs/CLOUDFLARE_DNS_SETUP.md)
-- [Control Center worker and provider setup](docs/CONTROL_CENTER_SETUP.md)
-- [NobleSeek setup](docs/NOBLESEEK_SETUP.md)
-
-Environment files, credentials, builds and local CLI state are ignored. Commit
-migrations and environment examples; keep live data and secrets out of Git.
+[Talk to Fabrything](https://www.fabrything.com/contact) about a partnership or managed service.

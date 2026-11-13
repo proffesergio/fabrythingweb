@@ -1,9 +1,8 @@
-# Fabrything journal — local review handoff
+# Fabrything journal — approved release handoff
 
-This is a local, unactivated change set. No push, deployment, running-service
-restart or production migration was performed. The final commerce/journal UI
-implementation is awaiting visual approval in the EchoLink task. Do not push this
-as a completed frontend release while the topic route and structured renderer remain pending.
+Designs approved November13. The article/topic UI, reusable blocks, signed publishing bridge and SEO routes are implemented and locally verified. The owner authorized main pushes through CI/CD; no existing live process was restarted or killed. No synthetic production publication or manual live migration was submitted.
+
+Full cross-repository scope, verification limits and exact manifests: EchoLink `docs/LOCAL_COMMERCE_JOURNAL_REVIEW.md`.
 
 ## Prepared backend and technical SEO
 
@@ -50,10 +49,10 @@ reuse the same legal-page template. Policy wording still needs owner/legal revie
 
 ## Owner activation checklist — not performed
 
-1. Approve and complete the hosted design implementation and remaining browser QA.
+1. Approved UI and320/390/768/1440px browser QA are complete. Observe CI/CD deployment receipts after the main push.
 2. Review migration `backend/storefront/migrations/0005_topiccluster_journalarticle.py`
    and apply it to the intended database only during the owner's release process.
-   Tests used isolated in-memory SQLite; no production migration was applied.
+   Tests used isolated in-memory SQLite. The existing production Vercel release hook runs migrations during deployment; none were manually applied by this task.
 3. Configure an active valid topic chain in Django admin. Set matching Page plan
    and per-article verified source/card/image briefs in EchoLink.
 4. Set backend `ECHOLINK_BLOG_SECRET` (random, at least32 characters),
@@ -85,27 +84,46 @@ pre-existing CRA/Browserslist/ESLint warnings. Full lint:166 existing errors and
 No real inference, social posting, website publication or paid affiliate/API call
 was used as a test. Hosted SuperDesign/12ui design work was explicitly authorized.
 
-<!-- FILE_MANIFEST -->
 
-## Exact changed files
+## Final verification — November13
+
+1,187 backend tests pass; Django migration drift/system checks pass.18 journal/legal frontend tests pass. Isolated build compiles with baseline warnings. Full ESLint166 existing errors/234 warnings, zero new errors. Browser checks pass at320/390/768/1440 with no overflow or JS errors and no real API writes. Both direct canonical and React structured contracts retain disclosures and sponsored links. Empty/future/review-only topics are excluded from navigation and sitemap.
+
+Only the existing confirmed price-policy test expectations changed; production pricing was preserved. The timestamp fixture now uses explicit separate times. Policy/affiliate/AdSense/account configuration still needs owner review.
+
+<!-- FILE_MANIFEST -->
+## Exact release files relative to fetched main
 
 ### EchoLink
 
+- `README.md`
 - `docs/AGENT_HANDOFF.md`
 - `docs/LOCAL_COMMERCE_JOURNAL_REVIEW.md`
 - `docs/PROJECT_MEMORY.json`
+- `platform/client/app.jsx`
+- `platform/client/assets/commerce/palette.png`
+- `platform/client/assets/commerce/shield.png`
+- `platform/client/commerce-settings.css`
+- `platform/client/commerce-settings.jsx`
 - `platform/client/font-settings.jsx`
+- `platform/client/journal-settings.jsx`
+- `platform/client/settings-dialog.jsx`
+- `platform/client/tests/motion-profile.browser.mjs`
 - `platform/scripts/journal-image.mjs`
 - `platform/server/api.mjs`
 - `platform/server/commerce-design.mjs`
 - `platform/server/commerce-settings.mjs`
 - `platform/server/fonts.mjs`
+- `platform/server/index.mjs`
 - `platform/server/jobs.mjs`
 - `platform/server/journal-images.mjs`
 - `platform/server/journal.mjs`
 - `platform/server/product-design.mjs`
 - `platform/server/providers.mjs`
+- `platform/server/read-model.mjs`
 - `platform/server/validation.mjs`
+- `platform/shared/commerce-design.mjs`
+- `platform/sql/020-journal-connector.sql`
 - `platform/test/channel-brand.test.mjs`
 - `platform/test/commerce-design.test.mjs`
 - `platform/test/fixtures/fonts/NotoSansBengali.woff`
@@ -119,7 +137,13 @@ was used as a test. Hosted SuperDesign/12ui design work was explicitly authorize
 ### Fabrything
 
 - `.gitignore`
+- `README.md`
 - `backend/.env.example`
+- `backend/catalog/test_admin_product_import.py`
+- `backend/catalog/test_apply_pricing_markup.py`
+- `backend/catalog/test_price_sync.py`
+- `backend/catalog/test_seed_store_catalog.py`
+- `backend/chat/tests/test_customer_api.py`
 - `backend/nobleseek/models.py`
 - `backend/nobleseek/sanitization.py`
 - `backend/nobleseek/serializers.py`
@@ -133,13 +157,23 @@ was used as a test. Hosted SuperDesign/12ui design work was explicitly authorize
 - `backend/storefront/migrations/0005_topiccluster_journalarticle.py`
 - `backend/storefront/models.py`
 - `backend/storefront/seo.py`
+- `backend/storefront/templates/storefront/journal_blocks.html`
+- `backend/storefront/templates/storefront/journal_cards.html`
+- `backend/storefront/templates/storefront/journal_document.html`
+- `backend/storefront/templates/storefront/journal_product_details.html`
 - `backend/storefront/test_journal.py`
 - `backend/storefront/urls.py`
 - `docs/JOURNAL_ECHOLINK_HANDOFF.md`
 - `frontend/package.json`
+- `frontend/public/index.html`
+- `frontend/public/journal.css`
+- `frontend/public/journal/chevron.png`
 - `frontend/scripts/verify-build.cjs`
 - `frontend/src/App.js`
+- `frontend/src/storefront/components/JournalBlocks.js`
 - `frontend/src/storefront/layout/StorefrontLayout.js`
+- `frontend/src/storefront/pages/BlogPages.js`
+- `frontend/src/storefront/pages/BlogPages.test.js`
 - `frontend/src/storefront/pages/legal/LegalPage.js`
 - `frontend/src/storefront/pages/legal/content.js`
 - `frontend/src/storefront/useSeo.js`

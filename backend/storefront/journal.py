@@ -68,32 +68,23 @@ def journal_json_ld(article):
     return {'@context': 'https://schema.org', '@graph': graph}
 
 
+def guide_contents(blocks):
+    labels = {'verdict': 'Quick verdict', 'comparison': 'Compare your options', 'products': 'Products in this guide', 'pros_cons': 'The trade-offs', 'faq': 'Common questions'}
+    return [{'index': i, 'title': b.get('text') if b['type'] == 'heading' else labels[b['type']]} for i, b in enumerate(blocks) if b['type'] == 'heading' or b['type'] in labels]
+
+
 def blocks_html(blocks, products):
-    """Safe semantic fallback: all text escaped, affiliate links explicitly labelled."""
+    """Autoescaped reusable blocks, shared with canonical HTML and the stored mirror."""
+    from django.template.loader import render_to_string
+    from nobleseek.sanitization import sanitize_article_html
     lookup = {p['id']: p for p in products}
-    output = []
-    for i, b in enumerate(blocks):
-        kind = b['type']
-        if kind in ('paragraph', 'heading', 'verdict'):
-            tag = {'paragraph': 'p', 'heading': 'h2', 'verdict': 'aside'}[kind]
-            output.append(f'<{tag} id="section-{i}">{escape(b["text"])}</{tag}>')
-        elif kind in ('comparison', 'products'):
-            output.append('<table><caption>Product comparison — check each website for the current price</caption><thead><tr><th scope="col">Product</th><th scope="col">Details</th></tr></thead><tbody>')
-            for pid in b['productIds']:
-                p = lookup[pid]
-                details = '; '.join(f'{k}: {v}' for k, v in p.get('specs', {}).items())
-                output.append(f'<tr><th scope="row"><a href="{escape(p["url"], quote=True)}" rel="nofollow sponsored noopener">{escape(p["title"])}</a></th><td>{escape(details)}</td></tr>')
-                if p.get('review'):
-                    review = p['review']
-                    output.append('<tr><td colspan="2"><blockquote>' + escape(review['body']) + '</blockquote><p>Review by ' + escape(review['author']) + ' · ' + escape(str(review['datePublished'])) + ' · <a href="' + escape(review['sourceUrl'], quote=True) + '" rel="nofollow noopener">Review source</a></p></td></tr>')
-            output.append('</tbody></table>')
-        elif kind == 'pros_cons':
-            for key in ('pros', 'cons'):
-                output.append('<h3>' + key.replace('_', ' ').title() + '</h3><ul>' + ''.join('<li>' + escape(x) + '</li>' for x in b[key]) + '</ul>')
-        elif kind == 'faq':
-            output.extend('<h3>' + escape(x['question']) + '</h3><p>' + escape(x['answer']) + '</p>' for x in b['items'])
-        elif kind == 'image' and b.get('src'):
-            srcset = ', '.join(f'{v["src"]} {v["width"]}w' for v in b.get('variants', []))
-            responsive = f' srcset="{escape(srcset, quote=True)}" sizes="(max-width: 800px) 100vw, 800px"' if srcset else ''
-            output.append(f'<figure><img src="{escape(b["src"], quote=True)}" alt="{escape(b["alt"], quote=True)}" width="{b["width"]}" height="{b["height"]}" loading="lazy" decoding="async"{responsive}></figure>')
-    return '\n'.join(output)
+    prepared, image_seen = [], False
+    for block in blocks:
+        b = dict(block)
+        b['selected'] = [lookup[pid] for pid in b.get('productIds', []) if pid in lookup]
+        if b['type'] == 'image' and b.get('src'):
+            b['srcset'] = ', '.join(f'{v["src"]} {v["width"]}w' for v in b.get('variants', []))
+            b['priority'] = not image_seen
+            image_seen = True
+        prepared.append(b)
+    return sanitize_article_html(render_to_string('storefront/journal_blocks.html', {'blocks': prepared}))

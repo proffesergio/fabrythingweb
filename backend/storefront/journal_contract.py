@@ -95,7 +95,7 @@ class JournalPayloadSerializer(serializers.Serializer):
                         del b[key]
             elif kind in ('comparison', 'products'):
                 references = b.get('productIds', [])
-                if not isinstance(references, list) or not references or len(references) > 12 or any(x not in ids for x in references):
+                if not isinstance(references, list) or any(not isinstance(x, str) for x in references) or not references or len(references) > 12 or any(x not in ids for x in references):
                     raise serializers.ValidationError('Product blocks must reference supplied product IDs.')
                 criteria = b.get('criteria', [])
                 if not isinstance(criteria, list) or len(criteria) > 12 or any(not isinstance(x, str) or len(x) > 100 for x in criteria):
@@ -115,6 +115,8 @@ class JournalPayloadSerializer(serializers.Serializer):
                     if type(b.get(dimension)) is not int or not 100 <= b[dimension] <= 4000:
                         raise serializers.ValidationError('Images require explicit safe dimensions.')
                 if b.get('src'):
+                    if not isinstance(b['src'], str) or len(b['src']) > 2000:
+                        raise serializers.ValidationError('Image URLs must be short public HTTPS strings.')
                     public_url(b['src'])
                 variants = b.get('variants', [])
                 if not isinstance(variants, list) or len(variants) > 4 or any(not isinstance(v, dict) or type(v.get('width')) is not int or not 100 <= v['width'] <= 4000 or not isinstance(v.get('src'), str) for v in variants):

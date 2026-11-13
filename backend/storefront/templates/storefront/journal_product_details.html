@@ -1,0 +1,1 @@
+<dl>{% for label,value in p.specs.items %}<div><dt>{{ label }}</dt><dd>{{ value }}</dd></div>{% endfor %}</dl>{% if p.review %}<blockquote><p>{{ p.review.body }}</p><cite>{{ p.review.author }} · {{ p.review.datePublished }} · <a href="{{ p.review.sourceUrl }}" rel="nofollow noopener">Review source</a></cite></blockquote>{% endif %}

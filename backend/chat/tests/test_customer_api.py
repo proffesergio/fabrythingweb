@@ -140,6 +140,10 @@ class ChatThreadMessagesTests(TestCase):
         # (encodeURIComponent) does this automatically; the test must too.
         cutoff = quote(m1.created_at.isoformat())
         m2 = ChatMessage.objects.create(thread=self.thread, sender=self.customer, sender_role="CUSTOMER", body="two")
+        # Windows clocks can return the same timestamp for consecutive inserts.
+        # A timestamp cursor is strictly newer; make this fixture deterministic.
+        from datetime import timedelta
+        ChatMessage.objects.filter(pk=m2.pk).update(created_at=m1.created_at + timedelta(seconds=1))
 
         auth(self.client, self.customer)
         res = self.client.get(f"/api/chat/threads/{self.thread.id}/messages/?after={cutoff}")

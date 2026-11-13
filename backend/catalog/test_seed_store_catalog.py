@@ -148,7 +148,7 @@ class SeedStoreCatalogProductTests(TestCase):
                 # seed_product_entry stores the fixture price as base_price
                 # and marks the variant up (apply_markup: floor=50/3% by
                 # default -- 3% of 500 is 15, below the floor).
-                self.assertEqual(variant.price, 599)  # 550 ties upward, then minus 1
+                self.assertEqual(variant.price, 550)  # rounding cannot exceed the configured markup
 
                 with open(fixture_path, "w", encoding="utf-8") as fh:
                     json.dump([{
@@ -163,7 +163,7 @@ class SeedStoreCatalogProductTests(TestCase):
                     call_command("seed_store_catalog", "--force-update")
             variant.refresh_from_db()
             # 3% of 750 is 22.5, still below the 50 floor.
-            self.assertEqual(variant.price, 799,
+            self.assertEqual(variant.price, 800,
                               "--force-update must refresh an existing variant's price")
         finally:
             shutil.rmtree(tmpdir)

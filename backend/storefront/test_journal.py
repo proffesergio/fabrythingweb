@@ -119,3 +119,30 @@ class JournalTests(TestCase):
         article.body_html += '<p>An editor added a correction.</p>'
         article.save()
         self.assertIsNone(journal_data(article))
+
+    def test_canonical_document_and_topic_archive_share_visible_blocks(self):
+        data = payload()
+        data['blocks'].insert(1, {'type': 'verdict', 'text': 'Read the manual before buying.'})
+        data['blocks'].append({'type': 'pros_cons', 'pros': ['Documented compatibility'], 'cons': ['Check the connector first']})
+        with patch.dict(os.environ, {'ECHOLINK_BLOG_AUTO_PUBLISH': 'true'}):
+            self.assertEqual(self.send(data).status_code, 201)
+        document = self.client.get('/api/store/journal/document/compatible-accessory/')
+        for text in ['journal.css', 'Guide contents', 'Quick verdict', 'The trade-offs', 'Common questions', 'nofollow noopener sponsored', 'Read the manual before buying.']:
+            self.assertContains(document, text)
+        archive = self.client.get('/api/store/journal/archive/accessories/')
+        self.assertContains(archive, '/blog/compatible-accessory')
+        self.assertContains(archive, 'https://www.fabrything.com/blog/topic/accessories')
+        self.assertContains(self.client.get('/api/store/sitemap.xml'), '/blog/topic/accessories')
+        self.assertEqual(self.client.get('/api/store/journal/archive/accessories/?page=9999').status_code, 404)
+        self.assertEqual(self.client.get('/api/store/journal/archive/missing/').status_code, 404)
+
+    def test_unpublished_clusters_do_not_enter_navigation_or_sitemap(self):
+        self.send()
+        self.assertEqual(self.client.get('/api/store/journal/topics/').json(), [])
+        self.assertNotContains(self.client.get('/api/store/sitemap.xml'), '/blog/topic/accessories')
+
+    def test_malformed_structured_input_returns_validation_errors(self):
+        data = payload(); data['blocks'][2]['productIds'] = [{}]
+        self.assertFalse(JournalPayloadSerializer(data=data).is_valid())
+        data = payload(); data['blocks'][3]['src'] = {'not': 'a URL'}
+        self.assertFalse(JournalPayloadSerializer(data=data).is_valid())

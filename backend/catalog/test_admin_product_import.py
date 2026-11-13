@@ -129,7 +129,7 @@ class BrowseCandidatesTests(AdminProductImportTestBase):
                                'page': '2', 'limit': '18'}, self.owner)
         self.assertEqual(res.status_code, 200, res.data)
         self.assertIn('page=2', urls[0])
-        self.assertEqual(res.data['data']['candidates'][0]['selling_price'], 1399)
+        self.assertEqual(res.data['data']['candidates'][0]['selling_price'], 1340)
 
     def test_invalid_page_is_rejected(self):
         for page in ('bad', '0', '1001'):
@@ -362,7 +362,7 @@ class ImportProductsTests(AdminProductImportTestBase):
         # selling price via apply_markup (defaults floor=50/3%): 3% of
         # 15000 is 450, above the floor.
         self.assertEqual(product.base_price, 15000)
-        self.assertEqual(product.initial_selling_price, 15499)
+        self.assertEqual(product.initial_selling_price, 15450)
         self.assertEqual(product.source_url, "https://potakait.com/new-phone")
         self.assertTrue(product.image)
         self.assertTrue(product.variants.filter(is_active=True).exists())

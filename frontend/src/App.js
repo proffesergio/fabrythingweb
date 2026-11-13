@@ -190,6 +190,7 @@ function App() {
           {path:"shop",element:<ProductCatalog/>},
           {path:"blog",element:<BlogIndex/>},
           {path:"blog/:slug",element:<BlogArticle/>},
+          {path:"blog/topic/:topic",element:<BlogIndex/>},
           {path:"product/:slug",element:<ProductDetail/>},
           {path:"cart",element:<CartPage/>},
           {path:"checkout",element:<CheckoutPage/>},

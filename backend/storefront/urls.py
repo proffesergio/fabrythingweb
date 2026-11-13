@@ -1,7 +1,7 @@
 from django.urls import path
 from .seo import sitemap
 from .journal_bridge import JournalBridgeView
-from .journal_views import JournalTopicsView, JournalRelatedView, journal_document, journal_robots
+from .journal_views import JournalTopicsView, JournalRelatedView, journal_document, journal_archive_document, journal_robots
 
 from .views import (
     # Public
@@ -142,5 +142,7 @@ urlpatterns += [
     path('journal/topics/', JournalTopicsView.as_view(), name='journal-topics'),
     path('journal/related/<str:slug>/', JournalRelatedView.as_view(), name='journal-related'),
     path('journal/document/<str:slug>/', journal_document, name='journal-document'),
+    path('journal/archive/', journal_archive_document, name='journal-archive'),
+    path('journal/archive/<slug:topic>/', journal_archive_document, name='journal-topic-archive'),
     path('robots.txt', journal_robots, name='store-robots'),
 ]
