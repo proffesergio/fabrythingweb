@@ -15,6 +15,8 @@ from rest_framework.test import APIClient
 from catalog.models import Categories, Products, ProductVariant
 from core.models import StoreConfiguration, WhatsAppAlertLog
 from orders.models import Order
+from storeops.alerts import process_one_alert
+from storeops.models import OrderAlert
 
 ENV_CONFIGURED = {
     "WHATSAPP_ACCESS_TOKEN": "tok",
@@ -59,12 +61,17 @@ class PlaceOrderWhatsAppAlertTests(TestCase):
     @mock.patch.dict("os.environ", ENV_CONFIGURED, clear=True)
     def test_placing_an_order_triggers_exactly_one_admin_alert_after_commit(self, mock_post):
         mock_post.return_value = mock.Mock(ok=True, status_code=200, text="")
+        mock_post.return_value.json.return_value = {'messages': [{'id': 'wamid.test'}]}
 
         with self.captureOnCommitCallbacks(execute=True):
             res = self._place_order()
 
         self.assertEqual(res.status_code, 201, res.content)
         order_number = res.json()["data"]["order_number"]
+        mock_post.assert_not_called()  # Checkout only commits the durable outbox.
+        self.assertEqual(OrderAlert.objects.count(), 1)
+        process_one_alert()
+        process_one_alert()
 
         alerts = WhatsAppAlertLog.objects.filter(kind="store_order_admin")
         self.assertEqual(alerts.count(), 1)
@@ -82,6 +89,7 @@ class PlaceOrderWhatsAppAlertTests(TestCase):
 
         self.assertEqual(res.status_code, 201, res.content)
         self.assertTrue(Order.objects.filter(order_number=res.json()["data"]["order_number"]).exists())
+        process_one_alert()
         mock_post.assert_not_called()
         self.assertEqual(WhatsAppAlertLog.objects.count(), 0)
 
@@ -96,10 +104,13 @@ class PlaceOrderWhatsAppAlertTests(TestCase):
         self.assertEqual(res.status_code, 201, res.content)
         order_number = res.json()["data"]["order_number"]
         self.assertTrue(Order.objects.filter(order_number=order_number).exists())
+        mock_post.assert_not_called()
+        process_one_alert()
 
         alert = WhatsAppAlertLog.objects.get(kind="store_order_admin")
         self.assertFalse(alert.success)
-        self.assertIn("no route to host", alert.error)
+        self.assertIn("Unconfirmed request", alert.error)
+        self.assertEqual(OrderAlert.objects.get().status, 'unknown')
 
     @mock.patch("core.whatsapp.requests.post")
     @mock.patch.dict("os.environ", ENV_CONFIGURED, clear=True)

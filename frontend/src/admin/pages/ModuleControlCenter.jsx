@@ -16,6 +16,7 @@ const FoodOverview = lazy(() => import('./FoodOverview'));
 const PrintOverview = lazy(() => import('./PrintOverview'));
 const NewsOverview = lazy(() => import('./NewsOverview'));
 const ShopControlCenter = lazy(() => import('./ShopControlCenter'));
+const MediaOperations = lazy(() => import('./MediaOperations'));
 const LegacyDashboard = lazy(() => import('../../pages/Home'));
 const OVERVIEWS = { shop: ShopOverview, food: FoodOverview, print: PrintOverview, news: NewsOverview };
 
@@ -43,7 +44,7 @@ export default function ModuleControlCenter({ module }) {
   const [query, setQuery] = useState('');
   const groups = useMemo(() => toolGroups(items, module), [items, module]);
   const requestedTab = params.get('tab');
-  const tab = requestedTab === 'tools' || (module === 'shop' && ['automation', 'business'].includes(requestedTab))
+  const tab = requestedTab === 'tools' || (module === 'shop' && ['automation', 'business', 'media'].includes(requestedTab))
     ? requestedTab : 'operations';
   const Overview = OVERVIEWS[module];
   const changeTab = (_, value) => {
@@ -73,6 +74,7 @@ export default function ModuleControlCenter({ module }) {
     <Tabs value={tab} onChange={changeTab} variant="scrollable" scrollButtons="auto" aria-label={`${meta.short} Control Center sections`} sx={{ mb: 3, borderBottom: '1px solid', borderColor: 'divider' }}>
       <Tab label="Operations" value="operations" />
       {module === 'shop' && <Tab label="Automation & insights" value="automation" />}
+      {module === 'shop' && <Tab label="Media & capacity" value="media" />}
       {module === 'shop' && <Tab label="Business report" value="business" />}
       <Tab label="Management tools" value="tools" />
     </Tabs>
@@ -80,6 +82,7 @@ export default function ModuleControlCenter({ module }) {
       <Suspense fallback={<Box sx={{ p: 4, textAlign: 'center' }}><CircularProgress aria-label="Loading section" /></Box>}>
         {tab === 'operations' && <Overview embedded />}
         {tab === 'automation' && <ShopControlCenter embedded />}
+        {tab === 'media' && <MediaOperations />}
         {tab === 'business' && <LegacyDashboard />}
         {tab === 'tools' && <>
           <TextField fullWidth size="small" label="Find a management tool" value={query} onChange={(event) => setQuery(event.target.value)} sx={{ mb: 3 }} />

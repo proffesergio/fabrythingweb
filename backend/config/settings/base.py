@@ -65,6 +65,7 @@ LOCAL_APPS = [
     "chat",
     "printing",
     "analytics",
+    "storeops.apps.StoreopsConfig",
 ]
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS

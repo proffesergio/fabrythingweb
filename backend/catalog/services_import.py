@@ -219,5 +219,10 @@ def seed_product_entry(entry, category, domain_user, added_by_user=None, *,
                 variant.discount_price = None
                 variant.save(update_fields=["price", "discount_price", "updated_at"])
 
+        from storeops.models import OperationsPolicy
+        if OperationsPolicy.current().auto_clean_images:
+            from storeops.images import enqueue_product
+            enqueue_product(product)
+
     return {"status": status, "reason": None, "product": product,
             "slug": slug, "sku_n_used": sku_n_used}

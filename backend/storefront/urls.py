@@ -1,5 +1,6 @@
-from django.urls import path
+from django.urls import include, path
 from .seo import sitemap
+from .store_documents import store_document
 from .journal_bridge import JournalBridgeView
 from .journal_views import JournalTopicsView, JournalRelatedView, journal_document, journal_archive_document, journal_robots
 
@@ -90,6 +91,11 @@ def affiliate_routes(public, click, admin, suffix=''):
 
 
 urlpatterns = [
+    path('', include('storeops.urls')),
+    path('documents/home/', store_document, name='store-home-document'),
+    path('documents/shop/', store_document, {'kind': 'shop'}, name='store-shop-document'),
+    path('documents/deals/', store_document, {'kind': 'deals'}, name='store-deals-document'),
+    path('documents/product/<slug:slug>/', store_document, {'kind': 'product'}, name='store-product-document'),
     path('sitemap.xml', sitemap, name='store_sitemap'),
     # Public (no auth)
     path('config/', StoreConfigView.as_view(), name='store_config'),

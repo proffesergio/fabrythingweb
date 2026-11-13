@@ -13,7 +13,6 @@ from rest_framework.exceptions import ValidationError
 from catalog.models import ProductVariant
 from core.email_alerts import send_email_alert_on_commit
 from core.models import INSIDE_DHAKA, OUTSIDE_DHAKA, StoreConfiguration
-from core.whatsapp import send_whatsapp_on_commit
 
 from .models import Order, OrderItem, OrderStatusLog
 
@@ -214,12 +213,8 @@ def place_cod_order(*, customer, items, contact_name, contact_phone,
         ),
     )
 
-    admin_number = (config.whatsapp_admin_number or "").strip()
-    send_whatsapp_on_commit(
-        admin_number, kind="store_order_admin", related_order=order.order_number,
-        template_name=STORE_ORDER_ADMIN_TEMPLATE,
-        params=[order.order_number, contact_name, contact_phone,
-               str(len(order_items)), f"{total} {config.currency}"],
-    )
+    from storeops.alerts import enqueue_order_alert
+    enqueue_order_alert(order, [order.order_number, contact_name, contact_phone,
+                               str(len(order_items)), f"{total} {config.currency}"])
 
     return order

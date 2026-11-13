@@ -1,3 +1,13 @@
+# Media, capacity, alerts and crawlable commerce — 2026-11-13
+
+- Owner approved the hosted Media & capacity design and Git/CI release. New Shop tab, catalog selection action, transactional CPU image queue with originals/CAS restore, measured storage and durable signed-callback order alerts are implemented.
+- Home/shop/deals/product documents now contain crawlable HTML and preserve the existing deployed React shell/analytics/verification. Apex-to-www redirect remains intentional; main/news sitemaps use their own canonical hosts.
+- No existing live service or EchoLink worker was restarted. Background processing/sending remains pending a dedicated worker and usable private settings.
+- Authorized Vercel export succeeded outside the repositories, but22 protected values are placeholders, not usable worker credentials. WhatsApp API/callback settings are absent. Never treat placeholder probe failures as production outages.
+- Scope, original design/conversion alignment, checks, migration0001–0004, activation limits and file map: [media and indexing handoff](../MEDIA_CAPACITY_INDEXING_2026-11-13.md). CI deployment evidence will be recorded there after verification.
+
+---
+
 # Journal and EchoLink release — 2026-11-13
 
 - Approved journal buyer-guide/topic interfaces and signed EchoLink bridge are implemented and pushed in31a5af9. Frontend67jVYtawZKyBywAAuKagePx9718a and backendAVjh6xyjiz6pAfspjSFBpYvCnaxi deployed successfully through the existing Vercel Git integration.

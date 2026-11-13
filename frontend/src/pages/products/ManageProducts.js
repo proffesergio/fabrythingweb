@@ -355,7 +355,11 @@ const ManageProducts = ({ onProductSelected }) => {
                         <Typography variant="body2" sx={{ cursor: "pointer" }} onClick={() => navigate("/admin")}>Home</Typography>
                         <Typography variant="body2">Products</Typography>
                     </Breadcrumbs>
-                    <Stack direction="row" spacing={1}>
+                    <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
+                        <Button variant="outlined" disabled={!selectedIds.size || selectedIds.size > 100}
+                            onClick={() => navigate(`/admin/shop?tab=media&products=${Array.from(selectedIds).join(',')}`)}>
+                            Clean selected photos
+                        </Button>
                         <Button
                             variant="outlined" startIcon={<LocalShippingIcon />}
                             disabled={selectedIds.size === 0 && !categoryFilter}

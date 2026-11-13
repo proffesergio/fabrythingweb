@@ -30,7 +30,7 @@ from django.db import transaction
 logger = logging.getLogger("core.whatsapp")
 
 REQUEST_TIMEOUT_SECONDS = 5
-DEFAULT_API_VERSION = "v20.0"
+DEFAULT_API_VERSION = "v27.0"
 
 
 def _access_token():
@@ -112,16 +112,22 @@ def send_whatsapp(to, *, kind, template_name, params, language_code="en", relate
     except Exception as exc:  # network error, timeout, DNS failure, ... — never raise
         error = f"{type(exc).__name__}: {exc}"
 
+    if _access_token():
+        error = error.replace(_access_token(), '[redacted]')
     if not success:
         logger.warning("whatsapp: %s alert to %s failed: %s", kind, to, error)
 
     from core.models import WhatsAppAlertLog  # local import: keep module import-light
 
-    WhatsAppAlertLog.objects.create(
-        recipient=to, kind=kind, related_order=related_order,
-        payload_summary=" | ".join(str(p) for p in params)[:300],
-        success=success, error=error[:500],
-    )
+    try:
+        with transaction.atomic():
+            WhatsAppAlertLog.objects.create(
+                recipient=to, kind=kind, related_order=related_order,
+                payload_summary=" | ".join(str(p) for p in params)[:300],
+                success=success, error=error[:500],
+            )
+    except Exception:
+        logger.warning('WhatsApp outcome log unavailable.')
     return success
 
 

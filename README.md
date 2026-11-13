@@ -13,6 +13,8 @@ The Fabrything Journal organizes buying guides, how-to articles, troubleshooting
 ## A platform for connected businesses
 
 - Product catalogues, inventory, purchasing and order management.
+- Product photo cleanup with retained originals, processing history and capacity visibility.
+- Configurable WhatsApp order notifications through the official Meta Cloud API, subject to provider activation.
 - Customer, business administrator, vendor and rider experiences.
 - Local food delivery and custom printing services.
 - NobleSeek news publishing alongside the store’s distinct editorial journal.

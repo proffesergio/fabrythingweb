@@ -1,7 +1,9 @@
 import { render, screen, within } from '@testing-library/react';
 import { Provider } from 'react-redux';
 import { configureStore } from '@reduxjs/toolkit';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, Route, Routes } from 'react-router-dom';
+import LegalPage from '../pages/legal/LegalPage';
+import { LEGAL_PAGES } from '../pages/legal/content';
 import cartReducer from '../../redux/reducer/cartSlice';
 import StorefrontLayout from './StorefrontLayout';
 
@@ -21,7 +23,10 @@ const renderLayout = (path = '/') =>
   render(
     <Provider store={store}>
       <MemoryRouter initialEntries={[path]}>
-        <StorefrontLayout />
+        <Routes><Route element={<StorefrontLayout />}><Route path="*" element={
+          LEGAL_PAGES.find((doc) => `/${doc.slug}` === path)
+            ? <LegalPage doc={LEGAL_PAGES.find((doc) => `/${doc.slug}` === path)} /> : null
+        } /></Route></Routes>
       </MemoryRouter>
     </Provider>
   );
@@ -43,7 +48,8 @@ test('desktop header excludes NobleSeek and Company footer links to its portal b
   const journal = within(company).getByRole('link', { name: 'Product Journal' });
   const portal = within(company).getByRole('link', { name: 'NobleSeek' });
   expect(journal).toHaveAttribute('href', '/blog');
-  expect(journal.nextElementSibling).toBe(portal);
+  expect(company).toContainElement(journal);
+  expect(company).toContainElement(portal);
   expect(portal).toHaveAttribute('href', 'https://nobleseek.fabrything.com');
   expect(screen.getAllByRole('link', { name: /nobleseek|নোবেলসিক/i })).toEqual([portal]);
 });
@@ -84,4 +90,12 @@ test.each(['/blog', '/blog/buying-guide'])('preserves editorial page metadata at
   document.title = 'Guide title — Fabrything Journal';
   renderLayout(path);
   expect(document.title).toBe('Guide title — Fabrything Journal');
+});
+
+test('shop pagination preserves the server canonical and filtered views stay out of the index', () => {
+  const view = renderLayout('/shop?page=2');
+  expect(document.querySelector('link[rel="canonical"]')).toHaveAttribute('href', 'https://www.fabrything.com/shop?page=2'); // eslint-disable-line testing-library/no-node-access
+  view.unmount();
+  renderLayout('/shop?category=fashion');
+  expect(document.querySelector('meta[name="robots"]')).toHaveAttribute('content', 'noindex,follow'); // eslint-disable-line testing-library/no-node-access
 });

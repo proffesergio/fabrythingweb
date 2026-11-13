@@ -85,7 +85,10 @@ class PublishingTests(TestCase):
         response = self.client.get("/api/store/sitemap.xml")
         root = ElementTree.fromstring(response.content)
         urls = {node.text for node in root.findall("{*}url/{*}loc")}
-        self.assertIn(news.get_canonical_url(), urls)
+        self.assertNotIn(news.get_canonical_url(), urls)
+        news_map = self.client.get('/api/store/nobleseek/sitemap.xml')
+        news_urls = {node.text for node in ElementTree.fromstring(news_map.content).findall('{*}url/{*}loc')}
+        self.assertIn(news.get_canonical_url(), news_urls)
         self.assertIn(blog.get_canonical_url(), urls)
         self.assertIn("https://www.fabrything.com/blog", urls)
         self.assertNotIn(hidden.get_canonical_url(), urls)

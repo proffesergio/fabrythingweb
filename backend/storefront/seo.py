@@ -1,4 +1,5 @@
 from urllib.parse import quote
+from urllib.parse import urlsplit
 from xml.etree.ElementTree import Element, SubElement, tostring
 
 from django.http import HttpResponse
@@ -22,11 +23,15 @@ def sitemap(request):
     news_base = PublishingSettings.current().news_site_url.rstrip('/')
     for path in ('/nobleseek', '/nobleseek/about', '/nobleseek/contact',
                  '/nobleseek/privacy', '/nobleseek/disclaimer', '/nobleseek/ethics'):
-        SubElement(SubElement(root, 'url'), 'loc').text = news_base + path
+        if urlsplit(news_base).hostname == 'www.fabrything.com':
+            SubElement(SubElement(root, 'url'), 'loc').text = news_base + path
     for article in Article.objects.filter(status=Article.Status.PUBLISHED,
                                            published_at__lte=timezone.now()).only('slug', 'content_type', 'updated_at'):
+        canonical = article.get_canonical_url(news_base)
+        if urlsplit(canonical).hostname != 'www.fabrything.com':
+            continue  # NobleSeek has its own sitemap on its canonical host.
         item = SubElement(root, 'url')
-        SubElement(item, 'loc').text = article.get_canonical_url(news_base)
+        SubElement(item, 'loc').text = canonical
         SubElement(item, 'lastmod').text = article.updated_at.date().isoformat()
     response = HttpResponse(tostring(root, encoding='utf-8', xml_declaration=True), content_type='application/xml')
     response['Cache-Control'] = 'public, max-age=0, s-maxage=300, stale-while-revalidate=60'

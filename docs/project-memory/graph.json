@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-11-03",
+  "updated_at": "2026-11-13",
   "nodes": [
     {
       "id": "fabrything",
@@ -93,6 +93,28 @@
       "production_build": "passed_with_existing_warnings",
       "migration_drift": "none",
       "vercel_upload": "private_files_excluded"
+    },
+    {
+      "id": "store-operations",
+      "type": "feature",
+      "path": "backend/storeops",
+      "guide": "docs/MEDIA_CAPACITY_INDEXING_2026-11-13.md",
+      "worker": "backend/scripts/store_worker.py",
+      "activation": "Pending original private environment; Vercel protected values cannot be exported; WhatsApp provider absent"
+    },
+    {
+      "id": "crawlable-commerce",
+      "type": "feature",
+      "path": "frontend/server/store-document.cjs",
+      "origin": "backend/storefront/store_documents.py",
+      "canonical": "https://www.fabrything.com",
+      "rendering": "Public HTML plus current deployed React shell; same response for visitors/crawlers"
+    },
+    {
+      "id": "journal",
+      "type": "feature",
+      "path": "backend/storefront/journal_views.py",
+      "guide": "docs/JOURNAL_ECHOLINK_HANDOFF.md"
     }
   ],
   "edges": [
@@ -135,6 +157,26 @@
       "from": "structure-cleanup-2026-11-03",
       "to": "fabrything",
       "relation": "restructures"
+    },
+    {
+      "from": "control-center",
+      "to": "store-operations",
+      "relation": "controls_and_measures"
+    },
+    {
+      "from": "frontend",
+      "to": "crawlable-commerce",
+      "relation": "renders_public_documents"
+    },
+    {
+      "from": "store-operations",
+      "to": "database",
+      "relation": "leases_jobs_and_measures"
+    },
+    {
+      "from": "store-operations",
+      "to": "media",
+      "relation": "preserves_originals_and_writes_webp"
     }
   ]
 }

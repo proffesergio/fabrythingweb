@@ -1,4 +1,4 @@
-from django.db import models
+from django.db import models, transaction
 from django.utils.text import slugify
 
 from accounts.models import Users
@@ -155,7 +155,13 @@ class Products(models.Model):
     def save(self, *args, **kwargs):
         if not self.slug:
             self.slug = slugify(self.name)
-        super().save(*args, **kwargs)
+        if self._state.adding:
+            # Keep a normal autocommit product insert and its post_save image
+            # jobs atomic, matching the shared import transaction.
+            with transaction.atomic():
+                super().save(*args, **kwargs)
+        else:
+            super().save(*args, **kwargs)
 
     def __str__(self):
         return self.name or f"Product #{self.id}"

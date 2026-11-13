@@ -1,0 +1,4 @@
+# Optional persistent CPU worker only; serverless web requirements stay small.
+-r requirements.txt
+rembg[cpu]>=2.0.67,<3
+psutil>=6,<8

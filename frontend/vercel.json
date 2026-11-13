@@ -2,6 +2,9 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "buildCommand": "CI=false react-scripts build",
   "outputDirectory": "build",
+  "functions": {
+    "api/store-document.js": { "includeFiles": "build/index.html", "maxDuration": 30 }
+  },
   "redirects": [
     {
       "source": "/",
@@ -85,6 +88,22 @@
     {
       "source": "/blog/:slug",
       "destination": "https://fabrythingapi.vercel.app/api/store/journal/document/:slug/"
+    },
+    {
+      "source": "/",
+      "destination": "/api/store-document?kind=home"
+    },
+    {
+      "source": "/shop",
+      "destination": "/api/store-document?kind=shop"
+    },
+    {
+      "source": "/deals",
+      "destination": "/api/store-document?kind=deals"
+    },
+    {
+      "source": "/product/:slug",
+      "destination": "/api/store-document?kind=product&slug=:slug"
     },
     {
       "source": "/(.*)",

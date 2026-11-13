@@ -17,6 +17,8 @@ const bootToken = getToken();
 axios.defaults.headers.common['Authorization'] = bootToken ? `Bearer ${bootToken}` : '';
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
+document.getElementById('store-document-schema')?.remove();
+document.getElementById('store-document-style')?.remove();
 root.render(
   <Provider store={store}>
     <App />

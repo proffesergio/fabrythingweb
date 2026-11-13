@@ -62,10 +62,27 @@ def save_file(filename: str, content: bytes, content_type: str) -> str:
         if AWS_S3_PUBLIC_BASE_URL:
             # R2/custom-domain serving: API URLs are private, so return the
             # public host instead (e.g. https://media.fabrything.com/...).
-            return f"{AWS_S3_PUBLIC_BASE_URL.rstrip('/')}/{file_path}"
-        return f"https://{AWS_STORAGE_BUCKET_NAME}.s3.amazonaws.com/{file_path}"
+            url = f"{AWS_S3_PUBLIC_BASE_URL.rstrip('/')}/{file_path}"
+        else:
+            url = f"https://{AWS_STORAGE_BUCKET_NAME}.s3.amazonaws.com/{file_path}"
+        _record(url, content)
+        return url
 
-    return _save_to_database(content, content_type)
+    url = _save_to_database(content, content_type)
+    _record(url, content)
+    return url
+
+
+def _record(url, content):
+    # A metrics write must not invalidate a successfully persisted image.
+    import logging
+    from django.db import transaction
+    try:
+        from storeops.capacity import record_asset
+        with transaction.atomic():
+            record_asset(url, content)
+    except Exception:
+        logging.getLogger(__name__).warning('Media ledger write unavailable; image storage succeeded.')
 
 
 def _save_to_database(content: bytes, content_type: str) -> str:

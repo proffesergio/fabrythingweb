@@ -82,7 +82,7 @@ class ConfiguredProviderTests(TestCase):
         call = mock_post.call_args
         url = call.args[0] if call.args else call.kwargs["url"]
         self.assertEqual(
-            url, "https://graph.facebook.com/v20.0/1234567890/messages"
+            url, "https://graph.facebook.com/v27.0/1234567890/messages"
         )
         headers = call.kwargs["headers"]
         self.assertEqual(headers["Authorization"], "Bearer super-secret-token-do-not-leak")

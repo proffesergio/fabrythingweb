@@ -130,11 +130,16 @@ function StorefrontLayoutInner({ toggleDarkMode, darkMode }) {
         '/terms': ['Terms of Use — Fabrything', 'Read the terms that apply when you use Fabrything.'],
         '/shipping': ['Delivery & Shipping Conditions — Fabrything', 'Find Fabrything delivery areas, shipping fees and order conditions.'],
     }[location.pathname] || ['Fabrything', 'Shop fashion, electronics and everyday essentials online in Bangladesh at Fabrything.'];
+    const seoParams = new URLSearchParams(location.search);
+    const collectionRoute = location.pathname === '/shop';
+    const seoPage = Number(seoParams.get('page') || 1);
+    const seoPath = location.pathname + (collectionRoute && Number.isInteger(seoPage) && seoPage > 1 ? `?page=${seoPage}` : '');
     useSeo({
         title: /^\/(product|blog|privacy|terms|shipping|contact|disclosure)(\/|$)/.test(location.pathname) ? null : routeSeo[0],
         description: routeSeo[1],
-        path: location.pathname,
-        noindex: /^\/(cart|checkout|account|auth|admin)(\/|$)/.test(location.pathname),
+        path: seoPath,
+        noindex: /^\/(cart|checkout|account|auth|admin)(\/|$)/.test(location.pathname)
+            || (collectionRoute && [...seoParams.keys()].some((key) => key !== 'page')),
     });
     const theme         = useTheme();
     const isMobile      = useMediaQuery(theme.breakpoints.down('md'));

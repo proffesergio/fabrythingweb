@@ -15,6 +15,13 @@ class ProductsAdmin(admin.ModelAdmin):
     search_fields = ("name", "sku", "brand")
     list_filter = ("status", "gender")
     inlines = [ProductVariantInline]
+    actions = ['queue_background_cleanup']
+
+    @admin.action(description='Queue background cleanup (preserve original photos)')
+    def queue_background_cleanup(self, request, queryset):
+        from storeops.images import enqueue_product
+        jobs = [job.pk for product in queryset.order_by('pk')[:100] for job in enqueue_product(product)]
+        self.message_user(request, f'{len(jobs)} photo jobs selected; up to 100 products per batch. Processing runs in the image worker.')
 
 
 @admin.register(ProductVariant)

@@ -4,6 +4,6 @@
 const config={
     API_URL:typeof window !== 'undefined' && window.location.hostname === 'nobleseek.fabrything.com'
         ? '/api/'
-        : process.env.REACT_APP_API_URL || "http://localhost:8000/api/"
+        : process.env.REACT_APP_API_URL || (process.env.NODE_ENV === 'production' ? '/api/' : 'http://localhost:8000/api/')
 }
 export default config;
