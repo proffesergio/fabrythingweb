@@ -1,5 +1,13 @@
 # Fabrything journal — approved release handoff
 
+## November14: automatic website-only profile
+
+The owner authorized the separate EchoLink `Fabrything Blog` profile, English first, focused on existing Gadgets/personal-audio compatibility. Its initial ceiling is two source-backed guides/day, at least12 hours apart. Five real topic levels are configured; no synthetic articles were seeded. Existing public catalog images supply article imagery; separate image/WhatsApp worker credentials remain pending.
+
+The backend now supports a signed, tenant-bound GET receipt lookup by sourceKey. It returns saved status, canonical URL and exact payload hash without article content or writes. EchoLink uses this to reconcile an interrupted publication response before considering any further action. Twelve journal tests pass, including authentication, cross-tenant rejection and a read-only receipt check.
+
+The supplied root `.env.local` database URL was validated with verified TLS and used only for this store's real topic configuration. Existing production migrations were already applied. Four dedicated journal bridge settings were securely configured on the production backend; existing database/storage/app secrets were preserved. Deployment and signed live health must succeed before EchoLink enables its new profile. No Meta credentials are needed for website publication. Affiliate and advertising accounts remain unapproved; the shop stays ad-free and no affiliate URLs are fabricated.
+
 Designs approved November13. The article/topic UI, reusable blocks, signed publishing bridge and SEO routes are implemented and locally verified. Source31a5af9 is pushed to main; frontend and backend Vercel deployments succeeded. Live /blog and topic API return200; no existing live process was restarted or killed. No synthetic production publication or manual live migration was submitted.
 
 Full cross-repository scope, verification limits and exact manifests: EchoLink `docs/LOCAL_COMMERCE_JOURNAL_REVIEW.md`.

@@ -31,6 +31,17 @@ class JournalBridgeView(APIView):
         expected = hmac.new(secret.encode(), stamp.encode() + b'.', hashlib.sha256).hexdigest()
         if not hmac.compare_digest(expected, request.headers.get('X-EchoLink-Signature', '')):
             return Response({'error': 'Invalid or expired signature.'}, status=401)
+        source_key = request.query_params.get('sourceKey')
+        if source_key:
+            prefix = os.environ['ECHOLINK_BLOG_WORKSPACE_ID'] + ':' + os.environ['ECHOLINK_BLOG_PAGE_ID'] + ':'
+            if not source_key.startswith(prefix) or len(source_key) > 240:
+                return Response({'error': 'Source tenant is not permitted.'}, status=403)
+            saved = JournalArticle.objects.select_related('article').filter(source_key=source_key).first()
+            if not saved:
+                return Response({'error': 'No journal receipt exists for this delivery.'}, status=404)
+            return Response({'id': saved.article_id, 'url': saved.article.get_canonical_url(),
+                             'status': saved.article.status, 'sourceKey': saved.source_key,
+                             'payloadHash': saved.payload_hash})
         return Response({'ok': True, 'version': 'fabrything-journal-v1'})
 
     def post(self, request):

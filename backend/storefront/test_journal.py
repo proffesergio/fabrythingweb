@@ -76,6 +76,26 @@ class JournalTests(TestCase):
         self.assertEqual(JournalArticle.objects.count(), 1)
         self.assertEqual(Article.objects.get().headline, payload()['title'])
 
+    def test_signed_receipt_lookup_reconciles_without_writes_or_cross_tenant_access(self):
+        self.send()
+        stamp = str(int(time.time()))
+        signature = hmac.new(SECRET.encode(), stamp.encode() + b'.', hashlib.sha256).hexdigest()
+
+        def lookup(key, supplied_signature=signature):
+            request = APIRequestFactory().get('/api/store/journal/publish/', {'sourceKey': key},
+                HTTP_X_ECHOLINK_TIMESTAMP=stamp, HTTP_X_ECHOLINK_SIGNATURE=supplied_signature)
+            return JournalBridgeView.as_view()(request)
+
+        receipt = lookup(payload()['sourceKey'])
+        self.assertEqual(receipt.status_code, 200)
+        self.assertEqual(receipt.data['sourceKey'], payload()['sourceKey'])
+        self.assertEqual(receipt.data['payloadHash'], JournalArticle.objects.get().payload_hash)
+        self.assertNotIn('blocks', receipt.data)
+        self.assertEqual(lookup(payload()['sourceKey'], 'wrong').status_code, 401)
+        self.assertEqual(lookup(PAGE + ':' + WORKSPACE + ':other').status_code, 403)
+        self.assertEqual(lookup(WORKSPACE + ':' + PAGE + ':missing').status_code, 404)
+        self.assertEqual(Article.objects.count(), 1)
+
     def test_destination_policy_and_explicit_review_gate_automatic_publication(self):
         with patch.dict(os.environ, {'ECHOLINK_BLOG_AUTO_PUBLISH': 'true'}):
             policy = PublishingSettings.current(); policy.require_review_for_automation = True; policy.save()
