@@ -1,7 +1,7 @@
 # Live activation follow-up — 2026-11-14
 
 - Latest storefront/API source16360a5 is deployed; homepage, sitemap and protected export endpoint were rechecked.
-- Owner authorized applying all changes live. EchoLink sibling now has SQL017–021 and the gracefully updated worker/bridge; public capability health is verified. Its Fabrything catalog refresh succeeded and a three-product preparation batch queued; normal end-to-end scheduling remains under observation.
+- Owner authorized applying all changes live. EchoLink sibling now has SQL017–021 and the gracefully updated worker/bridge; public capability health is verified. Its Fabrything catalog refresh succeeded and a three-product preparation batch queued; the first completed real caption/design passed editorial checks and automatically scheduled for06:36Z (12:36 Dhaka). Other preparations remain subject to RAM admission.
 - Dedicated store image/WhatsApp worker is still pending usable original settings. Owner will place these in repository-root `.env.local`; do not confuse backend/.env.local (CLI token only) or the protected-placeholder export with a usable worker environment. Never print or commit credentials.
 
 # Homepage and customer export extension — 2026-11-14
