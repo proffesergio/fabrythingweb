@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-11-13",
+  "updated_at": "2026-11-14",
   "nodes": [
     {
       "id": "fabrything",
@@ -115,6 +115,18 @@
       "type": "feature",
       "path": "backend/storefront/journal_views.py",
       "guide": "docs/JOURNAL_ECHOLINK_HANDOFF.md"
+    },
+    {
+      "id": "homepage-product-spotlight",
+      "type": "feature",
+      "path": "frontend/src/storefront/components/ProductSpotlight.js",
+      "status": "approved implemented; optional motion; real catalog data"
+    },
+    {
+      "id": "registered-customer-export",
+      "type": "feature",
+      "path": "backend/storefront/customer_exports.py",
+      "status": "staff-only CSV/JSON search-filtered streaming export"
     }
   ],
   "edges": [

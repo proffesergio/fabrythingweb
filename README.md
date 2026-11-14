@@ -13,6 +13,8 @@ The Fabrything Journal organizes buying guides, how-to articles, troubleshooting
 ## A platform for connected businesses
 
 - Product catalogues, inventory, purchasing and order management.
+- Product-led homepage showcases with accessible motion controls.
+- Staff-only customer exports in CSV and JSON, including search-filtered downloads.
 - Product photo cleanup with retained originals, processing history and capacity visibility.
 - Configurable WhatsApp order notifications through the official Meta Cloud API, subject to provider activation.
 - Customer, business administrator, vendor and rider experiences.

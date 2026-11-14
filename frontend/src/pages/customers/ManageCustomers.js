@@ -2,10 +2,11 @@ import { useEffect, useState, useCallback } from "react";
 import {
     Box, Typography, Card, CardContent, TextField, InputAdornment, Table, TableBody,
     TableCell, TableHead, TableRow, TableContainer, Paper, Avatar, Stack, Chip, LinearProgress,
-    Pagination,
+    Pagination, Button, Alert,
 } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
 import GroupIcon from "@mui/icons-material/Group";
+import DownloadIcon from "@mui/icons-material/Download";
 
 import useApi from "../../hooks/APIHandler";
 
@@ -15,6 +16,31 @@ export default function ManageCustomers() {
     const [search, setSearch] = useState("");
     const [page, setPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
+    const [exporting, setExporting] = useState(false);
+    const [exportError, setExportError] = useState('');
+
+    const exportCustomers = async (fileType) => {
+        if (exporting) return;
+        setExporting(true);
+        setExportError('');
+        try {
+            const res = await callApi({ url: 'store/admin/customers/export/', method: 'GET',
+                params: { file_type: fileType, ...(search ? { search } : {}) }, silent: true, timeout: 60000 });
+            if (res?.status !== 200) throw new Error('Export unavailable');
+            const data = fileType === 'json' ? JSON.stringify(res.data, null, 2) : res.data;
+            const blob = new Blob([data], { type: fileType === 'csv' ? 'text/csv;charset=utf-8' : 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `fabrything-customers-${new Date().toISOString().slice(0, 10)}.${fileType}`;
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            setTimeout(() => URL.revokeObjectURL(url), 1000);
+        } catch (_) {
+            setExportError('Customers could not be exported. Please retry.');
+        } finally { setExporting(false); }
+    };
 
     const fetchCustomers = useCallback(async () => {
         const params = { page };
@@ -34,6 +60,12 @@ export default function ManageCustomers() {
                 <GroupIcon color="primary" />
                 <Typography variant="h5" fontWeight={800}>Customers</Typography>
             </Stack>
+            <Stack direction="row" spacing={1} sx={{ mb: 2, flexWrap: 'wrap', gap: 1 }}>
+                <Button variant="outlined" startIcon={<DownloadIcon />} disabled={exporting} onClick={() => exportCustomers('csv')}>Export CSV</Button>
+                <Button variant="outlined" startIcon={<DownloadIcon />} disabled={exporting} onClick={() => exportCustomers('json')}>Export JSON</Button>
+            </Stack>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>Exports include all registered customers matching your search, across every page.</Typography>
+            {exportError && <Alert severity="error" sx={{ mb: 2 }}>{exportError}</Alert>}
 
             <Card sx={{ mb: 2 }}>
                 <CardContent>

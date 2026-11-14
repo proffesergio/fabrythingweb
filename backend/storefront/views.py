@@ -25,6 +25,7 @@ from orders.models import Order, OrderItem
 from orders.services import place_cod_order
 
 from .models import Cart, CartItem
+from .permissions import IsPlatformStaff
 from .serializers import (
     CartItemSerializer,
     CartMergeSerializer,
@@ -751,7 +752,7 @@ class AdminCustomerListView(generics.ListAPIView):
     """Admin view of storefront customers with order aggregates."""
     serializer_class = AdminCustomerSerializer
     authentication_classes = [JWTAuthentication]
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsPlatformStaff]
     pagination_class = CustomPageNumberPagination
 
     def get_queryset(self):

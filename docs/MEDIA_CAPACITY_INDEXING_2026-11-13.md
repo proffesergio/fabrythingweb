@@ -59,7 +59,11 @@ The SuperDesign target was converted with hosted12ui and the implemented URL was
 
 Local verification:1,220 backend tests;33 final image/outbox/document regression tests;38 focused React tests;4 Node document-composition/failure tests; new Python modules pass Ruff. Migration drift and Django system checks are clean. Isolated production build passed with the existing CRA/Browserslist warnings. Full frontend lint has165 baseline errors/234 warnings, zero new errors (the prior baseline was166 errors). Browser source/canonical/cart and responsive admin checks passed at1440/768/390/320 with zero JavaScript page errors and no real orders, notifications or website writes.
 
-Git/CI deployment evidence will be appended after observed completion.
+Source90370b6 deployed successfully for both projects; storeops migrations0001–0004 applied through the existing backend build. Live verification caught a frontend packaging/root-routing regression, corrected in2fcf19d. Both correction deployments are READY: frontend `dpl_Ek1oA1RhugCvUvkoDQAivKVVauZo`, backend `dpl_3nqTjDTQvTPrrCC8Phosk1AXFJ1d`. The build now packages its public HTML as a traced module rather than depending on the function's working directory, and moves the static fallback to `app-shell.html` so filesystem index precedence cannot bypass the homepage rewrite. Five Node regression tests pass, including an unrelated runtime working directory.
+
+Observed live after correction: home/shop/page2/deals/product200 with full HTML, matching canonical and current React scripts; blog200; robots/sitemap200 with899 sitemap URLs; unauthenticated operations401; apex308 towww. Production build metadata reports PostgreSQL56,303,616bytes, database image payload29,874,490bytes across715 images, and886 catalog products/885 active. Provider limits remain unverified. Protected Vercel environment exports contain22 placeholders and cannot activate the separate worker.
+
+November14 approved homepage banner and customer export extension: see [follow-up handoff](HOMEPAGE_CUSTOMER_EXPORT_2026-11-14.md).
 
 <details><summary>Exact release file manifest (54 files)</summary>
 

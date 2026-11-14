@@ -1,3 +1,9 @@
+# Homepage and customer export extension — 2026-11-14
+
+- Owner approved the hosted product spotlight; implemented catalog-driven responsive banner, pause/reduced motion and real-photo fallbacks without replacing managed banners. CSV/JSON exports include all search matches and use staff-only authorization, safe fields and CSV formula protection.
+- Core media/indexing source90370b6 and routing correction2fcf19d both deployed through Git integration. Live home/shop/deals/product and pagination return200 with canonical/full HTML/React scripts; sitemap899 URLs, operations401 anonymous, apex308 intentional. Storeops migrations0001–0004 applied. New worker still pending original private credentials/Meta setup; existing workers untouched.
+- Current extension checks:1,224 backend, five React and five Node tests, isolated build, four-width browser QA. Scope/design/file details: [homepage and export handoff](../HOMEPAGE_CUSTOMER_EXPORT_2026-11-14.md).
+
 # Media, capacity, alerts and crawlable commerce — 2026-11-13
 
 - Owner approved the hosted Media & capacity design and Git/CI release. New Shop tab, catalog selection action, transactional CPU image queue with originals/CAS restore, measured storage and durable signed-callback order alerts are implemented.

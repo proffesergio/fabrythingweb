@@ -1,6 +1,7 @@
 from django.urls import include, path
 from .seo import sitemap
 from .store_documents import store_document
+from .customer_exports import AdminCustomerExportView
 from .journal_bridge import JournalBridgeView
 from .journal_views import JournalTopicsView, JournalRelatedView, journal_document, journal_archive_document, journal_robots
 
@@ -132,6 +133,7 @@ urlpatterns = [
     # Admin endpoints
     path('admin/dashboard/', AdminDashboardView.as_view(), name='admin_dashboard'),
     path('admin/customers/', AdminCustomerListView.as_view(), name='admin_customers'),
+    path('admin/customers/export/', AdminCustomerExportView.as_view(), name='admin_customers_export'),
     path('admin/orders/', AdminOrderListView.as_view(), name='admin_orders'),
     path('admin/orders/<int:pk>/', AdminOrderDetailView.as_view(), name='admin_order_detail'),
     path('admin/banners/', AdminBannerListCreateView.as_view(), name='admin_banners'),

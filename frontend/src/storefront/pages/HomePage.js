@@ -4,6 +4,7 @@ import { LocalShipping, Payment, Verified, Support } from '@mui/icons-material';
 import { motion, useReducedMotion } from 'framer-motion';
 import useCachedApi from '../../hooks/useCachedApi';
 import HeroCarousel from '../components/HeroCarousel';
+import ProductSpotlight from '../components/ProductSpotlight';
 import FlashSaleSection from '../components/FlashSaleSection';
 import TabbedProductSection from '../components/TabbedProductSection';
 import ProductCarousel from '../components/ProductCarousel';
@@ -52,6 +53,7 @@ export default function HomePage() {
             </Container>
 
             {/* Colourful category tiles */}
+            <ProductSpotlight products={[...(data?.trending || []), ...(data?.new_arrivals || []), ...(data?.discover_products || [])]} loading={loading} />
             <CategoryGrid categories={data?.categories || []} />
 
             {/* Flash Sale */}
@@ -60,7 +62,7 @@ export default function HomePage() {
             )}
 
             {/* Tabbed Products: Trending / New Arrivals / Best Sellers */}
-            <Container maxWidth="lg">
+            <Container maxWidth="lg" id="popular-products" sx={{ scrollMarginTop: 100 }}>
                 {loading && !data ? (
                     <Grid container spacing={2} sx={{ mb: 6 }}>
                         {[1, 2, 3, 4].map(i => (
