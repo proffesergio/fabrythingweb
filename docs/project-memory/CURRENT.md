@@ -4,6 +4,7 @@
 - Extension sourcebf06014 is live: frontend6fo6qmtDysmsK7DFCyNuCTq1sFFS and backendHZKFvwu6Q5iVuFeQ2RqUX4ZSKn41 succeeded. Live1440/390 banner/photo QA passes with zero JS errors and no viewport overflow; anonymous export401. Full frontend lint163 existing errors/234 warnings, zero new errors. Task-owned preview processes were closed; existing services were untouched.
 - Core media/indexing source90370b6 and routing correction2fcf19d both deployed through Git integration. Live home/shop/deals/product and pagination return200 with canonical/full HTML/React scripts; sitemap899 URLs, operations401 anonymous, apex308 intentional. Storeops migrations0001–0004 applied. New worker still pending original private credentials/Meta setup; existing workers untouched.
 - Current extension checks:1,224 backend, five React and five Node tests, isolated build, four-width browser QA. Scope/design/file details: [homepage and export handoff](../HOMEPAGE_CUSTOMER_EXPORT_2026-11-14.md).
+- Final customer download encoding restores one UTF-8 BOM even if the browser consumed it; both customer UI tests pass with a raw-byte download assertion. No production customer data was exported during QA.
 
 # Media, capacity, alerts and crawlable commerce — 2026-11-13
 

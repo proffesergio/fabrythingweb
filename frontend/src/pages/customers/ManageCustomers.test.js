@@ -35,5 +35,12 @@ test('downloads all search matches without sending the visible page', async () =
   await waitFor(() => expect(click).toHaveBeenCalled());
   expect(mockCallApi).toHaveBeenCalledWith(expect.objectContaining({url: 'store/admin/customers/export/', params: {file_type: 'csv', search: 'karim'}}));
   expect(URL.createObjectURL).toHaveBeenCalledWith(expect.any(Blob));
+  const bytes = await new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(new Uint8Array(reader.result));
+    reader.onerror = reject;
+    reader.readAsArrayBuffer(URL.createObjectURL.mock.calls[0][0]);
+  });
+  expect(Array.from(bytes.slice(0, 3))).toEqual([239, 187, 191]);
   click.mockRestore();
 });

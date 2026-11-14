@@ -27,7 +27,9 @@ export default function ManageCustomers() {
             const res = await callApi({ url: 'store/admin/customers/export/', method: 'GET',
                 params: { file_type: fileType, ...(search ? { search } : {}) }, silent: true, timeout: 60000 });
             if (res?.status !== 200) throw new Error('Export unavailable');
-            const data = fileType === 'json' ? JSON.stringify(res.data, null, 2) : res.data;
+            // Browser decoders may consume the response BOM. Restore one so
+            // spreadsheet apps identify Bengali customer names as UTF-8.
+            const data = fileType === 'json' ? JSON.stringify(res.data, null, 2) : '\uFEFF' + String(res.data).replace(/^\uFEFF/, '');
             const blob = new Blob([data], { type: fileType === 'csv' ? 'text/csv;charset=utf-8' : 'application/json' });
             const url = URL.createObjectURL(blob);
             const link = document.createElement('a');
