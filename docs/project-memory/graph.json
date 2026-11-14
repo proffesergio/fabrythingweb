@@ -202,5 +202,12 @@
       "to": "media",
       "relation": "preserves_originals_and_writes_webp"
     }
-  ]
+  ],
+  "live_activation": {
+    "date": "2026-11-14",
+    "authorized": true,
+    "websiteSource": "16360a5",
+    "echoWorker": "Migrations21; lifecycle2, continuity1, profile1, commerce8, journal1; public health verified",
+    "storeWorker": "Pending owner-supplied original private settings in repository-root .env.local; protected export cannot run it"
+  }
 }
