@@ -120,13 +120,25 @@
       "id": "homepage-product-spotlight",
       "type": "feature",
       "path": "frontend/src/storefront/components/ProductSpotlight.js",
-      "status": "approved implemented; optional motion; real catalog data"
+      "status": "approved implemented; optional motion; real catalog data",
+      "deployment": {
+        "source": "bf06014",
+        "frontend": "6fo6qmtDysmsK7DFCyNuCTq1sFFS",
+        "backend": "HZKFvwu6Q5iVuFeQ2RqUX4ZSKn41",
+        "verified": true
+      }
     },
     {
       "id": "registered-customer-export",
       "type": "feature",
       "path": "backend/storefront/customer_exports.py",
-      "status": "staff-only CSV/JSON search-filtered streaming export"
+      "status": "staff-only CSV/JSON search-filtered streaming export",
+      "deployment": {
+        "source": "bf06014",
+        "frontend": "6fo6qmtDysmsK7DFCyNuCTq1sFFS",
+        "backend": "HZKFvwu6Q5iVuFeQ2RqUX4ZSKn41",
+        "verified": true
+      }
     }
   ],
   "edges": [
