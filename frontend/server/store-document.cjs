@@ -1,6 +1,3 @@
-const fs = require('node:fs');
-const path = require('node:path');
-
 function composeDocument(shell, document) {
   const shellHead = shell.match(/<head[^>]*>([\s\S]*?)<\/head>/i)?.[1];
   const head = document.match(/<head[^>]*>([\s\S]*?)<\/head>/i)?.[1];
@@ -50,7 +47,7 @@ function createHandler({loadShell, fetchDocument}) {
 }
 
 const handler = createHandler({
-  loadShell: () => fs.readFileSync(path.join(process.cwd(), 'build', 'index.html'), 'utf8'),
+  loadShell: () => require('./build-shell.cjs'),
   fetchDocument: (target) => fetch('https://fabrythingapi.vercel.app' + target, {signal: AbortSignal.timeout(15000), redirect: 'error'}),
 });
 module.exports = {composeDocument, createHandler, handler};

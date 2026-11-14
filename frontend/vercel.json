@@ -1,9 +1,9 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "buildCommand": "CI=false react-scripts build",
+  "buildCommand": "CI=false react-scripts build && node scripts/package-store-shell.cjs",
   "outputDirectory": "build",
   "functions": {
-    "api/store-document.js": { "includeFiles": "build/index.html", "maxDuration": 30 }
+    "api/store-document.js": { "includeFiles": "server/build-shell.cjs", "maxDuration": 30 }
   },
   "redirects": [
     {
@@ -107,7 +107,7 @@
     },
     {
       "source": "/(.*)",
-      "destination": "/index.html"
+      "destination": "/app-shell.html"
     }
   ],
   "headers": [
