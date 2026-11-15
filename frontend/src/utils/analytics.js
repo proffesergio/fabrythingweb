@@ -9,9 +9,7 @@
 //   and *.vercel.app preview builds never send to the real properties.
 //   Backend ingest follows the same rule, otherwise dev traffic pollutes the
 //   admin Traffic panel.
-// - Consent Mode v2: defaults to granted (Bangladesh has no opt-in cookie law
-//   and AdSense/GA4 expect measurement). Call denyConsent() to flip to denied
-//   — the choice persists in localStorage.
+// - The bootstrap and event helpers both honor the saved consent choice.
 
 import config from './config';
 
@@ -86,13 +84,14 @@ export function trackPageview(path) {
   const pagePath = path || window.location.pathname + window.location.search;
   if (!isTrackingEnabled()) return;
   try {
-    window.gtag?.('event', 'page_view', {
+    if (GA_ID) window.gtag?.('event', 'page_view', {
       page_path: pagePath,
       page_location: window.location.href,
       send_to: GA_ID,
     });
     window.dataLayer = window.dataLayer || [];
     window.dataLayer.push({ event: 'pageview', page_path: pagePath });
+    window.fbq?.('track', 'PageView');
   } catch { /* noop */ }
   ingest('page_view', { path: pagePath });
 }

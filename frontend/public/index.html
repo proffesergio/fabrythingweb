@@ -57,76 +57,58 @@
          actual ad units are rendered later from the admin Traffic panel. -->
     <meta name="google-adsense-account" content="%REACT_APP_ADSENSE_CLIENT%" />
     <!-- Auto Ads is loaded only where needed by nobleseek/ads/adsConfig.js. -->
-    <!-- ── Google Analytics 4 (GA4) ───────────────────────────────────
-         Measurement ID G-S32TZJZCLV, overridable via Vercel env
-         REACT_APP_GA4_MEASUREMENT_ID. Hostname-guarded like the Pixel below
-         so localhost / *.vercel.app previews never pollute production data.
-         Consent Mode v2 defaults to granted (no opt-in cookie law in BD);
-         see utils/analytics.js grantConsent()/denyConsent(). -->
-    <script>
-      (function () {
-        var h = window.location.hostname;
-        if (h === 'localhost' || h === '127.0.0.1' || h.endsWith('.vercel.app')) return;
-        var GA_ID = '%REACT_APP_GA4_MEASUREMENT_ID%';
-        if (!GA_ID || GA_ID.indexOf('REACT_APP') !== -1) GA_ID = 'G-S32TZJZCLV';
-        window.__GA4_ID__ = GA_ID;
-        window.dataLayer = window.dataLayer || [];
-        function gtag(){dataLayer.push(arguments);}
-        window.gtag = gtag;
-        gtag('consent', 'default', {
-          ad_storage: 'granted', ad_user_data: 'granted',
-          ad_personalization: 'granted', analytics_storage: 'granted'
-        });
-        gtag('js', new Date());
-        gtag('config', GA_ID, { send_page_view: false });
-        var s = document.createElement('script');
-        s.async = true;
-        s.src = 'https://www.googletagmanager.com/gtag/js?id=' + encodeURIComponent(GA_ID);
-        document.head.appendChild(s);
-      })();
-    </script>
-    <!-- ── Google Tag Manager ─────────────────────────────────────────
-         Set REACT_APP_GTM_ID=GTM-XXXXXXX in Vercel once the container exists
-         (tagmanager.google.com > create container for fabrything.com).
-         Empty/unset = this block no-ops. GTM then owns future tags
-         (Ads conversions, extra pixels) with no redeploy needed. -->
-    <script>
-      (function (w, d, s, l, i) {
-        if (!i || i.indexOf('REACT_APP') !== -1) return;
+    <!-- One tracking owner: direct tags by default. Set TRACKING_MODE=gtm only
+         when the published container owns all tags. The Google tag loader ID
+         and the Analytics reporting destination can be different aliases. -->
+    <script id="fabrything-tracking">
+      (function (w, d) {
         var h = w.location.hostname;
-        if (h === 'localhost' || h === '127.0.0.1' || h.endsWith('.vercel.app')) return;
-        w[l] = w[l] || [];
-        w[l].push({ 'gtm.start': new Date().getTime(), event: 'gtm.js' });
-        var f = d.getElementsByTagName(s)[0], j = d.createElement(s);
-        j.async = true;
-        j.src = 'https://www.googletagmanager.com/gtm.js?id=' + encodeURIComponent(i);
-        f.parentNode.insertBefore(j, f);
-      })(window, document, 'script', 'dataLayer', '%REACT_APP_GTM_ID%');
+        if (h !== 'www.fabrything.com' && h !== 'fabrything.com' && h !== 'nobleseek.fabrything.com') return;
+        try { if (w.localStorage.getItem('fab_analytics_consent') === 'denied') return; }
+        catch (_) { return; }
+        var ga = '%REACT_APP_GA4_MEASUREMENT_ID%';
+        var googleTag = '%REACT_APP_GOOGLE_TAG_ID%';
+        var container = '%REACT_APP_GTM_ID%';
+        var mode = '%REACT_APP_TRACKING_MODE%';
+        var pixel = '%REACT_APP_META_PIXEL_ID%';
+        if (!/^G-[A-Z0-9]+$/.test(ga)) ga = 'G-S32TZJZCLV';
+        // The owner supplied this container's G-T4T8KFW86C installation snippet;
+        // loading the old stream alias directly returns HTTP404 from Google.
+        if (!/^(?:GT|G)-[A-Z0-9]+$/.test(googleTag)) googleTag = ga === 'G-S32TZJZCLV' ? 'G-T4T8KFW86C' : ga;
+        if (!/^GTM-[A-Z0-9]+$/.test(container)) container = '';
+        if (!/^\d{8,20}$/.test(pixel)) pixel = '442368228898246';
+        w.dataLayer = w.dataLayer || [];
+        function gtag() { w.dataLayer.push(arguments); }
+        function load(id, src) {
+          if (d.getElementById(id)) return;
+          var s = d.createElement('script'); s.id = id; s.async = true; s.src = src;
+          d.head.appendChild(s);
+        }
+        // A container can contain its own Google and Meta tags. Loading those
+        // again here would count events twice and initialize unrelated pixels.
+        if (mode === 'gtm' && container) {
+          w.dataLayer.push({ 'gtm.start': new Date().getTime(), event: 'gtm.js' });
+          load('fab-gtm', 'https://www.googletagmanager.com/gtm.js?id=' + encodeURIComponent(container));
+          return;
+        }
+        if (ga) {
+          w.__GA4_ID__ = ga; w.gtag = gtag;
+          gtag('consent', 'default', { ad_storage: 'granted', ad_user_data: 'granted', ad_personalization: 'granted', analytics_storage: 'granted' });
+          gtag('set', 'send_page_view', false);
+          gtag('js', new Date());
+          // Current Google tag installation endpoint; send_page_view stays off
+          // because the router owns the initial and subsequent SPA pageviews.
+          load('fab-ga4', 'https://www.googletagmanager.com/gtm.js?id=' + encodeURIComponent(googleTag));
+        }
+        if (!w.fbq) {
+          var fbq = w.fbq = function () { fbq.callMethod ? fbq.callMethod.apply(fbq, arguments) : fbq.queue.push(arguments); };
+          w._fbq = fbq; fbq.push = fbq; fbq.loaded = true; fbq.version = '2.0'; fbq.queue = [];
+          load('fab-meta-pixel', 'https://connect.facebook.net/en_US/fbevents.js');
+        }
+        w.fbq('init', pixel);
+        // PageView is sent by the router, once on entry and on SPA navigation.
+      })(window, document);
     </script>
-    <!-- Meta Pixel. Wrapped in a hostname check so localhost/preview traffic
-         never lands in the real Pixel data — otherwise every `npm start` and
-         every Vercel preview build pollutes the numbers you make decisions on.
-         The Pixel ID is public by design (it is readable in any page source);
-         the Meta *access token* is NOT and must never appear in this repo. -->
-    <script>
-      (function () {
-        var h = window.location.hostname;
-        if (h === 'localhost' || h === '127.0.0.1' || h.endsWith('.vercel.app')) return;
-        !function(f,b,e,v,n,t,s)
-        {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
-        n.callMethod.apply(n,arguments):n.queue.push(arguments)};
-        if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
-        n.queue=[];t=b.createElement(e);t.async=!0;
-        t.src=v;s=b.getElementsByTagName(e)[0];
-        s.parentNode.insertBefore(t,s)}(window, document,'script',
-        'https://connect.facebook.net/en_US/fbevents.js');
-        fbq('init', '442368228898246');
-        fbq('track', 'PageView');
-      })();
-    </script>
-    <noscript><img height="1" width="1" style="display:none"
-      src="https://www.facebook.com/tr?id=442368228898246&ev=PageView&noscript=1"
-      alt="" /></noscript>
   <link rel="stylesheet" href="%PUBLIC_URL%/journal.css"/>
   </head>
   <body>

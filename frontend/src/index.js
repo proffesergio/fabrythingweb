@@ -9,6 +9,7 @@ import axios from 'axios';
 import { getToken } from './utils/authToken';
 import { applyUpdate, registerServiceWorker } from './utils/pwa';
 import { sendToAnalytics } from './utils/analytics';
+import { prepareStoreDocument } from './utils/storeDocument';
 
 // Set default Authorization header. getToken() refuses to hand back an expired
 // token (and drops it), so a months-old session can't poison every request the
@@ -16,9 +17,7 @@ import { sendToAnalytics } from './utils/analytics';
 const bootToken = getToken();
 axios.defaults.headers.common['Authorization'] = bootToken ? `Bearer ${bootToken}` : '';
 
-const root = ReactDOM.createRoot(document.getElementById('root'));
-document.getElementById('store-document-schema')?.remove();
-document.getElementById('store-document-style')?.remove();
+const root = ReactDOM.createRoot(prepareStoreDocument());
 root.render(
   <Provider store={store}>
     <App />

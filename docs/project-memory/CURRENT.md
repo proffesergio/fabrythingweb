@@ -1,3 +1,9 @@
+# Storefront startup and tracking — 2026-11-15
+
+- Fixes the measured bare-text frame by preserving the styled crawlable document until the interactive route commits. Failed scripts and JavaScript-disabled browsers retain usable product links. Approved styling and canonical SEO remain.
+- Uses the owner's Google-only tag G-T4T8KFW86C and confirmed Analytics destination G-S32TZJZCLV; separates direct tracking from legacy GTM/alternate Pixel initialization. Saved opt-out is honored before provider loads. Google's own tag still requests an obsolete alias with404/ORB; account-side destination repair remains pending, despite working event request generation.
+- Nine Node checks, two React checks, targeted lint, isolated build and1440/390/320 browser/failure/no-JS checks pass. Existing build warnings remain. Git/Vercel release is authorized and pending verification. Exact files and limits: [startup/tracking report](../STOREFRONT_STARTUP_TRACKING_2026-11-15.md). Existing workers remain untouched.
+
 # Live activation follow-up — 2026-11-14
 
 - Latest storefront/API source16360a5 is deployed; homepage, sitemap and protected export endpoint were rechecked.

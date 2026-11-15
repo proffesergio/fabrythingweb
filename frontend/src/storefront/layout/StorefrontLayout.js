@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useLayoutEffect } from 'react';
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import {
     AppBar, Toolbar, Typography, IconButton, Badge, Box, Container,
@@ -26,6 +26,7 @@ import WhatsAppButton from '../../components/WhatsAppButton';
 import ChatWidget from '../components/ChatWidget';
 import { LanguageProvider, useLanguage } from '../i18n/LanguageContext';
 import { LANGUAGES } from '../i18n/strings';
+import { completeStoreDocument } from '../../utils/storeDocument';
 
 // Highlighted "Food" nav entry pointing at `/food`. Two separate motions, and
 // only two: the icon blinks (opacity) and the background gradient slides
@@ -114,6 +115,9 @@ function LanguageSwitcher() {
 }
 
 function StorefrontLayoutInner({ toggleDarkMode, darkMode }) {
+    // This layout commits only after its lazy route is ready. A chunk failure
+    // leaves the styled public document visible with working navigation.
+    useLayoutEffect(completeStoreDocument, []);
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
     const [categories, setCategories]         = useState([]);
     const [whatsappNumber, setWhatsappNumber] = useState('');

@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-11-14",
+  "updated_at": "2026-11-15",
   "nodes": [
     {
       "id": "fabrything",
@@ -138,6 +138,27 @@
         "frontend": "6fo6qmtDysmsK7DFCyNuCTq1sFFS",
         "backend": "HZKFvwu6Q5iVuFeQ2RqUX4ZSKn41",
         "verified": true
+      }
+    },
+    {
+      "id": "storefront-startup-tracking-2026-11-15",
+      "type": "maintenance",
+      "guide": "docs/STOREFRONT_STARTUP_TRACKING_2026-11-15.md",
+      "status": "local_verified_pending_deployment",
+      "google_only_tag": "G-T4T8KFW86C",
+      "analytics_destination": "G-S32TZJZCLV",
+      "provider_warning": "Google-published tag still requests old alias with HTTP404/ORB; owner account configuration pending",
+      "checks": {
+        "node": 9,
+        "react": 2,
+        "build": "passed_with_existing_warnings",
+        "browser_widths": [
+          1440,
+          390,
+          320
+        ],
+        "no_js": true,
+        "failed_chunk": true
       }
     }
   ],
