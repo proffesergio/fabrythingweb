@@ -1,3 +1,9 @@
+# Catalog first-paint correction — 2026-11-15
+
+- Owner screenshot exposed the styled server catalog flashing before React. Earlier4825347 corrected a bare-text frame but did not prevent this alternate layout painting. The new head gate shows a theme-matched brand/progress state until the real route commits, without a minimum delay.
+- Actual product HTML/canonicals/schema and no-JS access remain. Critical asset failure or15s timeout exposes a usable catalog/reload notice; late scripts cannot replace that fallback. Existing live services and analytics configuration are unchanged.
+-12 Node/three React checks, targeted lint, isolated build and six browser scenarios pass, including delayed main scripts, desktop refresh, mobile light/dark, no-JS, failed chunks and timeout recovery. Normal loads record zero alternate-catalog or blank frames. Deployment/live verification pending. Exact files and limits: [first-paint report](../STOREFRONT_FIRST_PAINT_2026-11-15.md).
+
 # Storefront startup and tracking — 2026-11-15
 
 - Fixes the measured bare-text frame by preserving the styled crawlable document until the interactive route commits. Failed scripts and JavaScript-disabled browsers retain usable product links. Approved styling and canonical SEO remain.

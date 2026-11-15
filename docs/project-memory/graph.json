@@ -164,6 +164,22 @@
       "frontend_deployment": "dpl_HYZCjQaqGg9YBD2i25DE8daon9Ah",
       "api_deployment": "dpl_G6vPduJY8kswwyk3ZMysTJHqaqsw",
       "live_checks": "1440 refresh,390/320 delayed scripts: zero bare/blank frames, no overflow or JS exceptions; commerce, journal, robots/sitemap200"
+    },
+    {
+      "id": "storefront-first-paint-2026-11-15",
+      "type": "maintenance",
+      "guide": "docs/STOREFRONT_FIRST_PAINT_2026-11-15.md",
+      "status": "local_verified_pending_deployment",
+      "reason": "Owner screenshot exposed styled catalog flash; earlier styling-only measurements did not test alternate visibility",
+      "behavior": "Head gate before first paint; immediate swap when real route commits; stable usable catalog only for no-JS or failed/stalled startup",
+      "checks": {
+        "node": 12,
+        "react": 3,
+        "build": "passed_with_existing_warnings",
+        "browser_scenarios": 6,
+        "normal_alternate_frames": 0,
+        "normal_blank_frames": 0
+      }
     }
   ],
   "edges": [

@@ -4,6 +4,7 @@ import { prepareStoreDocument, completeStoreDocument } from './storeDocument';
 
 beforeAll(() => { global.IS_REACT_ACT_ENVIRONMENT = true; });
 afterAll(() => { delete global.IS_REACT_ACT_ENVIRONMENT; });
+afterEach(() => { delete window.__fabStoreBoot; });
 
 test('styled product document survives a delayed route and is replaced only when its content commits', async () => {
   document.head.innerHTML = '<style id="store-document-style">.store-document{color:navy}</style><script id="store-document-schema" type="application/ld+json">{}</script>';
@@ -34,4 +35,15 @@ test('ordinary SPA routes remain visible and do not remove unrelated styles', ()
   completeStoreDocument();
   expect(root.hidden).toBe(false);
   expect(document.getElementById('other-style')).not.toBeNull();
+});
+
+test('a late React commit leaves the catalog stable after a failed or timed-out bootstrap', () => {
+  document.head.innerHTML = '<style id="store-document-style">.store-document{color:navy}</style>';
+  document.body.innerHTML = '<div id="root"><main class="store-document"><h1>Real product</h1></main></div>';
+  window.__fabStoreBoot = {finish: () => false};
+  prepareStoreDocument();
+  completeStoreDocument();
+  expect(document.getElementById('root').hidden).toBe(true);
+  expect(document.querySelector('#store-document-fallback h1').textContent).toBe('Real product');
+  expect(document.getElementById('store-document-style')).not.toBeNull();
 });

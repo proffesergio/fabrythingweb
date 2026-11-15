@@ -1,3 +1,66 @@
+// Runs in the head, before the catalog body can paint or external assets wait.
+// Every visitor receives the same document; no-JS browsers use the catalog.
+function startStoreDocument() {
+  var element = document.documentElement;
+  var boot = window.__fabStoreBoot = {phase: 'loading'};
+  element.setAttribute('data-store-boot', 'loading');
+  try {
+    if (window.localStorage.getItem('sf_dark') === 'true') element.setAttribute('data-store-boot-theme', 'dark');
+  } catch (_) { /* The default theme works without browser storage. */ }
+  function clean() {
+    window.clearTimeout(timer);
+    window.removeEventListener('error', onError, true);
+  }
+  boot.fail = function () {
+    if (boot.phase !== 'loading') return;
+    boot.phase = 'fallback';
+    element.setAttribute('data-store-boot', 'fallback');
+    clean();
+  };
+  boot.finish = function () {
+    // Once visitors are using the fallback, do not replace it unexpectedly
+    // when a slow script finally arrives. The reload link starts a new attempt.
+    if (boot.phase === 'fallback') return false;
+    boot.phase = 'ready';
+    element.removeAttribute('data-store-boot');
+    element.removeAttribute('data-store-boot-theme');
+    clean();
+    return true;
+  };
+  function onError(event) {
+    var url = event.target && (event.target.src || event.target.href) || event.filename;
+    if (!url) return;
+    try {
+      var asset = new URL(url, window.location.href);
+      if (asset.origin === window.location.origin && /^\/static\/(js|css)\//.test(asset.pathname)) boot.fail();
+    } catch (_) { /* An unrelated provider/image failure cannot hold the shop. */ }
+  }
+  window.addEventListener('error', onError, true);
+  var timer = window.setTimeout(boot.fail, 15000);
+}
+
+const startupStyle = '<style id="store-document-startup-style">' +
+  '#store-document-loader,#store-document-fallback-note{display:none}' +
+  'html[data-store-boot=loading]{background:#f8fafc}' +
+  'html[data-store-boot=loading] .store-document{display:none}' +
+  'html[data-store-boot=loading] #store-document-loader{display:flex;min-height:100vh;min-height:100svh;align-items:center;justify-content:center;flex-direction:column;gap:24px;background:#f8fafc;color:#4f46e5;font:14px/1.5 system-ui,sans-serif}' +
+  'html[data-store-boot-theme=dark][data-store-boot=loading],html[data-store-boot-theme=dark] #store-document-loader{background:#0f172a;color:#818cf8}' +
+  '#store-document-loader .brand{width:170px;height:34px;object-fit:contain}' +
+  '#store-document-loader .dark-brand{display:none}' +
+  'html[data-store-boot-theme=dark] #store-document-loader .light-brand{display:none}' +
+  'html[data-store-boot-theme=dark] #store-document-loader .dark-brand{display:block}' +
+  '#store-document-loader svg{animation:store-document-spin 1s linear infinite}' +
+  '@keyframes store-document-spin{to{transform:rotate(360deg)}}' +
+  '@media(prefers-reduced-motion:reduce){#store-document-loader svg{animation:none}}' +
+  'html[data-store-boot=fallback] #store-document-fallback-note{display:block;margin:0;padding:12px 24px;background:#eef2ff;color:#17182f;font:14px/1.5 system-ui,sans-serif}' +
+  'html[data-store-boot=fallback] #store-app-status{display:none}' +
+  '</style>';
+const startupBody = '<div id="store-document-loader" role="status" aria-label="Loading Fabrything">' +
+  '<img class="brand light-brand" src="/fabrything-horizontal-light.png" alt="Fabrything" width="170" height="34">' +
+  '<img class="brand dark-brand" src="/fabrything-horizontal-dark.png" alt="" width="170" height="34">' +
+  '<svg width="36" height="36" viewBox="0 0 36 36" aria-hidden="true"><circle cx="18" cy="18" r="15" fill="none" stroke="currentColor" stroke-width="3" stroke-dasharray="65 30"/></svg></div>' +
+  '<p id="store-document-fallback-note" role="status">The interactive shop is taking longer to open. You can browse the catalog below or <a href="">reload the full shop</a>.</p>';
+
 function composeDocument(shell, document) {
   const shellHead = shell.match(/<head[^>]*>([\s\S]*?)<\/head>/i)?.[1];
   const head = document.match(/<head[^>]*>([\s\S]*?)<\/head>/i)?.[1];
@@ -9,7 +72,9 @@ function composeDocument(shell, document) {
     .replace(/<meta\b[^>]*(?:name=["'](?:description|robots|twitter:[^"']+)["']|property=["']og:[^"']+["'])[^>]*>/gi, '')
     .replace(/<link\b[^>]*rel=["']canonical["'][^>]*>/gi, '')
     .replace(/<script\b[^>]*type=["']application\/ld\+json["'][^>]*>[\s\S]*?<\/script>/gi, '');
-  return '<!doctype html><html lang="en"><head>' + head + extras + '</head><body style="margin:0">' + body + '</body></html>';
+  return '<!doctype html><html lang="en"><head>' + head + startupStyle +
+    '<script id="store-document-startup">(' + startStoreDocument.toString() + ')();</script>' +
+    extras + '</head><body style="margin:0">' + startupBody + body + '</body></html>';
 }
 
 function createHandler({loadShell, fetchDocument}) {
@@ -50,4 +115,4 @@ const handler = createHandler({
   loadShell: () => require('./build-shell.cjs'),
   fetchDocument: (target) => fetch('https://fabrythingapi.vercel.app' + target, {signal: AbortSignal.timeout(15000), redirect: 'error'}),
 });
-module.exports = {composeDocument, createHandler, handler};
+module.exports = {composeDocument, createHandler, handler, startStoreDocument};
