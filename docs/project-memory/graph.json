@@ -144,7 +144,7 @@
       "id": "storefront-startup-tracking-2026-11-15",
       "type": "maintenance",
       "guide": "docs/STOREFRONT_STARTUP_TRACKING_2026-11-15.md",
-      "status": "local_verified_pending_deployment",
+      "status": "deployed_and_verified_with_documented_google_account_warning",
       "google_only_tag": "G-T4T8KFW86C",
       "analytics_destination": "G-S32TZJZCLV",
       "provider_warning": "Google-published tag still requests old alias with HTTP404/ORB; owner account configuration pending",
@@ -159,7 +159,11 @@
         ],
         "no_js": true,
         "failed_chunk": true
-      }
+      },
+      "source": "4825347",
+      "frontend_deployment": "dpl_HYZCjQaqGg9YBD2i25DE8daon9Ah",
+      "api_deployment": "dpl_G6vPduJY8kswwyk3ZMysTJHqaqsw",
+      "live_checks": "1440 refresh,390/320 delayed scripts: zero bare/blank frames, no overflow or JS exceptions; commerce, journal, robots/sitemap200"
     }
   ],
   "edges": [

@@ -10,4 +10,4 @@ Verification: nine Node document/tracking checks and two React delayed-route/ord
 
 Files: `frontend/public/index.html`; `frontend/src/index.js`; `frontend/src/storefront/layout/StorefrontLayout.js`; `frontend/src/utils/analytics.js`; new `frontend/src/utils/storeDocument.js`, `storeDocument.test.js`; new `frontend/scripts/tracking-bootstrap.test.cjs`; this report and `docs/project-memory/`. No database migration or production credential change is required.
 
-Release: local checks complete; authorized Git/Vercel release pending verification.
+Release: source4825347 pushed to main. Native Vercel frontend dpl_HYZCjQaqGg9YBD2i25DE8daon9Ah and API dpl_G6vPduJY8kswwyk3ZMysTJHqaqsw both succeeded. Live1440px refresh and390px/320px delayed-script checks each recorded zero bare/blank frames, no viewport overflow and no JavaScript exceptions. New Google/Meta loaders return200. Home/shop/deals/blog, robots and sitemap return200 with canonical hosts preserved; apex308 remains intentional. The Google-managed nested alias warning remains the explicit account-side limitation above.
