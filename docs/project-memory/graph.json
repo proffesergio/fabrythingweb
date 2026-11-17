@@ -192,16 +192,18 @@
       "guide": "docs/ADSENSE_SEO_2026-11-16.md",
       "status": "deployed_and_verified",
       "scope": "AdSense publisher file/script, canonical news/blog documents, real404s, crawlable pagination, recent-news sitemap tags, Facebook crawler checks",
-      "api_deployment": "dpl_DgbvyQeK5ARK8W2vhftXWBmYYbxK",
+      "api_deployment": "dpl_8J8vLzSqhWmZuJkMFfx1sL6Zm9oX",
+      "api_cli_deployment": "dpl_DgbvyQeK5ARK8W2vhftXWBmYYbxK",
       "seo_frontend_deployment": "dpl_7wimyCLNz6ipE5e94VCsFDfcj6zX",
       "current_frontend_deployment": "dpl_8dGa6drxBWZ8VPdbXraQBmoJeoP3",
       "git_source": "57827ef",
+      "deployment_note": "Release IDs come from source commit 57827ef; metadata-only commits may produce equivalent deployments",
       "checks": {
         "backend": 36,
         "node": 14,
         "react": 34,
         "build": "passed_with_existing_warnings",
-        "public_http": "ads.txt, robots, sitemaps945/643, canonical documents, noindex404, API health",
+        "public_http": "ads.txt, robots, sitemaps947/643, canonical documents, noindex404, API health",
         "facebook_user_agent": "sampled news pages and images200"
       },
       "limit": "No claim of AdSense approval, indexing/ranking, or guaranteed Facebook previews"

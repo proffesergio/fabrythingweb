@@ -107,14 +107,16 @@ cannot force a preview in every comment or app version.
 
 ## Verified release
 
-Backend `dpl_DgbvyQeK5ARK8W2vhftXWBmYYbxK` and frontend
-`dpl_8dGa6drxBWZ8VPdbXraQBmoJeoP3` (Git main `57827ef`) are Ready on the existing
-production domains. The current frontend deployment adds the approved desktop
-newspaper UI over the prior SEO release (`dpl_7wimyCLNz6ipE5e94VCsFDfcj6zX`); the
-same build was first verified through direct CLI deployment
-`dpl_51GK9W8La7mVBJt2wgx9SNfV94PD`. Direct CLI upload initially exposed CRLF line
-endings in the shell build script; the release script was normalized to LF and the
-corrected build succeeded.
+Backend `dpl_8J8vLzSqhWmZuJkMFfx1sL6Zm9oX` and frontend
+`dpl_8dGa6drxBWZ8VPdbXraQBmoJeoP3` (both Git main `57827ef`) are Ready on the
+existing production domains. The frontend deployment adds the approved desktop
+newspaper UI over the prior SEO release (`dpl_7wimyCLNz6ipE5e94VCsFDfcj6zX`). The
+same builds were first verified through direct CLI deployments
+`dpl_DgbvyQeK5ARK8W2vhftXWBmYYbxK` and `dpl_51GK9W8La7mVBJt2wgx9SNfV94PD`. Direct
+CLI upload initially exposed CRLF line endings in the shell build script; the
+release script was normalized to LF and the corrected build succeeded. Metadata-only
+commits can produce equivalent deployments; these are the release IDs from source
+commit `57827ef`.
 
 Focused checks: 36 backend tests, 14 Node tests, 34 React tests and an isolated
 production build passed. Existing CRA/Browserslist and React act warnings remain.
