@@ -194,6 +194,8 @@
       "scope": "AdSense publisher file/script, canonical news/blog documents, real404s, crawlable pagination, recent-news sitemap tags, Facebook crawler checks",
       "api_deployment": "dpl_DgbvyQeK5ARK8W2vhftXWBmYYbxK",
       "seo_frontend_deployment": "dpl_7wimyCLNz6ipE5e94VCsFDfcj6zX",
+      "current_frontend_deployment": "dpl_8dGa6drxBWZ8VPdbXraQBmoJeoP3",
+      "git_source": "57827ef",
       "checks": {
         "backend": 36,
         "node": 14,
@@ -226,8 +228,10 @@
         "page_exceptions": 0,
         "no_js_article": true
       },
-      "frontend_deployment": "dpl_51GK9W8La7mVBJt2wgx9SNfV94PD",
-      "git_sync": "pending"
+      "frontend_deployment": "dpl_8dGa6drxBWZ8VPdbXraQBmoJeoP3",
+      "predeploy_cli_deployment": "dpl_51GK9W8La7mVBJt2wgx9SNfV94PD",
+      "source": "57827ef",
+      "git_sync": "main@57827ef"
     }
   ],
   "edges": [
