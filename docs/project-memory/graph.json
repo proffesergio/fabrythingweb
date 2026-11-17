@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-11-15",
+  "updated_at": "2026-11-17",
   "nodes": [
     {
       "id": "fabrything",
@@ -185,6 +185,49 @@
       "frontend_deployment": "dpl_EzbtHPbSymuXP2bPwUcbQHYbyDyB",
       "api_deployment": "dpl_8UoWRa5KbsEcWQc2UgNiEMjt94qV",
       "limit": "Startup exceeding15s intentionally keeps a stable catalog with reload link; no late automatic layout switch"
+    },
+    {
+      "id": "news-seo-2026-11-16",
+      "type": "release",
+      "guide": "docs/ADSENSE_SEO_2026-11-16.md",
+      "status": "deployed_and_verified",
+      "scope": "AdSense publisher file/script, canonical news/blog documents, real404s, crawlable pagination, recent-news sitemap tags, Facebook crawler checks",
+      "api_deployment": "dpl_DgbvyQeK5ARK8W2vhftXWBmYYbxK",
+      "seo_frontend_deployment": "dpl_7wimyCLNz6ipE5e94VCsFDfcj6zX",
+      "checks": {
+        "backend": 36,
+        "node": 14,
+        "react": 34,
+        "build": "passed_with_existing_warnings",
+        "public_http": "ads.txt, robots, sitemaps945/643, canonical documents, noindex404, API health",
+        "facebook_user_agent": "sampled news pages and images200"
+      },
+      "limit": "No claim of AdSense approval, indexing/ranking, or guaranteed Facebook previews"
+    },
+    {
+      "id": "nobleseek-newspaper-2026-11-16",
+      "type": "maintenance",
+      "path": "frontend/src/nobleseek/pages/NobleSeekListPage.js",
+      "guide": "docs/ADSENSE_SEO_2026-11-16.md",
+      "status": "deployed_and_verified",
+      "design": "Superdesign draft361ec0de-05f0-4501-8301-aaa76fcc02da approved",
+      "behavior": "Dense lead/secondary/rail, twelve-story latest row, eight topic sections, opinion block, compact header/footer; crawlable archive page links",
+      "checks": {
+        "react": 29,
+        "lint": "zero_new_errors_one_preexisting_warning",
+        "build": "passed_with_existing_warnings",
+        "browser_widths": [
+          1440,
+          390,
+          320
+        ],
+        "headlines": 51,
+        "overflow": false,
+        "page_exceptions": 0,
+        "no_js_article": true
+      },
+      "frontend_deployment": "dpl_51GK9W8La7mVBJt2wgx9SNfV94PD",
+      "git_sync": "pending"
     }
   ],
   "edges": [
@@ -247,6 +290,16 @@
       "from": "store-operations",
       "to": "media",
       "relation": "preserves_originals_and_writes_webp"
+    },
+    {
+      "from": "news-seo-2026-11-16",
+      "to": "fabrything",
+      "relation": "publishes_and_verifies"
+    },
+    {
+      "from": "nobleseek-newspaper-2026-11-16",
+      "to": "frontend",
+      "relation": "renders_news_portal"
     }
   ],
   "live_activation": {

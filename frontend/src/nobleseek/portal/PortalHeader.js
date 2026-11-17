@@ -42,7 +42,7 @@ export function MastheadLogo({ height = 48, light = false }) {
 // ── Top utility strip ───────────────────────────────────────────────────
 function TopUtilityBar() {
   return (
-    <Box sx={{ bgcolor: NS_NAVY, color: 'rgba(255,255,255,0.85)', fontSize: 12.5 }}>
+    <Box sx={{ bgcolor: '#00141A', color: 'rgba(255,255,255,0.85)', fontSize: 12.5 }}>
       <Container maxWidth="lg" sx={{ display: 'flex', alignItems: 'center', gap: 2, py: 0.7 }}>
         <Box className="ns-sans">{todayLine()}</Box>
         <Box sx={{ flex: 1 }} />
@@ -190,9 +190,9 @@ export default function PortalHeader() {
     <>
       <TopUtilityBar />
       <Box component="header" sx={{ bgcolor: 'white' }}>
-        <Container maxWidth="lg" sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', py: { xs: 2.5, md: 3.5 }, position: 'relative' }}>
+        <Container maxWidth="lg" sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', py: { xs: 2, md: 3 }, position: 'relative' }}>
           <Link to="/nobleseek" style={{ textDecoration: 'none' }} aria-label="নোবেলসিক হোম">
-            <MastheadLogo height={60} />
+            <MastheadLogo height={56} />
           </Link>
         </Container>
       </Box>

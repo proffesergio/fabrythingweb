@@ -10,7 +10,7 @@ import NewsFooter from '../portal/NewsFooter';
 // Bangla newspaper front page.
 export default function NobleSeekLayout() {
   return (
-    <Box className="ns-sans" sx={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', bgcolor: '#ffffff', color: '#141414' }}>
+    <Box className="ns-sans ns-newspaper" sx={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', bgcolor: '#ffffff', color: '#141414' }}>
       <NewsFonts />
       <PortalHeader />
       <Box component="main" sx={{ flex: 1, minWidth: 0 }}>

@@ -68,3 +68,6 @@ fabrything.com.txt
 .superdesign/
 *.bak
 /.local-validation/
+
+.vercel
+.env*

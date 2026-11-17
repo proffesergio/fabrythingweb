@@ -6,6 +6,7 @@ from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from nobleseek.models import Article
+from nobleseek.documents import ADSENSE_CLIENT
 from nobleseek.serializers import ArticleListSerializer
 from .journal import ORIGIN, journal_data, journal_json_ld
 from .journal_models import TopicCluster
@@ -69,7 +70,7 @@ def journal_document(request, slug):
         raise Http404('Article not found')
     data = journal_data(article)
     related = visible_guides().filter(journal__cluster_id=article.journal.cluster_id).exclude(pk=article.pk)[:3] if data else []
-    context = {'article': article, 'data': data, 'title': article.seo_title or article.effective_headline,
+    context = {'adsense_client': ADSENSE_CLIENT, 'article': article, 'data': data, 'title': article.seo_title or article.effective_headline,
         'description': article.seo_description or article.excerpt, 'canonical': article.get_canonical_url(),
         'image_url': article.hero_image or ORIGIN + '/fabrything-horizontal-light.png',
         'schema': json.dumps(journal_json_ld(article), ensure_ascii=False).replace('<', '\\u003c'),
@@ -111,7 +112,7 @@ def journal_archive_document(request, topic=None):
         if intent:
             params['intent'] = intent
         return path + ('?' + urlencode(params) if params else '')
-    context = {'language': 'en', 'title': (cluster.name + ' guides') if cluster else 'Product guides & stories',
+    context = {'adsense_client': ADSENSE_CLIENT, 'language': 'en', 'title': (cluster.name + ' guides') if cluster else 'Product guides & stories',
         'description': cluster.description if cluster and cluster.description else 'Explore buying guides, product care and practical shopping advice from Fabrything.',
         'canonical': ORIGIN + path + ('?page=' + str(page) if page > 1 else ''),
         'schema': json.dumps({'@context': 'https://schema.org', '@type': 'CollectionPage', 'name': cluster.name if cluster else 'Fabrything Journal', 'url': ORIGIN + path}),

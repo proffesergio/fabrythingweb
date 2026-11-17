@@ -1,7 +1,1 @@
-# ads.txt — authorizes Google to sell ads on fabrything.com.
-# (AdSense > Account > Settings > ads.txt; crawl errors appear in the
-# AdSense dashboard ~24h after deploy.)
-#
-# Publisher ID: ca-pub-1712742966437949 (fabrything@gmail.com).
-# Verify live at https://fabrything.com/ads.txt after deploy.
 google.com, pub-1712742966437949, DIRECT, f08c47fec0942fa0

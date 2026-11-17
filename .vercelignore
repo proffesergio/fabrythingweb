@@ -22,6 +22,8 @@ fabrything.com.txt
 .aws/
 .codex/
 .superdesign/
+.local-validation/
+.playwright-mcp/
 .code-review-graph/
 **/build/
 **/staticfiles/

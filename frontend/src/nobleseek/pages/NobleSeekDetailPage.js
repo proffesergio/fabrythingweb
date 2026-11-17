@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useState } from 'react';
+import { completeStoreDocument } from '../../utils/storeDocument';
 import { useParams, useSearchParams, Link } from 'react-router-dom';
 import { Box, Container, Typography, Chip, Grid, Skeleton, Divider, Button, LinearProgress } from '@mui/material';
 import { fetchNewsDetail, sectionName, fetchNewsCategories } from '../api';
@@ -35,6 +36,7 @@ export default function NobleSeekDetailPage() {
   const [cats, setCats] = useState([]);
   const [loading, setLoading] = useState(true);
   const adConfig = useAdConfig();
+  useLayoutEffect(() => { if (!loading && article) completeStoreDocument(); }, [loading, article]);
 
   useEffect(() => {
     setLoading(true);
@@ -55,6 +57,7 @@ export default function NobleSeekDetailPage() {
   if (!article) {
     return (
       <Container maxWidth="md" sx={{ py: 8, textAlign: 'center' }}>
+        <NewsSeo title="খবরটি পাওয়া যায়নি" slug={slug} noindex />
         <Typography variant="h5" fontWeight={800} className="ns-serif">দুঃখিত, খবরটি পাওয়া যায়নি</Typography>
         <Typography variant="body2" color="text.secondary" className="ns-sans" sx={{ mt: 1 }}>লিংকটি ভুল হতে পারে অথবা খবরটি সরিয়ে নেওয়া হয়েছে।</Typography>
         <Button component={Link} to="/nobleseek" variant="contained" sx={{ mt: 2, bgcolor: '#141414' }} className="ns-sans">প্রচ্ছদে ফিরুন</Button>

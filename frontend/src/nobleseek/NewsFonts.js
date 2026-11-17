@@ -17,6 +17,7 @@ export default function NewsFonts() {
     style.textContent = `
       .ns-serif { font-family: 'Noto Serif Bengali', 'Hind Siliguri', sans-serif !important; }
       .ns-sans { font-family: 'Hind Siliguri', 'Noto Sans Bengali', sans-serif !important; }
+      .ns-newspaper .MuiContainer-maxWidthLg { max-width: 1280px; }
       .ns-dropcap::first-letter {
         font-family: 'Noto Serif Bengali', serif;
         font-weight: 900; font-size: 3.1em; float: left;

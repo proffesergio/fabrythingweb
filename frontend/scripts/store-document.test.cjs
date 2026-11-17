@@ -72,6 +72,38 @@ test('missing product remains HTTP404', async () => {
  const res=response();await handler({method:'GET',query:{kind:'product',slug:'missing'}},res);
  assert.equal(res.statusCode,404);assert.equal(res.headers['X-Robots-Tag'],'noindex');
 });
+
+test('news preserves readable Bengali HTML and validates Unicode slugs and real 404s', async () => {
+ const news = document.replace('<html>', '<html lang="bn">').replace('<h1>', '<h1 data-news-document>');
+ const html = composeDocument(shell, news);
+ assert.match(html, /<html lang="bn">/);
+ assert.match(html, /data-news-document/);
+ assert.match(html, /main.abc.js/);
+ assert.doesNotMatch(html, /id="store-document-startup"/);
+ let target;
+ const handler = createHandler({loadShell:()=>shell,fetchDocument:async(p)=>{target=p;return {ok:true,text:async()=>news};}});
+ const res = response();
+ await handler({method:'GET',query:{kind:'news',slug:'বাংলা-সংবাদ'}},res);
+ assert.equal(res.statusCode,200);
+ assert.equal(target,'/api/store/nobleseek/document/' + encodeURIComponent('বাংলা-সংবাদ') + '/');
+ const missing = createHandler({loadShell:()=>shell,fetchDocument:async()=>({status:404})});
+ const missingRes=response();await missing({method:'GET',query:{kind:'news',slug:'missing'}},missingRes);
+ assert.equal(missingRes.statusCode,404);
+ assert.equal(missingRes.headers['X-Robots-Tag'],'noindex');
+ const invalid=response();target=undefined;
+ await handler({method:'GET',query:{kind:'news',slug:'../private'}},invalid);
+ assert.equal(invalid.statusCode,404);assert.equal(target,undefined);
+});
+
+test('publisher verification is present on public documents and ads.txt is plain authorized inventory', () => {
+ const publicShell=fs.readFileSync(path.join(__dirname,'../public/index.html'),'utf8');
+ assert.match(publicShell, /<head>[\s\S]*<script async data-ns-adsense="1" src="https:\/\/pagead2.googlesyndication.com\/pagead\/js\/adsbygoogle.js\?client=ca-pub-1712742966437949" crossorigin="anonymous"><\/script>[\s\S]*<\/head>/);
+ const html=composeDocument(publicShell.replace('%PUBLIC_URL%', '') + '<!-- /static/js/ -->',document);
+ assert.equal((html.match(/pagead2\.googlesyndication\.com\/pagead\/js\/adsbygoogle\.js/g)||[]).length,1);
+ assert.equal(fs.readFileSync(path.join(__dirname,'../public/ads.txt'),'utf8').trim(),'google.com, pub-1712742966437949, DIRECT, f08c47fec0942fa0');
+ const config=require('../vercel.json');
+ assert.equal(config.rewrites.find(rule=>rule.source==='/nobleseek/:slug').destination,'/api/store-document?kind=news&slug=:slug');
+});
 test('only fixed document types and safe slugs can be requested; queries retained', async () => {
  let target;const handler=createHandler({loadShell:()=>shell,fetchDocument:async(p)=>{target=p;return{ok:true,text:async()=>document};}});
  let res=response();await handler({method:'GET',query:{kind:'product',slug:'../../private'}},res);assert.equal(res.statusCode,404);assert.equal(target,undefined);

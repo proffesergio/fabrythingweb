@@ -90,6 +90,14 @@
       "destination": "https://fabrythingapi.vercel.app/api/store/journal/document/:slug/"
     },
     {
+      "source": "/nobleseek",
+      "destination": "/api/store-document?kind=news"
+    },
+    {
+      "source": "/nobleseek/:slug",
+      "destination": "/api/store-document?kind=news&slug=:slug"
+    },
+    {
       "source": "/",
       "destination": "/api/store-document?kind=home"
     },
@@ -111,6 +119,14 @@
     }
   ],
   "headers": [
+    {
+      "source": "/ads.txt",
+      "headers": [
+        { "key": "Content-Type", "value": "text/plain; charset=utf-8" },
+        { "key": "Cache-Control", "value": "public, max-age=300, must-revalidate" },
+        { "key": "X-Content-Type-Options", "value": "nosniff" }
+      ]
+    },
     {
       "source": "/static/(.*)",
       "headers": [

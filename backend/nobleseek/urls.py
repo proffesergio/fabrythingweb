@@ -2,6 +2,7 @@ from django.urls import path
 from .views import BlogDetailView, BlogListView
 from .views_operations import AdminOperationsView, AdminPublishingSettingsView
 from .views_sitemap import NewsXmlSitemapView
+from .documents import news_document
 
 from .views import (AdConfigPublicView, ArticleDetailView, ArticleListView,
                     CommentFlagView, CommentListCreateView, FlatPagePublicView,
@@ -21,6 +22,8 @@ from .views_admin import (AdminAdConfigView, AdminArticleDetailView,
                            AdminTrendListView)
 
 urlpatterns = [
+    path("document/", news_document, name="ns_document_home"),
+    path("document/<str:slug>/", news_document, name="ns_document"),
     path("blog/", BlogListView.as_view(), name="ns_blog"),
     path("blog/<str:slug>/", BlogDetailView.as_view(), name="ns_blog_detail"),
     path("admin/publishing-settings/", AdminPublishingSettingsView.as_view(), name="ns_publishing_settings"),

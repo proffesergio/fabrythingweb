@@ -6,7 +6,7 @@ import { fetchNewsList, fetchNewsCategories, fetchSection, fetchPopular, fetchPo
 
 jest.mock('../api', () => ({ ...jest.requireActual('../api'), fetchNewsList: jest.fn(), fetchNewsCategories: jest.fn(), fetchSection: jest.fn(), fetchPopular: jest.fn(), fetchPolls: jest.fn() }));
 jest.mock('../components/NewsSeo', () => () => null);
-jest.mock('../portal/PortalHeader', () => ({ NS_ACCENT: '#F2631F' }));
+jest.mock('../portal/PortalHeader', () => ({ NS_ACCENT: '#F2631F', MastheadLogo: () => <img src="/nobleseek-logo-wide.png" alt="NobleSeek" /> }));
 jest.mock('../ads/adsConfig', () => ({ useAdConfig: () => ({}) }));
 jest.mock('../ads/AdSlot', () => ({ placement }) => <aside aria-label={`ad ${placement}`} />);
 
@@ -44,8 +44,27 @@ test('empty API data shows honest empty states and omits empty section rows', as
   mount();
   expect(await screen.findByRole('heading', { level: 1, name: 'এখনো কোনো খবর প্রকাশ হয়নি' })).toBeInTheDocument();
   expect(screen.queryByRole('region', { name: 'খেলা' })).not.toBeInTheDocument();
-  expect(screen.queryByRole('img')).not.toBeInTheDocument();
+  expect(screen.queryByRole('img', { name: /^API photo/ })).not.toBeInTheDocument();
   expect(screen.queryByText('আজকের জরিপ')).not.toBeInTheDocument();
+});
+
+test('a crawlable archive URL loads its own page and links onward', async () => {
+  fetchNewsList.mockResolvedValue({ results: [story(15)], count: 40 });
+  mount('/nobleseek?page=2');
+  await screen.findAllByRole('heading', { name: 'API report 15' });
+  expect(fetchNewsList).toHaveBeenCalledWith(expect.objectContaining({ page: 2 }));
+  expect(screen.getByRole('link', { name: 'পরের পৃষ্ঠা' })).toHaveAttribute('href', '/nobleseek?page=3');
+});
+
+test('the newspaper shows distinct lead, rail and latest stories and requests a larger homepage batch', async () => {
+  fetchNewsList.mockResolvedValue({ results: Array.from({ length: 24 }, (_, i) => story(i + 1)), count: 50 });
+  mount();
+  await screen.findByRole('heading', { level: 1, name: 'API report 1' });
+  expect(fetchNewsList).toHaveBeenCalledWith({ pageSize: 24 });
+  expect(screen.getByRole('heading', { name: 'API report 4' })).toBeInTheDocument();
+  expect(screen.getByRole('heading', { name: 'API report 20' })).toBeInTheDocument();
+  expect(screen.getAllByRole('heading', { name: 'API report 1' })).toHaveLength(1);
+  expect(screen.getAllByRole('heading', { name: 'API report 4' })).toHaveLength(1);
 });
 
 test('homepage request failure offers retry instead of claiming no published news', async () => {

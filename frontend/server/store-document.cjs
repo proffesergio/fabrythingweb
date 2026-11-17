@@ -72,6 +72,13 @@ function composeDocument(shell, document) {
     .replace(/<meta\b[^>]*(?:name=["'](?:description|robots|twitter:[^"']+)["']|property=["']og:[^"']+["'])[^>]*>/gi, '')
     .replace(/<link\b[^>]*rel=["']canonical["'][^>]*>/gi, '')
     .replace(/<script\b[^>]*type=["']application\/ld\+json["'][^>]*>[\s\S]*?<\/script>/gi, '');
+  // News stays readable while its data-dependent React route loads. Both
+  // readers and crawlers receive the article, never a bot-specific document.
+  if (document.includes('data-news-document')) {
+    return '<!doctype html><html lang="bn"><head>' + head + extras
+      .replace(/<meta\b[^>]*name=["']google-adsense-account["'][^>]*>/gi, '') +
+      '</head><body style="margin:0">' + body + '</body></html>';
+  }
   return '<!doctype html><html lang="en"><head>' + head + startupStyle +
     '<script id="store-document-startup">(' + startStoreDocument.toString() + ')();</script>' +
     extras + '</head><body style="margin:0">' + startupBody + body + '</body></html>';
@@ -82,14 +89,17 @@ function createHandler({loadShell, fetchDocument}) {
     if (!['GET', 'HEAD'].includes(req.method)) { res.statusCode = 405; res.end(); return; }
     const kind = String(req.query?.kind || 'home');
     const slug = String(req.query?.slug || '');
-    if (!['home', 'shop', 'deals', 'product'].includes(kind) || (kind === 'product' && !/^[a-zA-Z0-9_-]{1,255}$/.test(slug))) {
+    const safeSlug = /^[\p{L}\p{M}\p{N}_-]{1,255}$/u.test(slug);
+    if (!['home', 'shop', 'deals', 'product', 'news'].includes(kind) ||
+        (kind === 'product' && !safeSlug) || (kind === 'news' && slug && !safeSlug)) {
       res.statusCode = 404; res.setHeader('X-Robots-Tag', 'noindex'); res.end('Not found'); return;
     }
     const params = new URLSearchParams();
     for (const [key, value] of Object.entries(req.query || {})) {
       if (!['kind', 'slug'].includes(key) && typeof value === 'string') params.set(key, value);
     }
-    const target = '/api/store/documents/' + kind + '/' + (kind === 'product' ? encodeURIComponent(slug) + '/' : '') + (params.size ? '?' + params : '');
+    const target = (kind === 'news' ? '/api/store/nobleseek/document/' : '/api/store/documents/' + kind + '/') +
+      ((kind === 'product' || kind === 'news') && slug ? encodeURIComponent(slug) + '/' : '') + (params.size ? '?' + params : '');
     try {
       const upstream = await fetchDocument(target);
       if (upstream.status === 404) { res.statusCode = 404; res.setHeader('X-Robots-Tag', 'noindex'); res.end('Product or page not found'); return; }
@@ -97,7 +107,9 @@ function createHandler({loadShell, fetchDocument}) {
       const html = composeDocument(loadShell(), await upstream.text());
       res.statusCode = 200;
       res.setHeader('Content-Type', 'text/html; charset=utf-8');
-      res.setHeader('Cache-Control', 'public, max-age=0, s-maxage=60, stale-while-revalidate=30');
+      res.setHeader('Cache-Control', kind === 'news'
+        ? 'public, max-age=0, s-maxage=300, stale-while-revalidate=60'
+        : 'public, max-age=0, s-maxage=60, stale-while-revalidate=30');
       res.setHeader('X-Content-Type-Options', 'nosniff');
       res.end(req.method === 'HEAD' ? undefined : html);
     } catch (_) {

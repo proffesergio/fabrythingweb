@@ -3,10 +3,10 @@ import React, { useEffect } from 'react';
 // Sets <title>, meta description, OG/Twitter tags + JSON-LD NewsArticle.
 // Also swaps the browser-tab icon to the NobleSeek badge while a news route
 // is mounted (restored on unmount so shop keeps its own favicon).
-export default function NewsSeo({ title, description, image, slug, jsonLd, publishedAt }) {
+export default function NewsSeo({ title, description, image, slug, jsonLd, publishedAt, canonical, noindex = false }) {
   useEffect(() => {
     const site = window.location.origin;
-    const url = jsonLd?.mainEntityOfPage?.['@id'] || `${site}/nobleseek${slug ? `/${encodeURIComponent(slug)}` : ''}`;
+    const url = canonical || jsonLd?.mainEntityOfPage?.['@id'] || `${site}/nobleseek${slug ? `/${encodeURIComponent(slug)}` : ''}`;
     document.title = title ? `${title} — নোবেলসিক` : 'নোবেলসিক — সর্বশেষ সংবাদ';
     const setMeta = (attr, key, content) => {
       if (!content) return;
@@ -15,7 +15,8 @@ export default function NewsSeo({ title, description, image, slug, jsonLd, publi
       el.setAttribute('content', content);
     };
     setMeta('name', 'description', description);
-    setMeta('property', 'og:type', 'article');
+    setMeta('name', 'robots', noindex ? 'noindex,follow' : 'index,follow,max-image-preview:large');
+    setMeta('property', 'og:type', jsonLd?.['@type'] === 'NewsArticle' ? 'article' : 'website');
     setMeta('property', 'og:title', title);
     setMeta('property', 'og:description', description);
     setMeta('property', 'og:image', image);
@@ -45,6 +46,6 @@ export default function NewsSeo({ title, description, image, slug, jsonLd, publi
       if (nsIcon) nsIcon.remove();
       if (iconLink && prevIcon) iconLink.setAttribute('href', prevIcon);
     };
-  }, [title, description, image, slug, jsonLd, publishedAt]);
+  }, [title, description, image, slug, jsonLd, publishedAt, canonical, noindex]);
   return null;
 }

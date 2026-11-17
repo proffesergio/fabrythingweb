@@ -5,8 +5,8 @@ const BASE = 'store/nobleseek/';
 
 function unwrap(res) { return res?.data?.data ?? res?.data; }
 
-export async function fetchNewsList({ category = '', search = '', page = 1, featured = '', breaking = '', popular = '' } = {}) {
-  const res = await axios.get(`${config.API_URL}${BASE}articles/`, { params: { category, search, page, featured, breaking, popular } });
+export async function fetchNewsList({ category = '', search = '', page = 1, pageSize = 12, featured = '', breaking = '', popular = '' } = {}) {
+  const res = await axios.get(`${config.API_URL}${BASE}articles/`, { params: { category, search, page, pageSize, featured, breaking, popular } });
   const raw = unwrap(res);
   // DRF paginated {results,count} or plain list — normalize both.
   if (raw && Array.isArray(raw.results)) return { results: raw.results, count: raw.count, next: raw.next };
@@ -49,7 +49,7 @@ export async function fetchPopular(limit = 5) {
 
 export async function fetchSection(category, limit = 5) {
   try {
-    const { results } = await fetchNewsList({ category });
+    const { results } = await fetchNewsList({ category, pageSize: Math.min(12, Math.max(1, limit)) });
     return (results || []).slice(0, limit);
   } catch { return []; }
 }

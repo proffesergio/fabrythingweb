@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { Box, Container, Typography, Divider, IconButton } from '@mui/material';
 import { Facebook } from '@mui/icons-material';
 import { fetchNewsCategories, PORTAL_SECTIONS } from '../api';
-import { MastheadLogo, NS_NAVY } from './PortalHeader';
+import { MastheadLogo } from './PortalHeader';
 
 const TRUST = [
   ['আমাদের সম্পর্কে', '/nobleseek/about'],
@@ -21,7 +21,7 @@ export default function NewsFooter() {
   const sections = (cats.length ? cats : PORTAL_SECTIONS).filter((c) => c.slug && (c.is_active !== false));
 
   return (
-    <Box component="footer" sx={{ bgcolor: NS_NAVY, color: 'rgba(255,255,255,0.72)', mt: 7 }}>
+    <Box component="footer" sx={{ bgcolor: '#00141A', color: 'rgba(255,255,255,0.72)', mt: 7 }}>
       <Container maxWidth="lg" sx={{ py: 5 }}>
         <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 4, justifyContent: 'space-between' }}>
           <Box sx={{ maxWidth: 330 }}>

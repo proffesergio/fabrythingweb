@@ -2,6 +2,7 @@ import React from 'react';
 import { Container, Typography, Box, Divider } from '@mui/material';
 import NewsSeo from '../components/NewsSeo';
 import { fetchInfoPage } from '../api';
+import { completeStoreDocument } from '../../utils/storeDocument';
 
 // Built-in copy: shown while loading AND as fallback when the API is
 // unreachable. The desk Pages tab upgrades these without a redeploy.
@@ -34,6 +35,7 @@ const DOCS = {
 };
 
 export default function NobleSeekInfoPage({ page = 'about' }) {
+  React.useLayoutEffect(completeStoreDocument, []);
   const fallback = DOCS[page] || DOCS.about;
   const [doc, setDoc] = React.useState(fallback);
   React.useEffect(() => {
